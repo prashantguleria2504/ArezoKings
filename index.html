@@ -365,22 +365,23 @@ function showApp(){
   const authPage=document.getElementById('authPage');
   const appShell=document.getElementById('appShell');
 
-  // Replace the login screen with the main app instead of leaving the
-  // page at the previous login scroll position.
-  if(authPage)authPage.style.display='none';
+  // Remove the login screen completely after successful authentication.
+  if(authPage)authPage.remove();
   if(appShell)appShell.style.display='block';
 
   let session=null;
   try{session=JSON.parse(sessionStorage.getItem(AUTH_SESSION_KEY)||'null')}catch{}
   const user=session?.username||'';
   const badge=document.getElementById('loggedInUser');
-  if(badge)badge.textContent=user?`👤 ${user}`:'';
+  if(badge)badge.textContent=user?'👤 '+user:'';
 
   showTracker();
   render();
 
-  // Always start the logged-in user at the top of the Matches page.
-  window.scrollTo({top:0,left:0,behavior:'auto'});
+  // Always start at the top of the Matches page.
+  window.scrollTo(0,0);
+  document.documentElement.scrollTop=0;
+  document.body.scrollTop=0;
 }
 
 function showLogin(){
@@ -464,7 +465,8 @@ async function loginUser(event){
 
 function logoutUser(){
   sessionStorage.removeItem(AUTH_SESSION_KEY);
-  showLogin();
+  // Reload so the Login page is reconstructed cleanly after logout.
+  window.location.reload();
 }
 
 const KEY='cricketMatchTrackerV1';
