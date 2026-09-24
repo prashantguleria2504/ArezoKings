@@ -454,12 +454,18 @@ function showAuth(mode='login'){
   if(!login||!register)return;
 
   const isLogin=mode==='login';
-  login.style.display=isLogin?'grid':'none';
-  register.style.display=isLogin?'none':'grid';
+
+  // The .hidden class uses !important, so switch visibility by toggling
+  // the class itself rather than relying on inline display styles.
+  login.classList.toggle('hidden',!isLogin);
+  register.classList.toggle('hidden',isLogin);
+
   loginTab.classList.toggle('active',isLogin);
   registerTab.classList.toggle('active',!isLogin);
   setAuthMessage('loginMessage','');
   setAuthMessage('registerMessage','');
+
+  document.getElementById(isLogin?'loginUsername':'registerUsername')?.focus();
 }
 
 function showApp(){
