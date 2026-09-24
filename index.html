@@ -97,8 +97,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 
     <form id="loginForm" class="auth-form" onsubmit="loginUser(event)">
       <div>
-        <label for="loginUsername">Username</label>
-        <input id="loginUsername" autocomplete="username" placeholder="Enter username" required>
+        <label for="loginUsername">Username or Email</label>
+        <input id="loginUsername" autocomplete="username" placeholder="Enter username or email" required>
       </div>
       <div>
         <label for="loginPassword">Password</label>
@@ -110,8 +110,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 
     <form id="registerForm" class="auth-form hidden" onsubmit="registerUser(event)">
       <div>
-        <label for="registerUsername">Username</label>
-        <input id="registerUsername" autocomplete="username" placeholder="Create username" minlength="3" required>
+        <label for="registerUsername">Username or Email</label>
+        <input id="registerUsername" autocomplete="username" placeholder="Create username (or email)" minlength="3" required>
       </div>
       <div>
         <label for="registerPassword">Password</label>
@@ -325,7 +325,10 @@ let cloudUser=null;
 let cloudRefreshTimer=null;
 
 function cloudEmailFromUsername(username){
-  return normalizeUsername(username)+'@arezokings.local';
+  const value=normalizeUsername(username);
+  // Allow a real email address directly. For username-only accounts use a
+  // valid application-domain identity behind the scenes.
+  return value.includes('@') ? value : value+'@arezokings.app';
 }
 
 async function loadCloudState(){
@@ -508,6 +511,10 @@ async function registerUser(event){
     setAuthMessage('registerMessage','Username must be at least 3 characters.','error');
     return;
   }
+  if(username.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username)){
+    setAuthMessage('registerMessage','Please enter a valid email address.','error');
+    return;
+  }
   if(password.length<6){
     setAuthMessage('registerMessage','Password must be at least 6 characters.','error');
     return;
@@ -555,10 +562,19 @@ async function loginUser(event){
 
   setAuthMessage('loginMessage','Signing in...','success');
 
-  const result=await supabaseClient.auth.signInWithPassword({
+  let result=await supabaseClient.auth.signInWithPassword({
     email:cloudEmailFromUsername(username),
     password:password
   });
+
+  // Backward compatibility for any earlier accounts created with the old
+  // internal .local mapping.
+  if(result.error && !username.includes('@')){
+    result=await supabaseClient.auth.signInWithPassword({
+      email:username+'@arezokings.local',
+      password:password
+    });
+  }
 
   if(result.error){
     setAuthMessage('loginMessage',result.error.message||'Invalid username or password.','error');
