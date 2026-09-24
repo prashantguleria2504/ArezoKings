@@ -362,8 +362,13 @@ function showAuth(mode='login'){
 }
 
 function showApp(){
-  document.getElementById('authPage')?.classList.add('hidden');
-  document.getElementById('appShell')?.classList.remove('hidden');
+  const authPage=document.getElementById('authPage');
+  const appShell=document.getElementById('appShell');
+
+  // Replace the login screen with the main app instead of leaving the
+  // page at the previous login scroll position.
+  authPage?.classList.add('hidden');
+  appShell?.classList.remove('hidden');
 
   let session=null;
   try{session=JSON.parse(sessionStorage.getItem(AUTH_SESSION_KEY)||'null')}catch{}
@@ -373,6 +378,9 @@ function showApp(){
 
   showTracker();
   render();
+
+  // Always start the logged-in user at the top of the Matches page.
+  window.scrollTo({top:0,left:0,behavior:'auto'});
 }
 
 function showLogin(){
@@ -381,6 +389,7 @@ function showLogin(){
   document.getElementById('loggedInUser').textContent='';
   document.getElementById('loginPassword').value='';
   showAuth('login');
+  window.scrollTo({top:0,left:0,behavior:'auto'});
 }
 
 async function registerUser(event){
