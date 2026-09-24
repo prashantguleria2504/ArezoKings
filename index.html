@@ -1121,6 +1121,15 @@ function closeBackupModal(){
   if(modal)modal.remove();
   if(window._backupObjectUrl){try{URL.revokeObjectURL(window._backupObjectUrl)}catch{}window._backupObjectUrl=null;}
 }
+function selectBackupJson(){
+  const box=document.getElementById('backupJsonText');
+  if(!box)return;
+  box.focus();
+  box.select();
+  try{box.setSelectionRange(0,box.value.length)}catch{}
+  alert('JSON selected. Press Ctrl+C to copy it, then paste it into a text file and save it as arezoKings-backup.json.');
+}
+
 async function copyBackupJson(){
   const box=document.getElementById('backupJsonText');
   if(!box)return;
@@ -1148,6 +1157,7 @@ function backupData(){
         <div class="backup-modal-actions">
           <a id="backupDownloadLink" class="backup-download-link" download="${filename}">Download JSON Backup</a>
           <button type="button" class="secondary" onclick="copyBackupJson()">Copy JSON</button>
+          <button type="button" class="secondary" onclick="selectBackupJson()">Select JSON</button>
           <button type="button" class="danger backup-modal-close" onclick="closeBackupModal()">Close</button>
         </div>
       </div>`;
