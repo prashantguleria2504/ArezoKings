@@ -329,7 +329,7 @@ function cloudEmailFromUsername(username){
 }
 
 async function loadCloudState(){
-  if(!supabaseClient || !cloudUser)return;
+  if(!supabaseClient || !cloudUser)return false;
   const result=await supabaseClient.from('team_state')
     .select('matches,contributions,ground_payments,ground_names')
     .eq('id',true).maybeSingle();
@@ -344,10 +344,10 @@ async function loadCloudState(){
     localStorage.setItem(KEY,JSON.stringify(data));
     localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
     localStorage.setItem(PAYMENT_KEY,JSON.stringify(groundPayments));
+    return true;
   }
-}
-
-async function saveCloudState(){
+  return false;
+}async function saveCloudState(){
   if(!supabaseClient || !cloudUser)return;
   const result=await supabaseClient.from('team_state').upsert({
     id:true,
@@ -1342,8 +1342,29 @@ refreshGroundDropdown();
 
 async function initializeCloudApp(){
   try{
-    await loadCloudState();
-    await maybeMigrateLocalData();
+    // Preserve this browser's old local data before replacing it with cloud state.
+    const localMatches=JSON.parse(localStorage.getItem(KEY)||'[]');
+    const localContrib=JSON.parse(localStorage.getItem(CONTRIBUTION_KEY)||'[]');
+    const localPayments=JSON.parse(localStorage.getItem(PAYMENT_KEY)||'[]');
+    const localHasData=
+      (Array.isArray(localMatches)&&localMatches.length>0) ||
+      (Array.isArray(localContrib)&&localContrib.length>0) ||
+      (Array.isArray(localPayments)&&localPayments.length>0);
+
+    const cloudLoaded=await loadCloudState();
+    let cloudHasData=data.length>0 || contributions.length>0 || groundPayments.length>0;
+
+    // First cloud login: offer to migrate the data already stored in this browser.
+    if(!cloudHasData && localHasData){
+      if(confirm('Existing ArezoKings data was found in this browser.\\n\\nUpload it to the shared cloud database now?')){
+        data=Array.isArray(localMatches)?localMatches:[];
+        contributions=Array.isArray(localContrib)?localContrib:[];
+        groundPayments=Array.isArray(localPayments)?localPayments:[];
+        await saveCloudState();
+        cloudHasData=true;
+      }
+    }
+
     render();
     renderContributions();
     renderGroundPayments();
@@ -1354,12 +1375,11 @@ async function initializeCloudApp(){
   }catch(err){
     console.error(err);
     setAuthMessage('loginMessage',
-      'Signed in, but cloud data could not be loaded. Please run the Supabase permissions SQL.',
+      'Signed in, but cloud data could not be loaded. Please check the Supabase database permissions.',
       'error'
     );
   }
 }
-
 async function initAuth(){
   if(!supabaseClient){
     showLogin();
