@@ -130,7 +130,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
   </div>
 </section>
 
-<div id="appShell" class="hidden">
+<div id="appShell" style="display:none">
 <header class="hero">
   <h1>🏏 ArezoKings</h1>
   <p>Track matches, opponent payments and player contributions — week by week and month by month.</p>
@@ -350,8 +350,8 @@ function showAuth(mode='login'){
   if(!login||!register)return;
 
   const isLogin=mode==='login';
-  login.classList.toggle('hidden',!isLogin);
-  register.classList.toggle('hidden',isLogin);
+  login.style.display=isLogin?'grid':'none';
+  register.style.display=isLogin?'none':'grid';
   loginTab.classList.toggle('active',isLogin);
   registerTab.classList.toggle('active',!isLogin);
   setAuthMessage('loginMessage','');
@@ -367,8 +367,8 @@ function showApp(){
 
   // Replace the login screen with the main app instead of leaving the
   // page at the previous login scroll position.
-  authPage?.classList.add('hidden');
-  appShell?.classList.remove('hidden');
+  if(authPage)authPage.style.display='none';
+  if(appShell)appShell.style.display='block';
 
   let session=null;
   try{session=JSON.parse(sessionStorage.getItem(AUTH_SESSION_KEY)||'null')}catch{}
@@ -384,8 +384,10 @@ function showApp(){
 }
 
 function showLogin(){
-  document.getElementById('appShell')?.classList.add('hidden');
-  document.getElementById('authPage')?.classList.remove('hidden');
+  const appShell=document.getElementById('appShell');
+  const authPage=document.getElementById('authPage');
+  if(appShell)appShell.style.display='none';
+  if(authPage)authPage.style.display='flex';
   document.getElementById('loggedInUser').textContent='';
   document.getElementById('loginPassword').value='';
   showAuth('login');
@@ -1226,8 +1228,7 @@ function initAuth(){
   if(session?.username){
     showApp();
   }else{
-    document.getElementById('appShell')?.classList.add('hidden');
-    showAuth('login');
+    showLogin();
   }
 }
 
