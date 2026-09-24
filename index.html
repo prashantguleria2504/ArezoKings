@@ -78,6 +78,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .backup-modal-close{margin-left:auto}
 
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="container">
@@ -125,7 +126,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
     </form>
 
     <div class="auth-note">
-      Account credentials are stored locally in this browser. This version provides browser-local access control; it is not a server-side authentication system.
+      Your account is stored securely in the ArezoKings cloud authentication service.
     </div>
   </div>
 </section>
@@ -310,7 +311,118 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 
 
 const AUTH_USERS_KEY='arezoKingsUsersV1';
+
 const AUTH_SESSION_KEY='arezoKingsSessionV1';
+
+const SUPABASE_URL='https://koauyvtwwdnktkplwllx.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_wtcMFTmREBGbq87ZB4yrNQ_-4xO6qhL';
+const supabaseClient=window.supabase?.createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY,
+  {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}
+);
+let cloudUser=null;
+let cloudRefreshTimer=null;
+
+function cloudEmailFromUsername(username){
+  return normalizeUsername(username)+'@arezokings.local';
+}
+
+async function loadCloudState(){
+  if(!supabaseClient || !cloudUser)return;
+  const result=await supabaseClient.from('team_state')
+    .select('matches,contributions,ground_payments,ground_names')
+    .eq('id',true).maybeSingle();
+  if(result.error)throw result.error;
+
+  const row=result.data;
+  if(row){
+    data=Array.isArray(row.matches)?row.matches:[];
+    contributions=Array.isArray(row.contributions)?row.contributions:[];
+    groundPayments=Array.isArray(row.ground_payments)?row.ground_payments:[];
+    if(Array.isArray(row.ground_names))saveGrounds(row.ground_names);
+    localStorage.setItem(KEY,JSON.stringify(data));
+    localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
+    localStorage.setItem(PAYMENT_KEY,JSON.stringify(groundPayments));
+  }
+}
+
+async function saveCloudState(){
+  if(!supabaseClient || !cloudUser)return;
+  const result=await supabaseClient.from('team_state').upsert({
+    id:true,
+    matches:Array.isArray(data)?data:[],
+    contributions:Array.isArray(contributions)?contributions:[],
+    ground_payments:Array.isArray(groundPayments)?groundPayments:[],
+    ground_names:getGrounds(),
+    updated_at:new Date().toISOString()
+  },{onConflict:'id'});
+  if(result.error)throw result.error;
+}
+
+async function refreshCloudState(){
+  if(!supabaseClient || !cloudUser)return;
+  try{
+    const before=JSON.stringify({
+      m:data,c:contributions,p:groundPayments,g:getGrounds()
+    });
+    await loadCloudState();
+    const after=JSON.stringify({
+      m:data,c:contributions,p:groundPayments,g:getGrounds()
+    });
+    if(before!==after){
+      render();
+      renderContributions();
+      renderGroundPayments();
+      refreshGroundDropdown();
+      refreshPaymentGroundDropdown();
+    }
+  }catch(err){
+    console.error('Cloud refresh failed:',err);
+  }
+}
+
+async function maybeMigrateLocalData(){
+  if(!supabaseClient || !cloudUser)return;
+  const localMatches=JSON.parse(localStorage.getItem(KEY)||'[]');
+  const localContrib=JSON.parse(localStorage.getItem(CONTRIBUTION_KEY)||'[]');
+  const localPayments=JSON.parse(localStorage.getItem(PAYMENT_KEY)||'[]');
+  const hasLocal=(Array.isArray(localMatches)&&localMatches.length>0) ||
+                 (Array.isArray(localContrib)&&localContrib.length>0) ||
+                 (Array.isArray(localPayments)&&localPayments.length>0);
+  if(!hasLocal)return;
+
+  const result=await supabaseClient.from('team_state')
+    .select('matches,contributions,ground_payments')
+    .eq('id',true).maybeSingle();
+  if(result.error)throw result.error;
+
+  const row=result.data;
+  const cloudEmpty=!row ||
+    (!(Array.isArray(row.matches)&&row.matches.length) &&
+     !(Array.isArray(row.contributions)&&row.contributions.length) &&
+     !(Array.isArray(row.ground_payments)&&row.ground_payments.length));
+
+  if(!cloudEmpty)return;
+
+  if(confirm('Local ArezoKings data was found in this browser.\n\nUpload it to the shared cloud database now?')){
+    data=Array.isArray(localMatches)?localMatches:[];
+    contributions=Array.isArray(localContrib)?localContrib:[];
+    groundPayments=Array.isArray(localPayments)?localPayments:[];
+    await saveCloudState();
+  }
+}
+
+function startCloudRefresh(){
+  if(cloudRefreshTimer)clearInterval(cloudRefreshTimer);
+  cloudRefreshTimer=setInterval(refreshCloudState,15000);
+}
+
+function stopCloudRefresh(){
+  if(cloudRefreshTimer)clearInterval(cloudRefreshTimer);
+  cloudRefreshTimer=null;
+}
+
 
 function normalizeUsername(value){
   return String(value||'').trim().toLowerCase();
@@ -322,24 +434,16 @@ async function hashPassword(password){
   return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-function getAuthUsers(){
-  try{
-    const users=JSON.parse(localStorage.getItem(AUTH_USERS_KEY)||'[]');
-    return Array.isArray(users)?users:[];
-  }catch{
-    return [];
-  }
-}
 
-function saveAuthUsers(users){
-  localStorage.setItem(AUTH_USERS_KEY,JSON.stringify(users));
+function normalizeUsername(value){
+  return String(value||'').trim().toLowerCase();
 }
 
 function setAuthMessage(id,message,type=''){
   const el=document.getElementById(id);
   if(!el)return;
   el.textContent=message||'';
-  el.className='auth-message'+(type?` ${type}`:'');
+  el.className='auth-message'+(type?' '+type:'');
 }
 
 function showAuth(mode='login'){
@@ -356,52 +460,44 @@ function showAuth(mode='login'){
   registerTab.classList.toggle('active',!isLogin);
   setAuthMessage('loginMessage','');
   setAuthMessage('registerMessage','');
-
-  const focusId=isLogin?'loginUsername':'registerUsername';
-  document.getElementById(focusId)?.focus();
 }
 
 function showApp(){
   const authPage=document.getElementById('authPage');
   const appShell=document.getElementById('appShell');
-
-  // Remove the login screen completely after successful authentication.
   if(authPage)authPage.remove();
   if(appShell)appShell.style.display='block';
 
-  let session=null;
-  try{session=JSON.parse(sessionStorage.getItem(AUTH_SESSION_KEY)||'null')}catch{}
-  const user=session?.username||'';
   const badge=document.getElementById('loggedInUser');
-  if(badge)badge.textContent=user?'👤 '+user:'';
+  const username=cloudUser?.user_metadata?.username||'';
+  if(badge)badge.textContent=username?'👤 '+username:'';
 
   showTracker();
   render();
-
-  // Always start at the top of the Matches page.
   window.scrollTo(0,0);
-  document.documentElement.scrollTop=0;
-  document.body.scrollTop=0;
 }
 
 function showLogin(){
+  stopCloudRefresh();
+  cloudUser=null;
   const appShell=document.getElementById('appShell');
   const authPage=document.getElementById('authPage');
   if(appShell)appShell.style.display='none';
   if(authPage)authPage.style.display='flex';
-  document.getElementById('loggedInUser').textContent='';
-  document.getElementById('loginPassword').value='';
   showAuth('login');
-  window.scrollTo({top:0,left:0,behavior:'auto'});
+  window.scrollTo(0,0);
 }
 
 async function registerUser(event){
   event.preventDefault();
-
   const username=normalizeUsername(document.getElementById('registerUsername').value);
   const password=document.getElementById('registerPassword').value;
   const confirmPassword=document.getElementById('registerPasswordConfirm').value;
 
+  if(!supabaseClient){
+    setAuthMessage('registerMessage','Supabase could not be loaded. Please refresh the page.','error');
+    return;
+  }
   if(username.length<3){
     setAuthMessage('registerMessage','Username must be at least 3 characters.','error');
     return;
@@ -415,57 +511,63 @@ async function registerUser(event){
     return;
   }
 
-  const users=getAuthUsers();
-  if(users.some(u=>normalizeUsername(u.username)===username)){
-    setAuthMessage('registerMessage','Username already exists. Please choose another.','error');
+  setAuthMessage('registerMessage','Creating cloud account...','success');
+
+  const result=await supabaseClient.auth.signUp({
+    email:cloudEmailFromUsername(username),
+    password:password,
+    options:{data:{username:username}}
+  });
+
+  if(result.error){
+    setAuthMessage('registerMessage',result.error.message||'Registration failed.','error');
     return;
   }
 
-  const passwordHash=await hashPassword(password);
-  users.push({
-    username,
-    passwordHash,
-    createdAt:new Date().toISOString()
-  });
-  saveAuthUsers(users);
+  if(!result.data.session){
+    setAuthMessage(
+      'registerMessage',
+      'Account created, but email confirmation is enabled in Supabase. Disable Email Confirmations in Authentication settings, then login again.',
+      'error'
+    );
+    return;
+  }
 
-  document.getElementById('loginUsername').value=username;
-  document.getElementById('registerPassword').value='';
-  document.getElementById('registerPasswordConfirm').value='';
-  showAuth('login');
-  setAuthMessage('loginMessage','Account created successfully. Please login.','success');
+  cloudUser=result.data.user;
+  await initializeCloudApp();
 }
 
 async function loginUser(event){
   event.preventDefault();
-
   const username=normalizeUsername(document.getElementById('loginUsername').value);
   const password=document.getElementById('loginPassword').value;
-  const users=getAuthUsers();
-  const user=users.find(u=>normalizeUsername(u.username)===username);
 
-  if(!user){
-    setAuthMessage('loginMessage','Invalid username or password.','error');
+  if(!supabaseClient){
+    setAuthMessage('loginMessage','Supabase could not be loaded. Please refresh the page.','error');
     return;
   }
 
-  const passwordHash=await hashPassword(password);
-  if(passwordHash!==user.passwordHash){
-    setAuthMessage('loginMessage','Invalid username or password.','error');
+  setAuthMessage('loginMessage','Signing in...','success');
+
+  const result=await supabaseClient.auth.signInWithPassword({
+    email:cloudEmailFromUsername(username),
+    password:password
+  });
+
+  if(result.error){
+    setAuthMessage('loginMessage',result.error.message||'Invalid username or password.','error');
     return;
   }
 
-  sessionStorage.setItem(AUTH_SESSION_KEY,JSON.stringify({
-    username:user.username,
-    loggedInAt:new Date().toISOString()
-  }));
-  setAuthMessage('loginMessage','');
-  showApp();
+  cloudUser=result.data.user;
+  await initializeCloudApp();
 }
 
-function logoutUser(){
-  sessionStorage.removeItem(AUTH_SESSION_KEY);
-  // Reload so the Login page is reconstructed cleanly after logout.
+async function logoutUser(){
+  stopCloudRefresh();
+  if(supabaseClient){
+    try{await supabaseClient.auth.signOut()}catch(err){console.error(err);}
+  }
   window.location.reload();
 }
 
@@ -479,7 +581,21 @@ const monthKey=d=>d.slice(0,7);
 const monthName=k=>new Date(k+'-01T00:00:00').toLocaleDateString('en-IN',{month:'long',year:'numeric'});
 const weekOfMonth=d=>Math.ceil(new Date(d+'T00:00:00').getDate()/7);
 
-function save(){localStorage.setItem(KEY,JSON.stringify(data));render();}
+async function save(){
+  localStorage.setItem(KEY,JSON.stringify(data));
+  localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
+  localStorage.setItem(PAYMENT_KEY,JSON.stringify(groundPayments));
+  render();
+
+  if(cloudUser){
+    try{
+      await saveCloudState();
+    }catch(err){
+      console.error(err);
+      alert('Cloud sync failed. Your data is still saved in this browser. Check Supabase SQL permissions.');
+    }
+  }
+}
 function selectedMonth(){
   const s=document.getElementById('monthFilter');
   return s.value;
@@ -1224,16 +1340,42 @@ function restoreData(e){
 monthFilter.addEventListener('change',render);initAuth();
 refreshGroundDropdown();
 
-function initAuth(){
-  let session=null;
-  try{session=JSON.parse(sessionStorage.getItem(AUTH_SESSION_KEY)||'null')}catch{}
-  if(session?.username){
+async function initializeCloudApp(){
+  try{
+    await loadCloudState();
+    await maybeMigrateLocalData();
+    render();
+    renderContributions();
+    renderGroundPayments();
+    refreshGroundDropdown();
+    refreshPaymentGroundDropdown();
+    startCloudRefresh();
     showApp();
+  }catch(err){
+    console.error(err);
+    setAuthMessage('loginMessage',
+      'Signed in, but cloud data could not be loaded. Please run the Supabase permissions SQL.',
+      'error'
+    );
+  }
+}
+
+async function initAuth(){
+  if(!supabaseClient){
+    showLogin();
+    return;
+  }
+
+  const sessionResult=await supabaseClient.auth.getSession();
+  const session=sessionResult.data?.session;
+
+  if(session?.user){
+    cloudUser=session.user;
+    await initializeCloudApp();
   }else{
     showLogin();
   }
 }
-
 document.addEventListener('submit', function(e){
   const form = e.target;
   if(form && form.id && /match/i.test(form.id)){
