@@ -998,3 +998,185 @@ document.addEventListener('change', function(e){
       saveGrounds(grounds);
       refreshGroundDropdown(ground);
     } else {
+      refreshGroundDropdown(current);
+    }
+  }
+});
+function render(){
+  refreshMonths();
+  const month=selectedMonth(), rows=data.filter(x=>monthKey(x.date)===month).sort((a,b)=>a.date.localeCompare(b.date));
+  const opponent=rows.reduce((s,x)=>s+Number(x.opponentAmount||0),0);
+  const players=rows.reduce((s,x)=>s+x.players.reduce((a,p)=>a+Number(p.amount||0),0),0);
+  const groundBookingTotal=rows.reduce((sum,x)=>sum+Number(x.groundAmount||0),0);
+  matchCount.textContent=rows.length;opponentTotal.textContent=money(opponent);playerTotal.textContent=money(players);document.getElementById("groundTotal").textContent=money(groundBookingTotal);grandTotal.textContent=money(rows.reduce((s,m)=>s+getMatchTotal(m),0));
+  const groups={};rows.forEach(x=>(groups[weekOfMonth(x.date)]??=[]).push(x));
+  weeks.innerHTML=Object.keys(groups).sort((a,b)=>a-b).map(w=>{
+    const list=groups[w],ot=list.reduce((s,x)=>s+Number(x.opponentAmount||0),0),pt=list.reduce((s,x)=>s+Number(x.neerajAmount||0)+Number(x.suyogAmount||0)+x.players.reduce((a,p)=>a+Number(p.amount||0),0),0);
+    return `<section class="section"><div class="section-head"><h2>Week ${w} <span class="badge">${list.length} match${list.length!==1?'es':''}</span></h2></div>
+    <div class="table-wrap"><table><thead><tr><th>Date</th><th>Ground</th><th class="amount">Total Ground Booking Amount</th><th>Opponent</th><th class="amount">Opponent Received</th><th class="amount">Amount with Neeraj</th><th>Neeraj Status / With Whom</th><th class="amount">Amount with Suyog</th><th>Suyog Status / With Whom</th><th class="amount">Other Players</th><th class="amount">Total</th><th>Actions</th></tr></thead><tbody>
+    ${list.map(x=>{const other=x.players.reduce((a,p)=>a+Number(p.amount||0),0), n=Number(x.neerajAmount||0), s=Number(x.suyogAmount||0), total=getMatchTotal(x); return `<tr class="${(!x.opponent || !String(x.opponent).trim()) ? 'match-not-scheduled-row' : ''}"><td><div>${new Date(x.date+'T00:00:00').toLocaleDateString('en-IN')}</div><div class="date-day">${new Date(x.date+'T00:00:00').toLocaleDateString('en-IN',{weekday:'long'})}</div>${(!x.opponent || !String(x.opponent).trim()) ? '<div class="match-not-scheduled-note">⚠ Match not yet scheduled</div>' : ''}</td><td>${esc(x.ground)}</td><td class="amount">${money(x.groundAmount)}</td><td>${esc(x.opponent)}</td><td class="amount">${money(x.opponentAmount||0)}${(String(x.opponent||"").trim() && Number(x.opponentAmount||0)===0) ? '<span class="amount-not-received">Amount not received</span>' : ''}</td><td class="amount">${money(n)}</td><td>${x.neerajReceived?'☑ Received':'☐ Pending'}${x.neerajComment?`<br><small>${esc(x.neerajComment)}</small>`:''}</td><td class="amount">${money(s)}</td><td>${x.suyogReceived?'☑ Received':'☐ Pending'}${x.suyogComment?`<br><small>${esc(x.suyogComment)}</small>`:''}</td><td class="amount">${money(other)}</td><td class="amount">${money(total)}</td><td class="actions"><button onclick="openMatchForm('${x.id}')">Edit</button><button class="danger" onclick="deleteMatch('${x.id}')">Delete</button></td></tr>
+    <tr><td colspan="7"><details><summary>Player contributions (${x.players.length})</summary><div class="table-wrap"><table class="player-table"><thead><tr><th>Player</th><th class="amount">Amount</th><th>Actions</th></tr></thead><tbody>${x.players.length?x.players.map(p=>`<tr><td>${esc(p.name)}</td><td class="amount">${money(p.amount)}</td><td><button onclick="editPlayer('${x.id}','${p.id}')">Edit</button><button class="danger" onclick="deletePlayer('${x.id}','${p.id}')">Delete</button></td></tr>`).join(''):`<tr><td colspan="3" class="empty">No player contributions yet.</td></tr>`}</tbody>${x.players.length?`<tfoot><tr class="total-row"><td>Total</td><td class="amount">${money(pt)}</td><td></td></tr></tfoot>`:''}</table></div><button class="primary" style="margin:10px 0 0 0" onclick="toggleAddPlayer('${x.id}')">＋ Add Player</button>
+<div id="addPlayerPanel-${x.id}" class="match-player-add-panel">
+  <select id="matchPlayerSelect-${x.id}" onchange="handleMatchPlayerChoice('${x.id}')">
+    <option value="">Select player</option>
+    ${contributions.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('')}
+    <option value="__NEW_PLAYER__">➕ New Player</option>
+  </select>
+  <input id="matchPlayerNewName-${x.id}" class="hidden" placeholder="New player name">
+  <input id="matchPlayerAmount-${x.id}" type="number" min="0" step="1" placeholder="Amount">
+  <button class="primary" onclick="saveMatchPlayer('${x.id}')">Save</button>
+  <button onclick="cancelAddPlayer('${x.id}')">Cancel</button>
+</div></details></td></tr>`}).join('')}
+    <tr class="total-row">
+      <td colspan="2">Week ${w} Total</td>
+      <td class="amount">${money(list.reduce((sum,x)=>sum+Number(x.groundAmount||0),0))}</td>
+      <td colspan="7"></td>
+      <td class="amount">${money(list.reduce((s,x)=>s+getMatchTotal(x),0))}</td>
+      <td></td>
+    </tr>
+    </tbody></table></div></section>`
+  }).join('') || `<section class="section"><div class="empty">No matches recorded for ${monthName(month)}. Click “Add Match” to begin.</div></section>`;
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function downloadFile(filename, text, mimeType){
+  const content=String(text??'');
+  let url='';
+  let useObjectUrl=false;
+  try{
+    const blob=new Blob([content],{type:mimeType||'text/plain;charset=utf-8'});
+    url=URL.createObjectURL(blob);
+    useObjectUrl=true;
+  }catch{}
+
+  if(!url){
+    url=`data:${mimeType||'text/plain;charset=utf-8'},${encodeURIComponent(content)}`;
+  }
+
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=filename;
+  a.style.display='none';
+  document.body.appendChild(a);
+  a.click();
+
+  setTimeout(()=>{
+    a.remove();
+    if(useObjectUrl){
+      try{URL.revokeObjectURL(url)}catch{}
+    }
+  },1000);
+
+  return true;
+}
+
+function exportCSV(){
+  try{
+    const rows=data.filter(x=>monthKey(x.date)===selectedMonth()).sort((a,b)=>a.date.localeCompare(b.date));
+    const out=[['Month','Week','Date','Day','Ground','Total Ground Booking Amount','Opponent','Opponent Amount','Neeraj Amount','Neeraj Received','Neeraj With Whom/Comment','Suyog Amount','Suyog Received','Suyog With Whom/Comment','Other Player','Other Player Amount','Match Total']];
+
+    rows.forEach(x=>{
+      const other=(x.players||[]).reduce((a,p)=>a+Number(p.amount||0),0);
+      const base=[monthName(monthKey(x.date)),weekOfMonth(x.date),x.date,
+        new Date(x.date+'T00:00:00').toLocaleDateString('en-IN',{weekday:'long'}),
+        x.ground||'',x.groundAmount||0,x.opponent||'',x.opponentAmount||0,
+        x.neerajAmount||0,x.neerajReceived?'Yes':'No',x.neerajComment||'',
+        x.suyogAmount||0,x.suyogReceived?'Yes':'No',x.suyogComment||''];
+
+      if(!x.players?.length){
+        out.push([...base,'','',getMatchTotal(x)]);
+      }else{
+        x.players.forEach(p=>out.push([...base,p.name||'',p.amount||0,getMatchTotal(x)]));
+      }
+    });
+
+    const csv=out.map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
+    downloadFile(`cricket-${selectedMonth()||'export'}.csv`,csv,'text/csv;charset=utf-8;');
+  }catch(err){
+    console.error(err);
+    alert('CSV export failed. Please try again.');
+  }
+}
+
+function backupData(){
+  try{
+    const backup={
+      backupVersion:2,
+      exportedAt:new Date().toISOString(),
+      matches:Array.isArray(data)?data:[],
+      contributions:Array.isArray(contributions)?contributions:[],
+      groundPayments:Array.isArray(groundPayments)?groundPayments:[],
+      groundNames:getGrounds()
+    };
+    downloadFile('arezoKings-backup.json',JSON.stringify(backup,null,2),'application/json;charset=utf-8;');
+  }catch(err){
+    console.error(err);
+    alert('Backup failed. Please try again.');
+  }
+}
+
+function restoreData(e){
+  const f=e.target.files?.[0];
+  if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const x=JSON.parse(r.result);
+      if(Array.isArray(x)){
+        data=x;
+      }else if(x && typeof x==='object' && Array.isArray(x.matches)){
+        data=x.matches;
+        contributions=Array.isArray(x.contributions)?x.contributions:[];
+        groundPayments=Array.isArray(x.groundPayments)?x.groundPayments:[];
+        if(Array.isArray(x.groundNames)) saveGrounds(x.groundNames);
+        localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
+        localStorage.setItem(PAYMENT_KEY,JSON.stringify(groundPayments));
+      }else{
+        throw new Error('Unsupported backup format');
+      }
+      localStorage.setItem(KEY,JSON.stringify(data));
+      render();
+      renderContributions();
+      renderGroundPayments();
+      refreshGroundDropdown();
+      refreshPaymentGroundDropdown();
+      e.target.value='';
+      alert('Backup restored successfully.');
+    }catch(err){
+      console.error(err);
+      e.target.value='';
+      alert('Invalid backup file.');
+    }
+  };
+  r.readAsText(f);
+}
+monthFilter.addEventListener('change',render);initAuth();
+refreshGroundDropdown();
+
+function initAuth(){
+  let session=null;
+  try{session=JSON.parse(sessionStorage.getItem(AUTH_SESSION_KEY)||'null')}catch{}
+  if(session?.username){
+    showApp();
+  }else{
+    document.getElementById('appShell')?.classList.add('hidden');
+    showAuth('login');
+  }
+}
+
+document.addEventListener('submit', function(e){
+  const form = e.target;
+  if(form && form.id && /match/i.test(form.id)){
+    const g = document.getElementById('mGround');
+    if(g && g.value && g.value !== '__ADD_NEW__'){
+      const grounds = getGrounds();
+      if(!grounds.includes(g.value)){
+        grounds.push(g.value);
+        saveGrounds(grounds);
+      }
+    }
+  }
+}, true);
+
+</script>
+</body>
+</html>
