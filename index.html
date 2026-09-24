@@ -1324,40 +1324,71 @@ function backupData(){
     alert('Backup failed. Please try again.');
   }
 }
-function restoreData(e){
-  const f=e.target.files?.[0];
-  if(!f)return;
-  const r=new FileReader();
-  r.onload=()=>{
-    try{
-      const x=JSON.parse(r.result);
-      if(Array.isArray(x)){
-        data=x;
-      }else if(x && typeof x==='object' && Array.isArray(x.matches)){
-        data=x.matches;
-        contributions=Array.isArray(x.contributions)?x.contributions:[];
-        groundPayments=Array.isArray(x.groundPayments)?x.groundPayments:[];
-        if(Array.isArray(x.groundNames)) saveGrounds(x.groundNames);
-        localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
-        localStorage.setItem(PAYMENT_KEY,JSON.stringify(groundPayments));
-      }else{
-        throw new Error('Unsupported backup format');
-      }
-      localStorage.setItem(KEY,JSON.stringify(data));
-      render();
-      renderContributions();
-      renderGroundPayments();
-      refreshGroundDropdown();
-      refreshPaymentGroundDropdown();
-      e.target.value='';
-      alert('Backup restored successfully.');
-    }catch(err){
-      console.error(err);
-      e.target.value='';
-      alert('Invalid backup file.');
+async function restoreData(e){
+  const input=e.target;
+  const file=input?.files?.[0];
+  if(!file)return;
+
+  try{
+    const text=await file.text();
+    const x=JSON.parse(text);
+
+    let restoredMatches=[];
+    let restoredContributions=[];
+    let restoredGroundPayments=[];
+    let restoredGroundNames=[];
+
+    if(Array.isArray(x)){
+      // Legacy backup containing matches only.
+      restoredMatches=x;
+    }else if(x && typeof x==='object' && Array.isArray(x.matches)){
+      // Current unified ArezoKings backup.
+      restoredMatches=x.matches;
+      restoredContributions=Array.isArray(x.contributions)?x.contributions:[];
+      restoredGroundPayments=Array.isArray(x.groundPayments)?x.groundPayments:[];
+      restoredGroundNames=Array.isArray(x.groundNames)?x.groundNames:[];
+    }else{
+      throw new Error('Unsupported backup format');
     }
-  };
-  r.readAsText(f);
+
+    data=restoredMatches;
+    contributions=restoredContributions;
+    groundPayments=restoredGroundPayments;
+
+    if(restoredGroundNames.length){
+      saveGrounds(restoredGroundNames);
+    }
+
+    localStorage.setItem(KEY,JSON.stringify(data));
+    localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
+    localStorage.setItem(PAYMENT_KEY,JSON.stringify(groundPayments));
+
+    render();
+    renderContributions();
+    renderGroundPayments();
+    refreshGroundDropdown();
+    refreshPaymentGroundDropdown();
+
+    // Important: with cloud authentication enabled, restore must also upload
+    // the restored backup to Supabase so other devices/users can see it.
+    if(cloudUser){
+      try{
+        await saveCloudState();
+      }catch(cloudErr){
+        console.error('Cloud restore failed:',cloudErr);
+        throw new Error('Backup was loaded locally, but could not be saved to the cloud. Please check Supabase permissions.');
+      }
+    }
+
+    input.value='';
+    alert(cloudUser
+      ? 'Backup restored successfully and synced to the cloud.'
+      : 'Backup restored successfully.');
+  }catch(err){
+    console.error(err);
+    if(input)input.value='';
+    alert(err?.message||'Invalid backup file.');
+  }
 }
 monthFilter.addEventListener('change',render);initAuth();
 refreshGroundDropdown();
