@@ -2355,6 +2355,13 @@ ensureFinanceFields();wrapLegacyFunctions();
       '<div class="accounts-help">Cumulative across all recorded months. <strong>Money Received</strong> is the amount collected by that person; <strong>Net Balance</strong> subtracts ground payments, adjustments and settlements.</div>'+
       '<div class="table-wrap"><table class="finance-table owner-balance-table"><thead><tr><th>Person</th><th class="amount">Money Received</th><th class="amount">Ground Paid</th><th class="amount">Adjustments</th><th class="amount">Settled</th><th class="amount">Net Balance</th></tr></thead><tbody>'+
       ['Neeraj','Suyog','Prashant'].map(n=>'<tr><td><strong>'+n+'</strong></td><td class="amount">'+cash(people[n].received)+'</td><td class="amount">'+cash(people[n].gp)+'</td><td class="amount">'+cash(people[n].adj)+'</td><td class="amount">'+cash(people[n].settlements)+'</td><td class="amount"><strong>'+cash(people[n].net)+'</strong></td></tr>').join('')+
+      '</tbody></table></div>';+
+      '<div class="finance-section-title manual-adjustments-title">↔ Manual Adjustments</div>'+
+      '<div class="accounts-help">All manual adjustments created in Accounts & Settlement. The selected person is deducted from the adjustment amount.</div>'+
+      '<div class="table-wrap manual-adjustments-wrap"><table class="finance-table manual-adjustments-table"><thead><tr><th>Date</th><th>Apply Month</th><th>Deduct From</th><th class="amount">Amount</th><th>Payee / From</th><th>Reason</th></tr></thead><tbody>'+
+      (Array.isArray(adjustments)&&adjustments.length
+        ? adjustments.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(a=>'<tr><td>'+safe(a.date||'')+'</td><td>'+safe(a.applyMonth?monthLabel(a.applyMonth):'')+'</td><td><strong>'+safe(a.deductFrom||a.paidBy||'')+'</strong></td><td class="amount"><strong>'+cash(a.amount)+'</strong></td><td>'+safe(a.payee||'')+'</td><td>'+safe(a.reason||'')+'</td></tr>').join('')
+        : '<tr><td colspan="6" class="empty">No manual adjustments recorded.</td></tr>')+
       '</tbody></table></div>';
 
     if(!showMonth){
@@ -2376,11 +2383,6 @@ ensureFinanceFields();wrapLegacyFunctions();
       '</div>'+
       '<div class="table-wrap"><table class="finance-table"><thead><tr><th>Person</th><th class="amount">Opponent</th><th class="amount">Players</th><th class="amount">Contributions</th><th class="amount">Ground Paid</th><th class="amount">Adjustments</th><th class="amount">Settled</th><th class="amount">Net Balance</th></tr></thead><tbody>'+
       r.people.map(p=>'<tr><td><strong>'+p.person+'</strong></td><td class="amount">'+cash(p.opp)+'</td><td class="amount">'+cash(p.play)+'</td><td class="amount">'+cash(p.cont)+'</td><td class="amount">'+cash(p.gp)+'</td><td class="amount">'+cash(p.adj)+'</td><td class="amount">'+cash(p.settlements)+'</td><td class="amount"><strong>'+cash(p.net)+'</strong></td></tr>').join('')+
-      '</tbody></table></div>'+
-      '<div class="finance-section-title manual-adjustments-title">↔ Manual Adjustments</div>'+
-      '<div class="accounts-help">Adjustments created from Accounts & Settlement. Each adjustment is deducted from the selected person\'s Net Balance.</div>'+
-      '<div class="table-wrap manual-adjustments-wrap"><table class="finance-table manual-adjustments-table"><thead><tr><th>Date</th><th>Apply Month</th><th>Deduct From</th><th class="amount">Amount</th><th>Payee / From</th><th>Reason</th><th>Actions</th></tr></thead><tbody>'+
-      (Array.isArray(adjustments)&&adjustments.length ? adjustments.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(a=>'<tr><td>'+safe(a.date||'')+'</td><td>'+safe(a.applyMonth?monthLabel(a.applyMonth):'')+'</td><td><strong>'+safe(a.deductFrom||a.paidBy||'')+'</strong></td><td class="amount"><strong>'+cash(a.amount)+'</strong></td><td>'+safe(a.payee||'')+'</td><td>'+safe(a.reason||'')+'</td><td class="actions"><button onclick="openAdjustmentForm(\\''+a.id+'\\')">Edit</button> <button class="danger" onclick="deleteAdjustment(\\''+a.id+'\\')">Delete</button></td></tr>').join('') : '<tr><td colspan="7" class="empty">No manual adjustments recorded.</td></tr>')+
       '</tbody></table></div>'+
       '<div class="accounts-month-foot">Money collected: <strong>'+cash(r.opponent+r.players+r.regular)+'</strong> · Team payments: <strong>'+cash(r.totalPaid)+'</strong> · Adjustments: <strong>'+cash(r.adjustments)+'</strong></div>'+
       (r.monthAdjustments?.length ? '<div class="finance-section-title">↔ Adjustments</div><div class="table-wrap"><table class="finance-table"><thead><tr><th>Date</th><th>Deduct From</th><th class="amount">Amount</th><th>Payee / From</th><th>Reason</th><th>Actions</th></tr></thead><tbody>'+r.monthAdjustments.map(a=>'<tr><td>'+safe(a.date)+'</td><td><strong>'+safe(a.deductFrom||a.paidBy||'')+'</strong></td><td class="amount">'+cash(a.amount)+'</td><td>'+safe(a.payee||'')+'</td><td>'+safe(a.reason||'')+'</td><td><button onclick="openAdjustmentForm(\''+a.id+'\')">Edit</button> <button class="danger" onclick="deleteAdjustment(\''+a.id+'\')">Delete</button></td></tr>').join('')+'</tbody></table></div>' : '')+
