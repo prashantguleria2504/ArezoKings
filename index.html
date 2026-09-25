@@ -35,14 +35,16 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 @media(max-width:800px){.summary-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.summary-grid{grid-template-columns:1fr}}
 
-.contribution-table{min-width:1120px;table-layout:fixed}
+.contribution-table{min-width:1200px;table-layout:fixed}
 .contribution-table th,.contribution-table td{vertical-align:middle;text-align:center!important}
-.contribution-table th:nth-child(1),.contribution-table td:nth-child(1){width:18%}
-.contribution-table th:nth-child(2),.contribution-table td:nth-child(2){width:17%}
+.contribution-table th:nth-child(1),.contribution-table td:nth-child(1){width:16%}
+.contribution-table th:nth-child(2),.contribution-table td:nth-child(2){width:16%}
 .contribution-table th:nth-child(3),.contribution-table td:nth-child(3){width:28%;padding-left:12px}
-.contribution-table th:nth-child(4),.contribution-table td:nth-child(4){width:14%}
+.contribution-table th:nth-child(4),.contribution-table td:nth-child(4){width:13%}
 .contribution-table th:nth-child(5),.contribution-table td:nth-child(5){width:13%}
-.contribution-table th:nth-child(6),.contribution-table td:nth-child(6){width:10%}
+.contribution-table th:nth-child(6),.contribution-table td:nth-child(6){width:14%}
+.contribution-table td.actions{min-width:155px;width:14%;white-space:nowrap}
+.contribution-table td.actions button{margin-right:4px}
 .contribution-table .amount{text-align:center!important}
 .contribution-table .recent-entry{margin:0 auto;max-width:250px;text-align:center}
 .contribution-table .recent-entry-main{grid-template-columns:1fr auto auto;justify-items:center}
@@ -53,8 +55,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .contrib-form{display:grid;grid-template-columns:1.1fr 1.4fr 1.7fr 1fr;gap:14px;padding:16px;border-bottom:1px solid var(--line)}
 .contrib-form label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px}
 .contrib-form input{font:inherit;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fff}
-@media(max-width:800px){.contrib-form{grid-template-columns:1fr 1fr}.contribution-table{min-width:980px}}
-@media(max-width:520px){.contrib-form{grid-template-columns:1fr}.contribution-table{min-width:900px}}
+@media(max-width:800px){.contrib-form{grid-template-columns:1fr 1fr}.contribution-table{min-width:1050px}}
+@media(max-width:520px){.contrib-form{grid-template-columns:1fr}.contribution-table{min-width:1000px}}
 .contrib-meta{font-size:11px;color:#1769aa;margin-top:3px;font-weight:700}.contrib-comment{font-size:11px;color:#7b1fa2;margin-top:3px;font-weight:600;white-space:normal;text-align:left}
 .recent-entry{padding:5px 0;border-bottom:1px dashed #e3e8ef}.recent-entry:last-child{border-bottom:0}
 .recent-entry-main{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:6px;justify-content:stretch}
@@ -1016,6 +1018,7 @@ function renderContributions(){
   }).join('');
 }
 function showPayments(){
+  document.getElementById('accountsSection')?.classList.add('hidden');
   document.getElementById('summarySection').classList.add('hidden');
   document.getElementById('playerContributionSummarySection').classList.add('hidden');
   document.getElementById('contributionsSection').classList.add('hidden');
@@ -1028,6 +1031,7 @@ function showPayments(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function showContributions(){
+  document.getElementById('accountsSection')?.classList.add('hidden');
   document.getElementById('paymentsSection').classList.add('hidden');
   document.getElementById('summarySection').classList.add('hidden');
   document.getElementById('playerContributionSummarySection').classList.add('hidden');
@@ -1181,6 +1185,13 @@ function moveMatchFormInline(matchId){
   editorRow.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function openMatchForm(id=null){
+  document.getElementById('accountsSection')?.classList.add('hidden');
+  document.getElementById('paymentsSection')?.classList.add('hidden');
+  document.getElementById('summarySection')?.classList.add('hidden');
+  document.getElementById('playerContributionSummarySection')?.classList.add('hidden');
+  document.getElementById('contributionsSection')?.classList.add('hidden');
+  document.getElementById('weeks')?.classList.remove('hidden');
+  document.querySelector('.cards')?.classList.remove('hidden');
   if(editingId && editingId!==id)closeMatchForm();
   refreshGroundDropdown();
   editingId=id;
