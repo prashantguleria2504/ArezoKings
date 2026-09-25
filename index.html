@@ -110,7 +110,10 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .accounts-month-selector select{min-width:220px;font:inherit;border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff}
 .accounts-month-selector button{padding:9px 16px}
 .accounts-month-empty{padding-top:12px}
-.accounts-available-card{margin:14px 16px;padding:16px 18px;border:1px solid #cfe2d3;border-left:5px solid var(--pitch);border-radius:10px;background:linear-gradient(90deg,#f0f8f2,#fff);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.accounts-funds-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:14px 16px}
+.accounts-available-card{margin:0;padding:16px 18px;border:1px solid #cfe2d3;border-left:5px solid var(--pitch);border-radius:10px;background:linear-gradient(90deg,#f0f8f2,#fff);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.accounts-paid-card{border-left-color:#d19a32;background:linear-gradient(90deg,#fff8e9,#fff)}
+.accounts-balance-card{border-left-color:#176b3a;background:linear-gradient(90deg,#eaf6ed,#fff)}
 .accounts-available-label{font-size:12px;color:#55705c;text-transform:uppercase;font-weight:800;letter-spacing:.04em}
 .accounts-available-value{font-size:30px;font-weight:800;color:#124b2d;margin-top:3px}
 .accounts-available-note{font-size:12px;color:var(--muted);margin-top:3px}
@@ -126,6 +129,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .finance-summary-title{font-weight:800;padding:14px 16px;font-size:17px;color:#124b2d}
 .finance-section-title{padding:13px 16px;border-bottom:1px solid var(--line);font-weight:800;color:#31543b}
 @media(max-width:900px){.accounts-source-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.accounts-funds-grid{grid-template-columns:1fr}}
 @media(max-width:520px){.accounts-available-card{align-items:flex-start;flex-direction:column}.accounts-source-grid{grid-template-columns:1fr}.accounts-available-value{font-size:26px}}
 .player-table th,.player-table td{vertical-align:middle}
 .match-financial-owner{font-size:10px;color:var(--muted);margin-top:3px}
@@ -2194,7 +2198,11 @@ ensureFinanceFields();wrapLegacyFunctions();
 
     overall.innerHTML=
       '<div class="finance-summary-title">🏏 Consolidated Team Summary</div>'+
-      '<div class="accounts-available-card"><div><div class="accounts-available-label">Total Available Amount</div><div class="accounts-available-value">'+cash(totals.opponent+totals.players+totals.regular)+'</div><div class="accounts-available-note">Opponent fees + Player 11 collections + Contributions</div></div><span class="accounts-available-badge">Team Pool</span></div>'+
+      '<div class="accounts-funds-grid">'+
+      '<div class="accounts-available-card accounts-total-card"><div><div class="accounts-available-label">Total Amount</div><div class="accounts-available-value">'+cash(totals.opponent+totals.players+totals.regular)+'</div><div class="accounts-available-note">Opponent fees + Player 11 collections + Contributions</div></div></div>'+
+      '<div class="accounts-available-card accounts-paid-card"><div><div class="accounts-available-label">Amount Paid</div><div class="accounts-available-value">'+cash(totals.groundPaid)+'</div><div class="accounts-available-note">Payments tab · Ground payments</div></div></div>'+
+      '<div class="accounts-available-card accounts-balance-card"><div><div class="accounts-available-label">Total Available Amount</div><div class="accounts-available-value">'+cash((totals.opponent+totals.players+totals.regular)-totals.groundPaid)+'</div><div class="accounts-available-note">Total Amount − Amount Paid</div></div><span class="accounts-available-badge">Team Pool</span></div>'+
+      '</div>'+
       '<div class="finance-summary-grid accounts-source-grid">'+
       [
         ['Opponent fees',totals.opponent,'From Matches','account-source-opponent'],
