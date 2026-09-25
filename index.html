@@ -15,7 +15,7 @@ button{cursor:pointer}.primary{background:var(--accent)!important;color:#fff;bor
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}.card .label{color:var(--muted);font-size:13px}.card .value{font-size:25px;font-weight:700;margin-top:7px}
 .section{background:var(--card);border:1px solid var(--line);border-radius:14px;margin:16px 0;box-shadow:var(--shadow);overflow:hidden}.section-head{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.section-head h2{margin:0;font-size:18px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:900px}th,td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}th{background:#f7f9fc;color:#566173;font-size:12px;text-transform:uppercase}td.amount{text-align:right;font-weight:600}th.amount{text-align:right}.total-row td{font-weight:700;background:#fafbfd}.date-day{font-size:11px;color:#1769aa;font-weight:700;margin-top:3px}.actions{white-space:nowrap;min-width:155px;width:155px}.actions button{padding:7px 10px;margin-right:5px;margin-bottom:3px;border-radius:7px;border:1px solid var(--line);background:#fff;display:inline-block;white-space:nowrap}
 .form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px;border-bottom:1px solid var(--line)}.form-grid label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px}.form-actions{grid-column:1/-1;display:flex;gap:8px}.hidden{display:none!important}.empty{padding:28px;text-align:center;color:var(--muted)}
-.table-owners{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}.table-owner{font-size:10px;display:inline-flex;align-items:center;gap:2px;white-space:nowrap;color:var(--muted)}.table-owner input{margin:0}.notes-cell{min-width:220px;max-width:280px;font-size:12px;line-height:1.35}.owner-picker{display:flex;gap:8px;flex-wrap:wrap;padding:7px 0}.owner-option{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:#fff;font-size:12px}.owner-option input{margin:0}.owner-field{min-width:0}.match-table{min-width:1180px}.match-table th{vertical-align:middle;line-height:1.15}.match-table th:nth-child(1){width:95px}.match-table th:nth-child(2){width:115px}.match-table th:nth-child(3){width:105px}.match-table th:nth-child(4){width:125px}.match-table th:nth-child(5){width:100px}.match-table th:nth-child(6){width:115px}.match-table th:nth-child(7){width:85px}.match-table th:nth-child(8){width:135px}.match-table th:nth-child(9){width:85px}.match-table th:nth-child(10){width:135px}.match-table th:nth-child(11){width:95px}.match-table th:nth-child(12){width:110px}.match-table th:nth-child(13){width:150px}.match-table td{vertical-align:top}.player-table{min-width:520px}
+.table-owners{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}.table-owner{font-size:10px;display:inline-flex;align-items:center;gap:2px;white-space:nowrap;color:var(--muted)}.table-owner input{margin:0}.notes-cell{min-width:220px;max-width:280px;font-size:12px;line-height:1.35}.owner-picker{display:flex;gap:8px;flex-wrap:wrap;padding:7px 0}.owner-option{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:#fff;font-size:12px}.owner-option input{margin:0}.owner-field{min-width:0}.match-table{min-width:1280px;width:100%;table-layout:fixed}.match-table th{vertical-align:middle;line-height:1.15;text-align:left}.match-table th.amount,.match-table td.amount{text-align:right}.match-table th:nth-child(1){width:8%}.match-table th:nth-child(2){width:9%}.match-table th:nth-child(3){width:8%}.match-table th:nth-child(4){width:11%}.match-table th:nth-child(5){width:10%}.match-table th:nth-child(6){width:13%}.match-table th:nth-child(7){width:9%}.match-table th:nth-child(8){width:9%}.match-table th:nth-child(9){width:14%}.match-table th:nth-child(10){width:9%}.match-table td{vertical-align:top}.match-table .table-owners{justify-content:flex-start}.match-table td.amount .table-owners{justify-content:flex-start;text-align:left}.match-table .actions{white-space:nowrap}.match-table .notes-cell{overflow-wrap:anywhere}.inline-match-editor{margin:10px 0 0!important;border:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.06)}.adjustment-link-back{font-size:11px;color:#1769aa;font-weight:700;margin-top:4px;line-height:1.25}.inline-match-editor .section-head{position:sticky;top:0;z-index:2;background:#fff}.inline-match-editor .form-grid{padding:16px}.player-table{min-width:520px}
 .badge{padding:4px 8px;border-radius:20px;background:#e9f6f0;color:#16734e;font-size:12px}
 footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 @media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}.form-grid{grid-template-columns:1fr 1fr}.hero h1{font-size:23px}}
@@ -1139,10 +1139,41 @@ function setMatchNotes(x){
   const el=document.getElementById('mNotes');
   if(el)el.value=getMatchNotes(x);
 }
+function incomingAdjustmentLabel(matchId){
+  const links=(data||[]).filter(m=>m.adjustmentAgainstMatchId===matchId && Number(m.adjustmentAmount||0)>0);
+  if(!links.length)return '';
+  return links.map(m=>{
+    const date=m.date?new Date(m.date+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short'}):'';
+    return '↔ '+date+' · '+(m.opponent||'')+' · '+(m.ground||'');
+  }).join('<br>');
+}
+function moveMatchFormInline(matchId){
+  const form=document.getElementById('matchFormSection');
+  const row=document.querySelector('tr[data-match-id="'+matchId+'"]');
+  if(!form||!row)return;
+  if(window._matchFormPlaceholder)window._matchFormPlaceholder.remove();
+  const placeholder=document.createElement('span');
+  placeholder.id='matchFormPlaceholder';
+  form.parentNode.insertBefore(placeholder,form);
+  window._matchFormPlaceholder=placeholder;
+  const editorRow=document.createElement('tr');
+  editorRow.id='inlineMatchEditorRow';
+  const cell=document.createElement('td');
+  cell.colSpan=10;
+  editorRow.appendChild(cell);
+  row.parentNode.insertBefore(editorRow,row.nextSibling);
+  cell.appendChild(form);
+  form.classList.remove('hidden');
+  form.classList.add('inline-match-editor');
+  editorRow.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
 function openMatchForm(id=null){
+  if(editingId && editingId!==id)closeMatchForm();
   refreshGroundDropdown();
   editingId=id;
-  document.getElementById('matchFormSection').classList.remove('hidden');
+  const form=document.getElementById('matchFormSection');
+  form.classList.remove('hidden');
+  form.classList.remove('inline-match-editor');
   document.getElementById('formTitle').textContent=id?'Edit Match':'Add Match';
   const x=id&&data.find(a=>a.id===id);
   document.getElementById('mDate').value=x?.date||new Date().toISOString().slice(0,10);
@@ -1159,15 +1190,26 @@ function openMatchForm(id=null){
   setOwnerPicker('adjustment',x?.adjustmentOwner||'');
   setOwnerPicker('players',x?.playersOwner||'');
   setMatchNotes(x);
-  document.getElementById('mNeeraj').value=x?.neerajAmount||0;
-  document.getElementById('mNeerajReceived').checked=!!x?.neerajReceived;
-  document.getElementById('mNeerajComment').value=x?.neerajComment||'';
-  document.getElementById('mSuyog').value=x?.suyogAmount||0;
-  document.getElementById('mSuyogReceived').checked=!!x?.suyogReceived;
-  document.getElementById('mSuyogComment').value=x?.suyogComment||'';
-  window.scrollTo({top:document.getElementById('matchFormSection').offsetTop-10,behavior:'smooth'});
+
+  if(id){
+    moveMatchFormInline(id);
+  }else{
+    window.scrollTo({top:document.getElementById('matchFormSection').offsetTop-10,behavior:'smooth'});
+  }
 }
-function closeMatchForm(){document.getElementById('matchFormSection').classList.add('hidden');editingId=null;}
+function closeMatchForm(){
+  const form=document.getElementById('matchFormSection');
+  const placeholder=window._matchFormPlaceholder;
+  if(placeholder && placeholder.parentNode){
+    placeholder.parentNode.insertBefore(form,placeholder.nextSibling);
+    placeholder.remove();
+  }
+  document.getElementById('inlineMatchEditorRow')?.remove();
+  form.classList.add('hidden');
+  form.classList.remove('inline-match-editor');
+  window._matchFormPlaceholder=null;
+  editingId=null;
+}
 function saveMatch(){
   const date=mDate.value;
   let ground=mGround.value.trim();
@@ -1394,13 +1436,15 @@ function render(){
         '<button class="primary" onclick="saveMatchPlayer(\''+x.id+'\')">Save</button>'+
         '<button onclick="cancelAddPlayer(\''+x.id+'\')">Cancel</button></div></details></td></tr>';
 
-      return '<tr class="'+((!x.opponent || !String(x.opponent).trim())?'match-not-scheduled-row':'')+'">'+
+      return '<tr data-match-id="'+esc(x.id)+'" class="'+((!x.opponent || !String(x.opponent).trim())?'match-not-scheduled-row':'')+'">'+
         '<td><div>'+dateText+'</div><div class="date-day">'+dayText+'</div></td>'+
         '<td>'+esc(x.ground)+'</td>'+
         '<td class="amount">'+money(x.groundAmount)+'</td>'+
         '<td>'+esc(x.opponent)+'</td>'+
         '<td class="amount"><div>'+money(x.opponentAmount||0)+'</div><div class="table-owners">'+ownerChecks('opponentOwner',x.opponentReceivedBy)+'</div></td>'+
-        '<td><div><strong>'+money(x.adjustmentAmount||0)+'</strong></div>'+adjustmentLink+'<div class="table-owners">'+ownerChecks('adjustmentOwner')+'</div></td>'+
+        '<td><div><strong>'+money(x.adjustmentAmount||0)+'</strong></div>'+adjustmentLink+
+        (incomingAdjustmentLabel(x.id)?'<div class="adjustment-link-back">'+esc(incomingAdjustmentLabel(x.id)).replace(/\n/g,'<br>')+'</div>':'')+
+        '<div class="table-owners">'+ownerChecks('adjustmentOwner')+'</div></td>'+
         '<td class="amount"><div>'+money(other)+'</div><div class="table-owners">'+ownerChecks('playersOwner')+'</div></td>'+
         '<td class="amount">'+money(total)+'</td>'+
         '<td class="notes-cell">'+(notes?esc(notes).replace(/\n/g,'<br>'):'<span class="muted">—</span>')+'</td>'+
