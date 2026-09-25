@@ -2427,25 +2427,23 @@ let carryForwardAmount=Number(financeState.carryForwardAmount||0);
 let carryForwardAdmin=false;
 
 async function refreshCarryForwardAdminStatus(){
-  // The Configuration layer is the source of truth for the signed-in role.
-  // Load the current user's profile first; do not depend on a stale local flag.
+  // Use the exact same Administrator profile displayed on Configuration.
   carryForwardAdmin=false;
   try{
-    if(typeof configIsAdmin==='function' && configIsAdmin()){
-      carryForwardAdmin=true;
-      return true;
+    if(cloudUser && typeof loadConfiguration==='function'){
+      await loadConfiguration();
     }
-    if(typeof loadConfigurationAccess==='function' && cloudUser){
-      await loadConfigurationAccess();
-      if(typeof configIsAdmin==='function' && configIsAdmin()){
-        carryForwardAdmin=true;
-        return true;
-      }
-    }
+    const profile=typeof configCurrentProfile==='function'
+      ? configCurrentProfile()
+      : (Array.isArray(configurationUsers)
+          ? configurationUsers.find(u=>u.user_id===cloudUser?.id)
+          : null);
+    carryForwardAdmin=profile?.role==='admin' && profile?.active===true;
   }catch(err){
     console.error('Carry-forward admin check failed:',err);
+    carryForwardAdmin=false;
   }
-  return false;
+  return carryForwardAdmin;
 }
 
 function canEditCarryForward(){
@@ -3005,8 +3003,7 @@ ensureFinanceFields();wrapLegacyFunctions();
   };
 
   window.showAccounts=async function(){
-    // Accounts is a standalone page. Hide every other application section first.
-    document.querySelectorAll('.section').forEach(section=>section.classList.add('hidden'));
+    // Open Accounts exclusively without changing the normal Matches rendering.
     ['summarySection','playerContributionSummarySection','paymentsSection','manualPaymentsSection','contributionsSection','matchFormSection','weeks','configurationSection'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
     document.querySelector('.cards')?.classList.add('hidden');
 
@@ -3014,15 +3011,9 @@ ensureFinanceFields();wrapLegacyFunctions();
     if(!section)return;
     section.classList.remove('hidden');
 
-    // Configuration data is loaded only to determine the signed-in user's role.
-    if(cloudUser && typeof loadConfiguration==='function'){
-      try{ await loadConfiguration(); }catch(err){ console.error('Accounts configuration load failed:',err); }
-    }
     await refreshCarryForwardAdminStatus();
     renderAccountsDashboard();
     renderCarryForwardEditor(false);
-
-    // Final visibility guard: Configuration must never remain visible under Accounts.
     document.getElementById('configurationSection')?.classList.add('hidden');
     window.scrollTo({top:0,behavior:'smooth'});
   };
@@ -3291,12 +3282,6 @@ async function showConfiguration(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
-const originalShowTrackerForConfig=window.showTracker;
-window.showTracker=function(){
-  document.querySelectorAll('.section').forEach(section=>section.classList.add('hidden'));
-  document.getElementById('configurationSection')?.classList.add('hidden');
-  document.getElementById('accountsSection')?.classList.add('hidden');
-  if(typeof originalShowTrackerForConfig==='function')originalShowTrackerForConfig();
-};
+
 </script></body>
 </html>
