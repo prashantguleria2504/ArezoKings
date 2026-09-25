@@ -155,7 +155,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .manual-adjustments-table .actions{white-space:nowrap}
 .manual-adjustments-table .danger{color:#c0392b}
 .finance-section-title{padding:14px 16px;border-bottom:1px solid var(--line);font-weight:800}
-.accounts-carry-forward-mini{margin-top:8px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:#eef8f0;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:#176b3a}.accounts-carry-forward-mini strong{font-size:12px}.accounts-carry-forward-edit{display:flex;align-items:center;gap:5px}.accounts-carry-forward-edit input{width:95px;padding:4px 6px;border:1px solid var(--line);border-radius:5px;font:inherit;background:#fff}.accounts-carry-forward-edit input:disabled{background:#f1f3f1;color:#687386}.accounts-carry-forward-edit button{padding:4px 7px;font-size:10px}.accounts-carry-forward-readonly{font-size:10px;color:#687386}.accounts-month-selector{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line)}
+.accounts-carry-forward-mini{margin-top:8px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:#eef8f0;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:#176b3a}.accounts-carry-forward-mini strong{font-size:12px}.accounts-carry-forward-edit{display:flex;align-items:center;gap:5px}.accounts-carry-forward-edit input{width:120px;padding:6px 8px;border:1px solid #9cc8aa;border-radius:6px;font:inherit;background:#fff}.accounts-carry-forward-edit input:focus{outline:2px solid #b9dfc4;border-color:#176b3a}.accounts-carry-forward-edit input:disabled{background:#f1f3f1;color:#687386}.accounts-carry-forward-edit button{padding:4px 7px;font-size:10px}.accounts-carry-forward-readonly{font-size:10px;color:#687386}.accounts-month-selector{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line)}
 .accounts-month-selector select{min-width:220px;font:inherit;border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff}
 .accounts-month-selector button{padding:9px 16px}
 .accounts-month-empty{padding-top:12px}
@@ -2433,9 +2433,13 @@ function renderCarryForwardEditor(){
   if(!valueEl||!editor)return;
   valueEl.textContent=cash(carryForwardAmount);
   const admin=canEditCarryForward();
-  editor.innerHTML=admin
-    ? '<input id="accountsCarryForwardInput" type="number" min="0" step="1" value="'+(carryForwardAmount||0)+'" aria-label="Carry forwarded amount"><button class="primary" type="button" onclick="saveCarryForwardAmount()">Save</button>'
-    : '<span class="accounts-carry-forward-readonly">Admin only</span>';
+  // Always render the field so its state is obvious. Only administrators get
+  // an enabled input and Save button; regular users get a disabled field.
+  editor.innerHTML=
+    '<input id="accountsCarryForwardInput" type="number" min="0" step="1" value="'+(carryForwardAmount||0)+'" aria-label="Carry forwarded amount"'+(admin?'':' disabled')+'>'+
+    (admin
+      ? '<button class="primary" type="button" onclick="saveCarryForwardAmount()">Save</button>'
+      : '<span class="accounts-carry-forward-readonly">Admin only</span>');
 }
 window.saveCarryForwardAmount=function(){
   if(!canEditCarryForward()){
@@ -2968,12 +2972,11 @@ ensureFinanceFields();wrapLegacyFunctions();
     document.querySelector('.cards')?.classList.add('hidden');
     document.getElementById('accountsSection')?.classList.remove('hidden');
 
-    // Load the signed-in user's current role before rendering the carry-forward editor.
-    // This ensures only an Administrator gets the editable field.
-    if(typeof loadConfigurationAccess==='function' && cloudUser){
-      await loadConfigurationAccess();
+    if(cloudUser && typeof loadConfigurationAccess==='function'){
+      try{ await loadConfigurationAccess(); }catch(err){ console.error('Accounts role load failed:',err); }
     }
     renderAccountsDashboard();
+    renderCarryForwardEditor();
     window.scrollTo({top:0,behavior:'smooth'});
   };
 
