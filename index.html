@@ -1474,7 +1474,7 @@ function render(){
         '<td><div><strong>'+money(x.adjustmentAmount||0)+'</strong></div>'+adjustmentLink+
         (incomingAdjustmentLabel(x.id)?'<div class="adjustment-link-back">'+esc(incomingAdjustmentLabel(x.id)).replace(/\n/g,'<br>')+'</div>':'')+
         '<div class="table-owners">'+ownerChecks('adjustmentOwner')+'</div></td>'+
-        '<td class="amount"><div>'+money(other)+'</div><div class="table-owners">'+((x.players||[]).length ? playerOwnerChecks(x) : '')+'</div></td>'+
+        '<td class="amount"><div>'+money(other)+'</div><div class="table-owners">'+playerOwnerChecks(x)+'</div></td>'+
         '<td class="amount">'+money(total)+'</td>'+
         '<td class="notes-cell">'+(notes?esc(notes).replace(/\n/g,'<br>'):'<span class="muted">—</span>')+'</td>'+
         '<td class="actions"><button onclick="openMatchForm(\''+x.id+'\')">Edit</button><button class="danger" onclick="deleteMatch(\''+x.id+'\')">Delete</button></td>'+
