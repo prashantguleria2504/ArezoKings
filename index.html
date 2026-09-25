@@ -2725,7 +2725,7 @@ function closeFinanceModal(){document.getElementById('financeModalHost').innerHT
 function syncFinanceCloud(){
   if(cloudUser&&typeof saveCloudState==='function')saveCloudState().catch(err=>console.error('Finance cloud sync failed',err));
 }
-function showAccounts(){
+async function showAccounts(){
   ['summarySection','playerContributionSummarySection','paymentsSection','contributionsSection','matchFormSection','weeks'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
   document.querySelector('.cards')?.classList.add('hidden');
   const section=document.getElementById('accountsSection');
@@ -2962,11 +2962,17 @@ ensureFinanceFields();wrapLegacyFunctions();
     renderAccountsDashboard(selector.value);
   };
 
-  window.showAccounts=function(){
+  window.showAccounts=async function(){
     document.getElementById('manualPaymentsSection')?.classList.add('hidden');
     ['summarySection','playerContributionSummarySection','paymentsSection','contributionsSection','matchFormSection','weeks'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
     document.querySelector('.cards')?.classList.add('hidden');
     document.getElementById('accountsSection')?.classList.remove('hidden');
+
+    // Load the signed-in user's current role before rendering the carry-forward editor.
+    // This ensures only an Administrator gets the editable field.
+    if(typeof loadConfigurationAccess==='function' && cloudUser){
+      await loadConfigurationAccess();
+    }
     renderAccountsDashboard();
     window.scrollTo({top:0,behavior:'smooth'});
   };
