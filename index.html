@@ -2050,63 +2050,10 @@ const oldRender=window.render;
 window.render=function(){oldRender();ensureFinanceFields();};
 document.addEventListener('change',e=>{if(e.target?.id==='accountsMonth')renderAccounts();});
 window.renderAccounts=function(){
-  const sel=document.getElementById('accountsMonth');
-  const current=(sel&&sel.value)||(document.getElementById('monthFilter')?.value)||new Date().toISOString().slice(0,7);
-  const matches=Array.isArray(data)?data.filter(m=>monthKey(m.date||'')===current):[];
-  const pays=Array.isArray(groundPayments)?groundPayments.filter(p=>(p.month||monthKey(p.date||''))===current):[];
-  const contribs=Array.isArray(contributions)?contributions:[];
-  const adjs=Array.isArray(adjustments)?adjustments.filter(a=>(a.applyMonth||'')===current):[];
-  const groundBooking=matches.reduce((s,m)=>s+Number(m.groundAmount||0),0);
-  const groundPaid=pays.reduce((s,p)=>s+Number(p.amount||0),0);
-  const opponent=matches.reduce((s,m)=>s+Number(m.opponentAmount||0),0);
-  const players=matches.reduce((s,m)=>s+(m.players||[]).reduce((a,p)=>a+Number(p.amount||0),0),0);
-  const regular=contribs.reduce((s,p)=>s+(p.recentEntries||[]).filter(e=>(e.date||'').slice(0,7)===current).reduce((a,e)=>a+Number(e.amount||0),0),0);
-  const matchAdj=matches.reduce((s,m)=>s+Number(m.adjustmentAmount||0),0);
-  const manualAdj=adjs.reduce((s,a)=>s+Number(a.amount||0),0);
-  const totalAdj=matchAdj+manualAdj;
-
-  const summary=document.getElementById('financeMonthSummary');
-  if(summary)summary.innerHTML=[
-    ['Ground booking amount',groundBooking,'From Matches'],
-    ['Ground paid',groundPaid,'From Payments'],
-    ['Opponent amount',opponent,'From opponent payments'],
-    ['Players amount',players,'From playing players'],
-    ['Regular contributions',regular,'From Contributions'],
-    ['Total adjustments',totalAdj,'Match + manual adjustments']
-  ].map(x=>'<div class="finance-summary-item"><div class="label">'+esc(x[0])+'</div><div class="value">'+money(x[1])+'</div><div class="hint">'+esc(x[2])+'</div></div>').join('');
-
-  const people=['Neeraj','Suyog','Prashant'];
-  const ownerRows=people.map(person=>{
-    const opp=matches.filter(m=>(m.opponentOwner||m.opponentReceivedBy||'')===person).reduce((s,m)=>s+Number(m.opponentAmount||0),0);
-    const play=matches.filter(m=>(m.playersOwner||'')===person).reduce((s,m)=>s+(m.players||[]).reduce((a,p)=>a+Number(p.amount||0),0),0);
-    const cont=contribs.reduce((s,p)=>s+(p.recentEntries||[]).filter(e=>(e.date||'').slice(0,7)===current&&(e.receivedBy||'')===person).reduce((a,e)=>a+Number(e.amount||0),0);
-    const gp=pays.filter(p=>(p.paidBy||'')===person).reduce((s,p)=>s+Number(p.amount||0),0);
-    const adj=matches.filter(m=>(m.adjustmentOwner||'')===person).reduce((s,m)=>s+Number(m.adjustmentAmount||0),0)+adjs.filter(a=>(a.paidBy||'')===person).reduce((s,a)=>s+Number(a.amount||0),0);
-    const net=opp+play+cont-gp-adj;
-    return '<tr><td><strong>'+person+'</strong></td><td class="amount">'+money(opp)+'</td><td class="amount">'+money(play)+'</td><td class="amount">'+money(cont)+'</td><td class="amount">'+money(gp)+'</td><td class="amount">'+money(adj)+'</td><td class="amount"><strong>'+money(net)+'</strong></td></tr>';
-  }).join('');
-  const owner=document.getElementById('accountOwnerRows');
-  if(owner)owner.innerHTML=ownerRows;
-
-  const ledger=[];
-  matches.forEach(m=>{
-    if(Number(m.opponentAmount||0)>0)ledger.push([m.date,'Opponent','vs '+(m.opponent||''),m.opponentOwner||m.opponentReceivedBy||'',Number(m.opponentAmount||0),0]);
-    const pt=(m.players||[]).reduce((s,p)=>s+Number(p.amount||0),0);
-    if(pt>0)ledger.push([m.date,'Players','Playing players · '+(m.ground||''),m.playersOwner||'',pt,0]);
-    if(Number(m.adjustmentAmount||0)>0)ledger.push([m.adjustmentDate||m.date,'Adjustment','Match adjustment · '+(m.opponent||''),m.adjustmentOwner||'',0,Number(m.adjustmentAmount||0)]);
-  });
-  pays.forEach(p=>ledger.push([p.date,'Ground payment','Ground · '+(p.ground||''),p.paidBy||'',0,Number(p.amount||0)]));
-  const lr=document.getElementById('financeLedgerRows');
-  if(lr)lr.innerHTML=ledger.sort((a,b)=>String(b[0]).localeCompare(String(a[0]))).map(x=>'<tr><td>'+fmtFinanceDate(x[0])+'</td><td>'+esc(x[1])+'</td><td>'+esc(x[2])+'</td><td>'+esc(x[3]||'Unassigned')+'</td><td class="amount">'+(x[4]?money(x[4]):'—')+'</td><td class="amount">'+(x[5]?money(x[5]):'—')+'</td><td>'+esc(monthName(current))+'</td></tr>').join('')||'<tr><td colspan="7" class="empty">No transactions for this month.</td></tr>';
-
-  const ar=document.getElementById('adjustmentRows');
-  const adjRows=[
-    ...matches.filter(m=>Number(m.adjustmentAmount||0)>0).map(m=>'<tr><td>'+fmtFinanceDate(m.adjustmentDate||m.date)+'</td><td>'+esc(monthName(current))+'</td><td>Match adjustment · '+esc(m.opponent||'')+(m.adjustmentAgainstMatchId?'<div class="date-day">↔ '+esc(adjustmentMatchLabel(m.adjustmentAgainstMatchId))+'</div>':'')+'</td><td>'+esc(m.adjustmentOwner||'Unassigned')+'</td><td>'+esc(m.opponent||'')+'</td><td class="amount">'+money(m.adjustmentAmount)+'</td><td>Match</td></tr>'),
-    ...adjs.map(a=>'<tr><td>'+fmtFinanceDate(a.date)+'</td><td>'+esc(monthName(current))+'</td><td>'+esc(a.reason||'Adjustment')+'</td><td>'+esc(a.paidBy||'Unassigned')+'</td><td>'+esc(a.payee||'')+'</td><td class="amount">'+money(a.amount)+'</td><td>Manual</td></tr>')
-  ];
-  if(ar)ar.innerHTML=adjRows.join('')||'<tr><td colspan="7" class="empty">No adjustments for this month.</td></tr>';
+  if(typeof window.renderAccountsDashboard==='function'){
+    window.renderAccountsDashboard();
+  }
 };
-
 window.showAccounts=function(){
   ['summarySection','playerContributionSummarySection','paymentsSection','contributionsSection','matchFormSection','weeks'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
   document.querySelector('.cards')?.classList.add('hidden');
