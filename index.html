@@ -2647,6 +2647,15 @@ ensureFinanceFields();wrapLegacyFunctions();
   function safe(v){return typeof esc==='function'?esc(v==null?'':String(v)):String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
   function cash(v){return typeof money==='function'?money(num(v)):'₹'+num(v).toLocaleString('en-IN');}
 
+  // Only genuine team-expense manual payments belong in Accounts & Settlement > Amount Paid.
+  // Contribution payments, and payments explicitly added to the payer's Recent Contribution,
+  // are treated as contribution money rather than team expenses.
+  function isAccountExpenseManualPayment(payment){
+    if(!payment)return false;
+    const category=String(payment.category||'').trim().toLowerCase();
+    return category!=='contribution' && !payment.addToContribution;
+  }
+
   function calculate(month){
     const matches=Array.isArray(data)?data.filter(m=>monthOf(m.date)===month):[];
     const payments=Array.isArray(groundPayments)?groundPayments.filter(p=>(p.month||monthOf(p.date))===month):[];
@@ -2656,7 +2665,7 @@ ensureFinanceFields();wrapLegacyFunctions();
 
     const groundBooking=matches.reduce((s,m)=>s+num(m.groundAmount),0);
     const groundPaid=payments.reduce((s,p)=>s+num(p.amount),0);
-    const otherPaid=otherPayments.reduce((s,p)=>s+getPaymentRemaining(p),0);
+    const otherPaid=otherPayments.filter(isAccountExpenseManualPayment).reduce((s,p)=>s+getPaymentRemaining(p),0);
     const totalPaid=groundPaid+otherPaid;
     const opponent=matches.reduce((s,m)=>s+num(m.opponentAmount),0);
     const players=matches.reduce((s,m)=>s+(Array.isArray(m.players)?m.players:[]).reduce((a,p)=>a+num(p.amount),0),0);
@@ -2676,7 +2685,9 @@ ensureFinanceFields();wrapLegacyFunctions();
         .filter(e=>monthOf(e.date)===month&&(e.receivedBy||'')===person)
         .reduce((a,e)=>a+num(e.amount),0),0);
       const gp=payments.filter(p=>(p.paidBy||'')===person).reduce((s,p)=>s+num(p.amount),0);
-      const otherPaidByPerson=otherPayments.filter(p=>(p.paidBy||'')===person).reduce((s,p)=>s+num(p.amount),0);
+      const otherPaidByPerson=otherPayments
+        .filter(p=>isAccountExpenseManualPayment(p)&&(p.paidBy||'')===person)
+        .reduce((s,p)=>s+getPaymentRemaining(p),0);
       const adj=matches.filter(m=>(m.adjustmentOwner||'')===person).reduce((s,m)=>s+num(m.adjustmentAmount),0)
         +manual.filter(a=>(a.deductFrom||a.paidBy||'')===person).reduce((s,a)=>s+num(a.amount),0);
       const settlementRows=Array.isArray(settlements)?settlements.filter(x=>(x.month||monthOf(x.date))===month&&(x.person||'')===person).reduce((s,x)=>s+num(x.amount),0):0;
