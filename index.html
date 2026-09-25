@@ -155,7 +155,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .manual-adjustments-table .actions{white-space:nowrap}
 .manual-adjustments-table .danger{color:#c0392b}
 .finance-section-title{padding:14px 16px;border-bottom:1px solid var(--line);font-weight:800}
-.accounts-carry-forward-card{margin:16px 16px 0;padding:14px 16px;border:1px solid var(--line);border-left:4px solid #176b3a;border-radius:10px;background:#f8fbf8;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}.accounts-carry-forward-label{font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.3px}.accounts-carry-forward-value{font-size:24px;font-weight:800;color:#176b3a;margin-top:4px}.accounts-carry-forward-editor{display:flex;align-items:end;gap:8px;flex-wrap:wrap}.accounts-carry-forward-editor label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px}.accounts-carry-forward-editor input{width:170px;font:inherit;border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:#fff}.accounts-carry-forward-editor input:disabled{background:#f1f3f1;color:#687386;cursor:not-allowed}.accounts-carry-forward-note{font-size:11px;color:#687386;margin-top:4px}.accounts-carry-forward-admin{font-size:11px;color:#176b3a;font-weight:700}.accounts-carry-forward-user{font-size:11px;color:#687386;font-weight:600}@media(max-width:520px){.accounts-carry-forward-editor input{width:140px}}.accounts-month-selector{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line)}
+.accounts-month-selector{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line)}
 .accounts-month-selector select{min-width:220px;font:inherit;border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff}
 .accounts-month-selector button{padding:9px 16px}
 .accounts-month-empty{padding-top:12px}
@@ -470,22 +470,6 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
   <div class="finance-toolbar">
     <button class="secondary" onclick="openAdjustmentForm()">＋ Add Manual Adjustment</button>
     <button class="secondary" onclick="openSettlementForm()">↔ Record Settlement</button>
-  </div>
-
-  <div class="accounts-carry-forward-card" id="accountsCarryForward">
-    <div>
-      <div class="accounts-carry-forward-label">Amount Carry Forwarded</div>
-      <div class="accounts-carry-forward-value" id="accountsCarryForwardDisplay">₹0</div>
-      <div class="accounts-carry-forward-note" id="accountsCarryForwardNote">Opening amount carried forward for the selected month.</div>
-    </div>
-    <div class="accounts-carry-forward-editor">
-      <div>
-        <label for="accountsCarryForwardInput">Enter amount</label>
-        <input id="accountsCarryForwardInput" type="number" min="0" step="1" placeholder="0">
-        <div class="accounts-carry-forward-admin" id="accountsCarryForwardAccess"></div>
-      </div>
-      <button class="primary" id="accountsCarryForwardSave" type="button" onclick="saveCarryForwardAmount()">Save</button>
-    </div>
   </div>
 
   <div id="accountsOverall"></div>
@@ -2179,7 +2163,7 @@ function buildBackupPayload(){
     contributions:Array.isArray(contributions)?contributions:[],
     groundPayments:Array.isArray(groundPayments)?groundPayments:[],
     groundNames:getGrounds(),
-    finance:{version:2,adjustments:Array.isArray(adjustments)?adjustments:[],settlements:Array.isArray(settlements)?settlements:[],carryForwardByMonth:(carryForwardByMonth&&typeof carryForwardByMonth==='object')?carryForwardByMonth:{}}
+    finance:{version:1,adjustments:Array.isArray(adjustments)?adjustments:[],settlements:Array.isArray(settlements)?settlements:[]}
   };
 }
 function closeBackupModal(){
@@ -2283,8 +2267,6 @@ async function restoreData(e){
     if(restoredFinance){
       adjustments=Array.isArray(restoredFinance.adjustments)?restoredFinance.adjustments:[];
       settlements=Array.isArray(restoredFinance.settlements)?restoredFinance.settlements:[];
-      carryForwardByMonth=(restoredFinance.carryForwardByMonth&&typeof restoredFinance.carryForwardByMonth==='object'&&!Array.isArray(restoredFinance.carryForwardByMonth))
-        ? restoredFinance.carryForwardByMonth : {};
       saveFinanceLocal();
     }
 
@@ -2434,57 +2416,11 @@ const FINANCE_KEY='arezoKingsFinanceV1';
 let financeState=JSON.parse(localStorage.getItem(FINANCE_KEY)||'{}');
 let adjustments=Array.isArray(financeState.adjustments)?financeState.adjustments:[];
 let settlements=Array.isArray(financeState.settlements)?financeState.settlements:[];
-let carryForwardByMonth=(financeState.carryForwardByMonth&&typeof financeState.carryForwardByMonth==='object'&&!Array.isArray(financeState.carryForwardByMonth))
-  ? financeState.carryForwardByMonth : {};
 const ACCOUNT_PEOPLE=['Neeraj','Suyog','Prashant'];
 
 function saveFinanceLocal(){
-  financeState={version:2,adjustments,settlements,carryForwardByMonth};
+  financeState={version:1,adjustments,settlements};
   localStorage.setItem(FINANCE_KEY,JSON.stringify(financeState));
-}
-function getCarryForwardAmount(month){
-  const value=Number(carryForwardByMonth?.[month]||0);
-  return Number.isFinite(value)&&value>0?value:0;
-}
-function canEditCarryForward(){
-  return typeof configIsAdmin==='function' && configIsAdmin();
-}
-function refreshCarryForwardEditor(month){
-  const display=document.getElementById('accountsCarryForwardDisplay');
-  const input=document.getElementById('accountsCarryForwardInput');
-  const saveBtn=document.getElementById('accountsCarryForwardSave');
-  const access=document.getElementById('accountsCarryForwardAccess');
-  if(!display||!input)return;
-  const amount=getCarryForwardAmount(month||'');
-  display.textContent=cash(amount);
-  input.value=amount||'';
-  const admin=canEditCarryForward();
-  input.disabled=!admin;
-  if(saveBtn)saveBtn.disabled=!admin;
-  if(access)access.textContent=admin?'Administrator: you can edit this amount.':'Read only: only an Administrator can edit this amount.';
-  if(access)access.className=admin?'accounts-carry-forward-admin':'accounts-carry-forward-user';
-}
-window.saveCarryForwardAmount=function(){
-  if(!canEditCarryForward()){
-    alert('Administrator access is required to update the carry-forward amount.');
-    return;
-  }
-  const month=document.getElementById('accountsMonth')?.value||'';
-  if(!month){
-    alert('Please select a month first.');
-    return;
-  }
-  const input=document.getElementById('accountsCarryForwardInput');
-  const amount=Number(input?.value||0);
-  if(!Number.isFinite(amount)||amount<0){
-    alert('Please enter a valid non-negative amount.');
-    return;
-  }
-  carryForwardByMonth[month]=amount;
-  saveFinanceLocal();
-  refreshCarryForwardEditor(month);
-  if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();
-  syncFinanceCloud();
 };
 function financePersonOptions(selected=''){
   return '<option value="">Not assigned</option>'+ACCOUNT_PEOPLE.map(p=>'<option value="'+esc(p)+'" '+(p===selected?'selected':'')+'>'+esc(p)+'</option>').join('');
@@ -2772,7 +2708,6 @@ function showAccounts(){
     keys.add(current);
     (Array.isArray(adjustments)?adjustments:[]).forEach(x=>{const k=monthOf(x.date||'');if(k)keys.add(k);});
     (Array.isArray(settlements)?settlements:[]).forEach(x=>{if(x.month)keys.add(x.month);});
-    Object.keys(carryForwardByMonth||{}).forEach(x=>{if(x)keys.add(x);});
     sel.innerHTML=[...keys].sort().reverse().map(k=>'<option value="'+esc(k)+'">'+esc(monthName(k))+'</option>').join('');
     sel.value=keys.has(current)?current:[...keys][0];
   }
@@ -2789,7 +2724,7 @@ const oldShowTracker=window.showTracker;
 window.showTracker=function(){document.getElementById('accountsSection')?.classList.add('hidden');oldShowTracker();};
 const oldRender=window.render;
 window.render=function(){oldRender();ensureFinanceFields();};
-document.addEventListener('change',e=>{if(e.target?.id==='accountsMonth'){refreshCarryForwardEditor(e.target.value||'');renderAccounts();}});
+document.addEventListener('change',e=>{if(e.target?.id==='accountsMonth')renderAccounts();});
 window.renderAccounts=function(){
   if(typeof window.renderAccountsDashboard==='function'){
     window.renderAccountsDashboard();
@@ -2806,7 +2741,6 @@ window.showAccounts=function(){
   const current=(document.getElementById('monthFilter')?.value)||new Date().toISOString().slice(0,7);
   const keys=new Set((Array.isArray(data)?data:[]).map(m=>monthKey(m.date||'')).filter(Boolean));
   keys.add(current);
-  Object.keys(carryForwardByMonth||{}).forEach(k=>{if(k)keys.add(k);});
   if(sel){
     sel.innerHTML=[...keys].sort().reverse().map(k=>'<option value="'+esc(k)+'">'+esc(monthName(k))+'</option>').join('');
     sel.value=current;
@@ -2888,7 +2822,6 @@ ensureFinanceFields();wrapLegacyFunctions();
     (Array.isArray(contributions)?contributions:[]).forEach(p=>(p.recentEntries||[]).forEach(e=>{if(monthOf(e.date))set.add(monthOf(e.date));}));
     (Array.isArray(adjustments)?adjustments:[]).forEach(a=>{if(a.applyMonth)set.add(a.applyMonth);});
     (Array.isArray(settlements)?settlements:[]).forEach(a=>{const m=a.month||monthOf(a.date);if(m)set.add(m);});
-    Object.keys(carryForwardByMonth||{}).forEach(m=>{if(m)set.add(m);});
     return [...set].sort();
   }
 
@@ -2930,10 +2863,8 @@ ensureFinanceFields();wrapLegacyFunctions();
 
     const consolidatedTotalAmount=Object.values(people).reduce((sum,p)=>sum+p.net,0);
     const consolidatedAmountPaid=totals.groundPaid+totals.manualPaid;
-    const selectedCarryForward=getCarryForwardAmount(selector?.value||'');
     const consolidatedAvailableAmount=consolidatedTotalAmount-consolidatedAmountPaid;
 
-    refreshCarryForwardEditor(selector?.value||'');
     overall.innerHTML=
       '<div class="finance-summary-title">🏏 Consolidated Team Summary</div>'+
       '<div class="accounts-funds-grid">'+
