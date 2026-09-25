@@ -482,7 +482,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
     <button class="primary" type="button" onclick="showSelectedAccountsMonth()">Show</button>
   </div>
   <div id="accountsByMonth"></div>
-</section>>>
+</section>
 <section class="section hidden" id="configurationSection">
   <div class="section-head">
     <h2>⚙️ Configuration</h2>
@@ -1563,17 +1563,26 @@ function renderContributions(){
   }).join('');
 }
 refreshManualPaymentCategories();
+
+function hideAllPageSections(){
+  [
+    'summarySection',
+    'playerContributionSummarySection',
+    'paymentsSection',
+    'manualPaymentsSection',
+    'contributionsSection',
+    'matchFormSection',
+    'accountsSection',
+    'configurationSection',
+    'weeks'
+  ].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
+  document.querySelector('.cards')?.classList.add('hidden');
+}
+
 function showPayments(){
-  document.getElementById('accountsSection')?.classList.add('hidden');
-  document.getElementById('configurationSection')?.classList.add('hidden');
-  document.getElementById('summarySection').classList.add('hidden');
-  document.getElementById('playerContributionSummarySection').classList.add('hidden');
-  document.getElementById('contributionsSection').classList.add('hidden');
-  document.getElementById('matchFormSection').classList.add('hidden');
-  document.getElementById('weeks').classList.add('hidden');
-  document.getElementById('paymentsSection').classList.remove('hidden');
+  hideAllPageSections();
+  document.getElementById('paymentsSection')?.classList.remove('hidden');
   document.getElementById('manualPaymentsSection')?.classList.remove('hidden');
-  document.querySelector('.cards').classList.add('hidden');
   refreshPaymentGroundDropdown();
   populateManualPaymentPeople();
   syncAllManualPaymentContributions();
@@ -1582,41 +1591,27 @@ function showPayments(){
   renderManualPayments();
   window.scrollTo({top:0,behavior:'smooth'});
 }
+
 function showContributions(){
-    document.getElementById('manualPaymentsSection')?.classList.add('hidden');
-  document.getElementById('accountsSection')?.classList.add('hidden');
-  document.getElementById('paymentsSection').classList.add('hidden');
-  document.getElementById('summarySection').classList.add('hidden');
-  document.getElementById('playerContributionSummarySection').classList.add('hidden');
-  document.getElementById('weeks').classList.add('hidden');
-  document.getElementById('matchFormSection').classList.add('hidden');
-  document.getElementById('contributionsSection').classList.remove('hidden');
-  document.querySelector('.cards').classList.add('hidden');
+  hideAllPageSections();
+  document.getElementById('contributionsSection')?.classList.remove('hidden');
   renderContributions();
   window.scrollTo({top:0,behavior:'smooth'});
 }
+
 function showSummary(){
-    document.getElementById('manualPaymentsSection')?.classList.add('hidden');
-  document.getElementById('accountsSection')?.classList.add('hidden');
-  document.getElementById('paymentsSection').classList.add('hidden');
-  document.getElementById('contributionsSection').classList.add('hidden');
-  document.getElementById('playerContributionSummarySection').classList.remove('hidden');
-  document.querySelector('.cards').classList.remove('hidden');
-  document.getElementById('weeks').classList.add('hidden');
-  document.getElementById('summarySection').classList.remove('hidden');
-  document.getElementById('matchFormSection').classList.add('hidden');
+  hideAllPageSections();
+  // Player Contribution Summary is intentionally part of the Summary page.
+  document.getElementById('playerContributionSummarySection')?.classList.remove('hidden');
+  document.getElementById('summarySection')?.classList.remove('hidden');
+  document.querySelector('.cards')?.classList.remove('hidden');
   renderSummary();
 }
+
 function showTracker(){
-    document.getElementById('manualPaymentsSection')?.classList.add('hidden');
-  document.getElementById('accountsSection')?.classList.add('hidden');
-  document.getElementById('paymentsSection').classList.add('hidden');
-  document.getElementById('summarySection').classList.add('hidden');
-  document.getElementById('playerContributionSummarySection').classList.add('hidden');
-  document.getElementById('contributionsSection').classList.add('hidden');
-  document.getElementById('weeks').classList.remove('hidden');
-  document.getElementById('matchFormSection').classList.add('hidden');
-  document.querySelector('.cards').classList.remove('hidden');
+  hideAllPageSections();
+  document.getElementById('weeks')?.classList.remove('hidden');
+  document.querySelector('.cards')?.classList.remove('hidden');
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function renderSummary(){
@@ -1740,11 +1735,7 @@ function moveMatchFormInline(matchId){
   editorRow.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function openMatchForm(id=null){
-  document.getElementById('accountsSection')?.classList.add('hidden');
-  document.getElementById('paymentsSection')?.classList.add('hidden');
-  document.getElementById('summarySection')?.classList.add('hidden');
-  document.getElementById('playerContributionSummarySection')?.classList.add('hidden');
-  document.getElementById('contributionsSection')?.classList.add('hidden');
+  hideAllPageSections();
   document.getElementById('weeks')?.classList.remove('hidden');
   document.querySelector('.cards')?.classList.remove('hidden');
   if(editingId && editingId!==id)closeMatchForm();
