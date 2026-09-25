@@ -82,7 +82,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .finance-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--line)}
 .finance-toolbar select,.finance-toolbar input{font:inherit;border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff}
 .finance-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px}
-.accounts-intro{padding:12px 16px;background:#f7fafc;border-bottom:1px solid var(--line);font-size:13px}.finance-summary-title{font-size:16px;font-weight:800;padding:16px 16px 4px}.finance-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:12px 16px 18px}.finance-summary-item{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}.finance-summary-item .label{font-size:12px;color:var(--muted);font-weight:700}.finance-summary-item .value{font-size:21px;font-weight:800;margin-top:5px}.finance-summary-item .hint{font-size:11px;color:var(--muted);margin-top:4px}.accounts-help{padding:0 16px 10px;font-size:12px;color:var(--muted)}.owner-balance-table th,.owner-balance-table td{white-space:nowrap}.accountsSectionHidden{display:none!important}@media(max-width:900px){.finance-summary-grid{grid-template-columns:1fr 1fr}}.finance-card{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:14px}
+.finance-error{padding:16px;border:1px solid #f2caca;background:#fff5f5;color:#b42318;border-radius:10px;margin:12px 16px;font-weight:700}.accounts-intro{padding:12px 16px;background:#f7fafc;border-bottom:1px solid var(--line);font-size:13px}.finance-summary-title{font-size:16px;font-weight:800;padding:16px 16px 4px}.finance-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:12px 16px 18px}.finance-summary-item{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}.finance-summary-item .label{font-size:12px;color:var(--muted);font-weight:700}.finance-summary-item .value{font-size:21px;font-weight:800;margin-top:5px}.finance-summary-item .hint{font-size:11px;color:var(--muted);margin-top:4px}.accounts-help{padding:0 16px 10px;font-size:12px;color:var(--muted)}.owner-balance-table th,.owner-balance-table td{white-space:nowrap}.accountsSectionHidden{display:none!important}@media(max-width:900px){.finance-summary-grid{grid-template-columns:1fr 1fr}}.finance-card{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:14px}
 .finance-card .label{font-size:12px;color:var(--muted)}.finance-card .value{font-size:22px;font-weight:800;margin-top:5px}
 .finance-table{min-width:1050px}
 .finance-table .in{color:#16734e;font-weight:800}.finance-table .out{color:#c0392b;font-weight:800}
@@ -1939,11 +1939,7 @@ function renderAccounts(){
     .reduce((s,a)=>s+Number(a.amount||0),0);
   const totalAdjustments=matchAdjustments+manualAdjustments;
 
-  document.getElementById('finIn').textContent=money(opponentTotal+playerTotal+regularContributions);
-  document.getElementById('finOut').textContent=money(groundPaid);
-  document.getElementById('finAdj').textContent=money(totalAdjustments);
-  document.getElementById('finNet').textContent=money(opponentTotal+playerTotal+regularContributions-groundPaid-totalAdjustments);
-
+  // The summary cards are rendered directly below; no legacy finIn/finOut elements are required.
   const summary=document.getElementById('financeMonthSummary');
   if(summary){
     const items=[
@@ -2030,11 +2026,26 @@ function showAccounts(){
   ['summarySection','playerContributionSummarySection','paymentsSection','contributionsSection','matchFormSection','weeks'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
   document.querySelector('.cards')?.classList.add('hidden');
   const section=document.getElementById('accountsSection');
-  section?.classList.remove('hidden');
+  if(!section)return;
+  section.classList.remove('hidden');
+
   const sel=document.getElementById('accountsMonth');
-  const current=selectedMonth()||new Date().toISOString().slice(0,7);
-  if(sel){sel.innerHTML=financeMonthOptions(current);sel.value=current;}
-  renderAccounts();
+  const current=(document.getElementById('monthFilter')?.value)||new Date().toISOString().slice(0,7);
+  if(sel){
+    const keys=new Set((Array.isArray(data)?data:[]).map(x=>monthKey(x.date||'')).filter(Boolean));
+    keys.add(current);
+    (Array.isArray(adjustments)?adjustments:[]).forEach(x=>{if(x.applyMonth)keys.add(x.applyMonth);});
+    (Array.isArray(settlements)?settlements:[]).forEach(x=>{if(x.month)keys.add(x.month);});
+    sel.innerHTML=[...keys].sort().reverse().map(k=>'<option value="'+esc(k)+'">'+esc(monthName(k))+'</option>').join('');
+    sel.value=keys.has(current)?current:[...keys][0];
+  }
+  try{
+    renderAccounts();
+  }catch(err){
+    console.error('Accounts calculation error:',err);
+    const summary=document.getElementById('financeMonthSummary');
+    if(summary)summary.innerHTML='<div class="finance-error">Unable to calculate the Accounts summary. Please refresh the page and try again.</div>';
+  }
   window.scrollTo({top:0,behavior:'smooth'});
 }
 const oldShowTracker=window.showTracker;
