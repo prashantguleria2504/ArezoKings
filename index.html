@@ -1790,38 +1790,6 @@ function closeFinanceModal(){document.getElementById('financeModalHost').innerHT
 function syncFinanceCloud(){
   if(cloudUser&&typeof saveCloudState==='function')saveCloudState().catch(err=>console.error('Finance cloud sync failed',err));
 }
-const oldSaveCloudState=window.saveCloudState;
-window.saveCloudState=async function(){
-  if(!supabaseClient||!cloudUser)return;
-  const result=await supabaseClient.from('team_state').upsert({
-    id:true,matches:Array.isArray(data)?data:[],contributions:Array.isArray(contributions)?contributions:[],
-    ground_payments:Array.isArray(groundPayments)?groundPayments:[],ground_names:getGrounds(),
-    finance_adjustments:Array.isArray(adjustments)?adjustments:[],finance_settlements:Array.isArray(settlements)?settlements:[],
-    updated_at:new Date().toISOString()
-  },{onConflict:'id'});
-  if(result.error)throw result.error;
-};
-const oldLoadCloudState=window.loadCloudState;
-window.loadCloudState=async function(){
-  if(!supabaseClient||!cloudUser)return false;
-  const result=await supabaseClient.from('team_state').select('matches,contributions,ground_payments,ground_names,finance_adjustments,finance_settlements').eq('id',true).maybeSingle();
-  if(result.error)throw result.error;
-  const row=result.data;
-  if(row){
-    data=Array.isArray(row.matches)?row.matches:[];
-    contributions=Array.isArray(row.contributions)?row.contributions:[];
-    groundPayments=Array.isArray(row.ground_payments)?row.ground_payments:[];
-    adjustments=Array.isArray(row.finance_adjustments)?row.finance_adjustments:[];
-    settlements=Array.isArray(row.finance_settlements)?row.finance_settlements:[];
-    financeState={version:1,adjustments,settlements};
-    saveFinanceLocal();
-    if(Array.isArray(row.ground_names))saveGrounds(row.ground_names);
-    localStorage.setItem(KEY,JSON.stringify(data));localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));localStorage.setItem(PAYMENT_KEY,JSON.stringify(groundPayments));
-    return true;
-  }
-  return false;
-};
-
 function showAccounts(){
   ['summarySection','playerContributionSummarySection','paymentsSection','contributionsSection','matchFormSection','weeks'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
   document.querySelector('.cards')?.classList.add('hidden');
