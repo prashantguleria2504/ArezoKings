@@ -911,6 +911,7 @@ function saveManualPayment(){
   }
   localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
   clearManualPaymentForm();renderManualPayments();populateManualPaymentAdjustments();
+  if(typeof syncFinanceCloud==='function')syncFinanceCloud();
   if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();
 }
 function editManualPayment(id){
@@ -936,6 +937,7 @@ function deleteManualPayment(id){
   }
   localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
   renderManualPayments();populateManualPaymentAdjustments();
+  if(typeof syncFinanceCloud==='function')syncFinanceCloud();
   if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();
 }
 function clearManualPaymentForm(){
@@ -948,7 +950,7 @@ function renderManualPayments(){
   if(!manualPayments.length){body.innerHTML='<tr><td colspan="9" class="empty">No manual payments yet.</td></tr>';return;}
   body.innerHTML=[...manualPayments].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>{
     const adj=adjustments.find(a=>a.id===x.linkedAdjustmentId);
-    return '<tr class="manual-payment-row"><td>'+esc(x.category||'Other')+'</td><td>'+esc(x.description)+'</td><td class="amount">'+money(x.amount)+'</td><td>'+esc(x.date||'')+'</td><td>'+esc(x.paidBy||'')+'</td><td>'+(adj?'<strong>'+money(adj.amount)+'</strong> · '+esc(adj.deductFrom||adj.paidBy||''):'—')+'</td><td>'+esc(x.month||'')+'</td><td>'+esc(x.notes||'')+'</td><td class="actions"><button onclick="editManualPayment(\\''+x.id+'\\')">Edit</button><button class="danger" onclick="deleteManualPayment(\\''+x.id+'\\')">Delete</button></td></tr>';
+    return '<tr class="manual-payment-row"><td>'+esc(x.category||'Other')+'</td><td>'+esc(x.description)+'</td><td class="amount">'+money(x.amount)+'</td><td>'+esc(x.date||'')+'</td><td>'+esc(x.paidBy||'')+'</td><td>'+(adj?'<strong>'+money(adj.amount)+'</strong> · '+esc(adj.deductFrom||adj.paidBy||''):'—')+'</td><td>'+esc(x.month||'')+'</td><td>'+esc(x.notes||'')+'</td><td class="actions"><button onclick="editManualPayment(&quot;'+x.id+'&quot;)">Edit</button><button class="danger" onclick="deleteManualPayment(&quot;'+x.id+'&quot;)">Delete</button></td></tr>';
   }).join('');
 }
 const CONTRIBUTION_KEY='cricketMatchContributionsV1';
