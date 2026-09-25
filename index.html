@@ -16,7 +16,9 @@ button{cursor:pointer}.primary{background:var(--pitch)!important;color:#fff;bord
 .config-intro{padding:12px 16px;border-bottom:1px solid var(--line);background:#fbfdfb;color:#536257}
 .config-current-card{margin:14px 16px;padding:14px;border:1px solid #cfe2d5;border-left:4px solid var(--pitch);border-radius:9px;background:#f4faf5}
 .config-toolbar{display:flex;align-items:center;gap:12px;padding:0 16px 14px;flex-wrap:wrap}
-.config-note{font-size:12px;color:var(--muted)}
+.config-note{font-size:12px;color:var(--muted)}.config-carry-forward-card{margin:0 16px 14px;padding:14px 16px;border:1px solid #cfe2d5;border-left:4px solid var(--pitch);border-radius:9px;background:#f4faf5;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.config-carry-forward-card .label{font-size:13px;font-weight:800;color:#315a40}.config-carry-forward-card .hint{font-size:11px;color:var(--muted);margin-top:3px}
+.config-carry-forward-form{display:flex;align-items:center;gap:8px}.config-carry-forward-form input{width:150px;padding:9px 10px;border:1px solid #9cc8aa;border-radius:7px;font:inherit;background:#fff}.config-carry-forward-form input:focus{outline:2px solid #b9dfc4;border-color:#176b3a}.config-carry-forward-form button{padding:8px 12px}
 .config-table-wrap{overflow:visible}
 .config-users-table{width:100%;min-width:0;table-layout:fixed}
 .config-users-table th,.config-users-table td{text-align:center;vertical-align:middle}
@@ -492,6 +494,16 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
     <strong>User access & permissions</strong> — permissions are loaded from Supabase and saved directly to <code>app_users</code> and <code>app_permissions</code>.
   </div>
   <div class="config-current-card" id="configCurrentUser"></div>
+  <div class="config-carry-forward-card" id="configCarryForwardSection">
+    <div>
+      <div class="label">Carry Forwarded Amount</div>
+      <div class="hint">Administrator setting used in Accounts &amp; Settlement. Total Amount = Net Balance held by all team members + this amount.</div>
+    </div>
+    <div class="config-carry-forward-form">
+      <input id="configurationCarryForwardInput" type="number" min="0" step="1" placeholder="0" aria-label="Carry Forwarded Amount">
+      <button class="primary" type="button" onclick="saveCarryForwardAmount()">Save</button>
+    </div>
+  </div>
   <div class="config-toolbar">
     <button class="primary" id="configAddUserButton" type="button" onclick="addConfigurationUser()">＋ Add Existing Login</button>
     <button class="secondary" type="button" onclick="loadConfiguration()">↻ Refresh</button>
@@ -2453,35 +2465,21 @@ function canEditCarryForward(){
   return profile?.role==='admin' && profile?.active===true;
 }
 
-function renderCarryForwardEditor(editing=false){
-  const valueEl=document.getElementById('accountsCarryForwardValue');
-  const editor=document.getElementById('accountsCarryForwardEditor');
-  if(!valueEl||!editor)return;
-  valueEl.textContent=cash(carryForwardAmount);
-
-  const admin=canEditCarryForward();
-  if(!admin){
-    editor.innerHTML='<span class="accounts-carry-forward-readonly">Admin only</span>';
-    return;
-  }
-
-  // Administrator gets a pencil first. Clicking it unlocks the amount field.
-  editor.innerHTML=editing
-    ? '<input id="accountsCarryForwardInput" type="number" min="0" step="1" value="'+(carryForwardAmount||0)+'" aria-label="Carry forwarded amount">'+
-      '<button class="primary" type="button" onclick="saveCarryForwardAmount()">Save</button>'
-    : '<button class="carry-edit-pencil" type="button" title="Edit carry forwarded amount" aria-label="Edit carry forwarded amount" onclick="renderCarryForwardEditor(true)">✎</button>';
+function renderCarryForwardConfiguration(){
+  const section=document.getElementById('configCarryForwardSection');
+  const input=document.getElementById('configurationCarryForwardInput');
+  if(!section||!input)return;
+  section.style.display=configIsAdmin()?'flex':'none';
+  if(document.activeElement!==input)input.value=Number(carryForwardAmount||0);
 }
 
 window.saveCarryForwardAmount=async function(){
-  // Re-check the role from Supabase before allowing the update.
-  const admin=await refreshCarryForwardAdminStatus();
-  if(!admin){
-    alert('Administrator access is required to update the carry-forward amount.');
-    renderCarryForwardEditor();
+  if(!configIsAdmin()){
+    alert('Administrator access is required to update the Carry Forwarded Amount.');
     return;
   }
 
-  const input=document.getElementById('accountsCarryForwardInput');
+  const input=document.getElementById('configurationCarryForwardInput');
   const amount=Number(input?.value||0);
   if(!Number.isFinite(amount)||amount<0){
     alert('Please enter a valid non-negative amount.');
@@ -2490,9 +2488,11 @@ window.saveCarryForwardAmount=async function(){
 
   carryForwardAmount=amount;
   saveFinanceLocal();
-  renderCarryForwardEditor();
-  renderAccountsDashboard();
+  renderCarryForwardConfiguration();
+  if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();
+  configSetMessage('Carry Forwarded Amount saved.','success');
 };;
+
 function financePersonOptions(selected=''){
   return '<option value="">Not assigned</option>'+ACCOUNT_PEOPLE.map(p=>'<option value="'+esc(p)+'" '+(p===selected?'selected':'')+'>'+esc(p)+'</option>').join('');
 }
@@ -2940,7 +2940,7 @@ ensureFinanceFields();wrapLegacyFunctions();
     overall.innerHTML=
       '<div class="finance-summary-title">🏏 Consolidated Team Summary</div>'+
       '<div class="accounts-funds-grid">'+
-      '<div class="accounts-available-card accounts-total-card"><div style="width:100%"><div class="accounts-available-label">Total Amount</div><div class="accounts-available-value">'+cash(consolidatedTotalAmount)+'</div><div class="accounts-available-note">Net Balance held by all team members + carry forwarded amount</div><div class="accounts-carry-forward-mini"><span><strong>Carry Forwarded Amount</strong></span><span id="accountsCarryForwardValue">'+cash(carryForwardAmount)+'</span><span id="accountsCarryForwardEditor" class="accounts-carry-forward-edit"></span></div></div></div>'+
+      '<div class="accounts-available-card accounts-total-card"><div style="width:100%"><div class="accounts-available-label">Total Amount</div><div class="accounts-available-value">'+cash(consolidatedTotalAmount)+'</div><div class="accounts-available-note">Net Balance held by all team members + carry forwarded amount</div><div class="accounts-carry-forward-mini"><span><strong>Carry Forwarded Amount</strong></span><span>'+cash(carryForwardAmount)+'</span></div></div></div>'+
       '<div class="accounts-available-card accounts-paid-card"><div style="width:100%"><div class="accounts-available-label">Amount Paid</div><div class="accounts-paid-total">'+cash(consolidatedAmountPaid)+'</div><div class="accounts-paid-breakdown"><div class="payment-mini payment-mini-ground"><span>Ground Payments</span><strong>'+cash(totals.groundPaid)+'</strong></div><div class="payment-mini payment-mini-manual"><span>Manual Payments</span><strong>'+cash(totals.manualPaid)+'</strong></div></div><div class="accounts-available-note">Payments tab · Ground + manual payments</div></div></div>'+
       '<div class="accounts-available-card accounts-balance-card"><div><div class="accounts-available-label">Total Available Amount</div><div class="accounts-available-value">'+cash(consolidatedAvailableAmount)+'</div><div class="accounts-available-note">Total Amount − Amount Paid</div></div><span class="accounts-available-badge">Team Pool</span></div>'+
       '</div>'+
@@ -2965,8 +2965,6 @@ ensureFinanceFields();wrapLegacyFunctions();
         ? adjustments.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(a=>'<tr><td>'+safe(a.date||'')+'</td><td><strong>'+safe(a.id||'')+'</strong></td><td><strong>'+safe(a.deductFrom||a.paidBy||'')+'</strong></td><td class="amount"><strong>'+cash(a.amount)+'</strong></td><td>'+((getAdjustmentPaymentId(a)&&manualPayments.find(p=>p.id===getAdjustmentPaymentId(a))&&paymentIsFullySettled(manualPayments.find(p=>p.id===getAdjustmentPaymentId(a))))?'<span class="payment-paid-status">SETTLED</span>':(getAdjustmentPaymentId(a)?'<span class="payment-pending-status">PARTIAL SETTLED</span>':'<span class="payment-pending-status">OPEN</span>'))+'</td><td>'+safe(getAdjustmentPaymentId(a)||'—')+'</td><td>'+safe(a.payee||'')+'</td><td>'+safe(a.reason||'')+'</td><td class="actions"><button onclick="editAdjustment(\''+safe(a.id||'')+'\')">Edit</button><button class="danger" onclick="deleteAdjustment(\''+safe(a.id||'')+'\')">Delete</button></td></tr>').join('')
         : '<tr><td colspan="9" class="empty">No manual adjustments recorded.</td></tr>')+
       '</tbody></table></div>';
-
-    renderCarryForwardEditor();
 
     if(!showMonth){
       byMonth.innerHTML='<div class="accounts-help accounts-month-empty">Select a month above and click <strong>Show</strong> to view that month\'s financial details.</div>';
@@ -3011,9 +3009,7 @@ ensureFinanceFields();wrapLegacyFunctions();
     if(!section)return;
     section.classList.remove('hidden');
 
-    await refreshCarryForwardAdminStatus();
     renderAccountsDashboard();
-    renderCarryForwardEditor(false);
     document.getElementById('configurationSection')?.classList.add('hidden');
     window.scrollTo({top:0,behavior:'smooth'});
   };
@@ -3115,6 +3111,7 @@ function renderConfiguration(){
       ' &nbsp; <span class="config-role-user">No Configuration profile</span>';
     body.innerHTML='<tr><td colspan="10" class="empty">Your login is authenticated, but it has no active entry in <strong>app_users</strong>. Ask the administrator to add this existing login.</td></tr>';
     if(addBtn)addBtn.style.display='none';
+    renderCarryForwardConfiguration();
     return;
   }
 
@@ -3125,9 +3122,11 @@ function renderConfiguration(){
     (me.active?'Active':'Inactive')+'</span>';
 
   if(addBtn)addBtn.style.display=admin?'inline-block':'none';
+  renderCarryForwardConfiguration();
 
   if(!configurationUsers.length){
     body.innerHTML='<tr><td colspan="10" class="empty">No users are configured.</td></tr>';
+    renderCarryForwardConfiguration();
     return;
   }
 
