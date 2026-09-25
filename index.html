@@ -110,7 +110,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .accounts-month-selector select{min-width:220px;font:inherit;border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff}
 .accounts-month-selector button{padding:9px 16px}
 .accounts-month-empty{padding-top:12px}
-.finance-manual-payment-section{border-left:4px solid #7c5aa6}
+.ground-payment-row{background:#fffaf0;border-left:4px solid #d19a32}.ground-payment-row td:first-child{font-weight:700;color:#8a5a00}.manual-payment-row{background:#faf5ff;border-left:4px solid #7c5aa6}.manual-payment-row td:first-child{font-weight:700;color:#68418d}.accounts-paid-total{font-size:28px;font-weight:800;color:#6b4b00;margin:2px 0 8px}.accounts-paid-breakdown{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 8px}.payment-mini{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;font-size:11px;font-weight:700}.payment-mini-ground{background:#fff2cf;border:1px solid #ecd9ae;color:#8a5a00}.payment-mini-manual{background:#f2e8fb;border:1px solid #dfd0ef;color:#68418d}@media(max-width:520px){.accounts-paid-breakdown{grid-template-columns:1fr}.accounts-paid-total{font-size:25px}}.finance-manual-payment-section{border-left:4px solid #7c5aa6}
 .payment-note{font-size:12px;color:#7c5aa6;font-weight:700}
 .manual-payment-table{min-width:1150px}
 .manual-payment-row{background:#faf5ff}
@@ -854,7 +854,7 @@ function renderGroundPayments(){
     return;
   }
   const rows=[...groundPayments].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  body.innerHTML=rows.map(x=>`<tr>
+  body.innerHTML=rows.map(x=>`<tr class="ground-payment-row">
     <td>${esc(x.ground)}</td>
     <td>${x.month?new Date(x.month+'-01T00:00:00').toLocaleDateString('en-IN',{month:'long',year:'numeric'}):''}</td>
     <td class="amount">${money(x.amount)}</td>
@@ -2261,13 +2261,14 @@ ensureFinanceFields();wrapLegacyFunctions();
     if(!overall||!byMonth)return;
 
     const months=allMonths();
-    const totals={groundBooking:0,groundPaid:0,opponent:0,players:0,regular:0,adjustments:0};
+    const totals={groundBooking:0,groundPaid:0,manualPaid:0,opponent:0,players:0,regular:0,adjustments:0};
     const people={Neeraj:{received:0,gp:0,adj:0,settlements:0,net:0},Suyog:{received:0,gp:0,adj:0,settlements:0,net:0},Prashant:{received:0,gp:0,adj:0,settlements:0,net:0}};
     const results=months.map(m=>calculate(m));
 
     results.forEach(r=>{
       totals.groundBooking+=r.groundBooking;
-      totals.groundPaid+=r.totalPaid;
+      totals.groundPaid+=r.groundPaid;
+      totals.manualPaid+=r.otherPaid;
       totals.opponent+=r.opponent;
       totals.players+=r.players;
       totals.regular+=r.regular;
@@ -2292,7 +2293,7 @@ ensureFinanceFields();wrapLegacyFunctions();
       '<div class="finance-summary-title">🏏 Consolidated Team Summary</div>'+
       '<div class="accounts-funds-grid">'+
       '<div class="accounts-available-card accounts-total-card"><div><div class="accounts-available-label">Total Amount</div><div class="accounts-available-value">'+cash(totals.opponent+totals.players+totals.regular)+'</div><div class="accounts-available-note">Opponent fees + Player 11 collections + Contributions</div></div></div>'+
-      '<div class="accounts-available-card accounts-paid-card"><div><div class="accounts-available-label">Amount Paid</div><div class="accounts-available-value">'+cash(totals.groundPaid)+'</div><div class="accounts-available-note">Payments tab · Ground + manual payments</div></div></div>'+
+      '<div class="accounts-available-card accounts-paid-card"><div style="width:100%"><div class="accounts-available-label">Amount Paid</div><div class="accounts-paid-total">'+cash(totals.groundPaid+totals.manualPaid)+'</div><div class="accounts-paid-breakdown"><div class="payment-mini payment-mini-ground"><span>Ground Payments</span><strong>'+cash(totals.groundPaid)+'</strong></div><div class="payment-mini payment-mini-manual"><span>Manual Payments</span><strong>'+cash(totals.manualPaid)+'</strong></div></div><div class="accounts-available-note">Payments tab · Ground + manual payments</div></div></div>'+
       '<div class="accounts-available-card accounts-balance-card"><div><div class="accounts-available-label">Total Available Amount</div><div class="accounts-available-value">'+cash((totals.opponent+totals.players+totals.regular)-totals.groundPaid)+'</div><div class="accounts-available-note">Total Amount − Amount Paid</div></div><span class="accounts-available-badge">Team Pool</span></div>'+
       '</div>'+
       '<div class="finance-summary-grid accounts-source-grid">'+
