@@ -1280,6 +1280,11 @@ function deleteRecentContributionByIndex(playerIndex,entryIndex){
   entries.splice(index,1);
   player.recentEntries=entries;
   localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
+  // Contributions are shared through Supabase, so persist the deletion there too.
+  // Otherwise the 15-second cloud refresh can restore the deleted recent entry.
+  if(typeof cloudUser!=='undefined' && cloudUser && typeof saveCloudState==='function'){
+    saveCloudState().catch(err=>console.error('Contribution delete cloud save failed:',err));
+  }
   editingContributionId=null;
   editingRecentContributionId=null;
   clearContributionForm();
