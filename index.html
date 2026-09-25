@@ -331,11 +331,13 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
     <span class="payment-note">Use this for payments not related to ground bookings.</span>
   </div>
   <div class="contrib-form manual-payment-form">
+    <div><label>Category</label><select id="mpCategory"><option value="">Select category</option><option>Equipment</option><option>Snacks / Food</option><option>Transport</option><option>Ground-related</option><option>Other</option></select></div>
     <div><label>Payment Description</label><input id="mpDescription" placeholder="e.g. Equipment, snacks, transport"></div>
     <div><label>Amount</label><input id="mpAmount" type="number" min="0" step="1" placeholder="0"></div>
     <div><label>Date</label><input id="mpDate" type="date"></div>
-    <div><label>Paid By</label><select id="mpPaidBy"><option value="">Select person</option><option>Neeraj</option><option>Suyog</option><option>Prashant</option></select></div>
+    <div><label>Payment Made By</label><select id="mpPaidBy"><option value="">Select person</option><option>Neeraj</option><option>Suyog</option><option>Prashant</option></select></div>
     <div><label>Payment Month</label><input id="mpMonth" type="month"></div>
+    <div><label>Linked Adjustment</label><select id="mpLinkedAdjustment"><option value="">No adjustment linked</option></select></div>
     <div><label>Notes</label><input id="mpNotes" placeholder="Optional"></div>
     <div class="form-actions">
       <button class="primary" onclick="saveManualPayment()">Save Manual Payment</button>
@@ -344,7 +346,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
   </div>
   <div class="table-wrap">
     <table class="contribution-table manual-payment-table">
-      <thead><tr><th>Description</th><th class="amount">Amount</th><th>Date</th><th>Paid By</th><th>Month</th><th>Notes</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Category</th><th>Description</th><th class="amount">Amount</th><th>Date</th><th>Payment Made By</th><th>Linked Adjustment</th><th>Month</th><th>Notes</th><th>Actions</th></tr></thead>
       <tbody id="manualPaymentRows"></tbody>
     </table>
   </div>
@@ -877,50 +879,90 @@ function renderGroundPayments(){
 }
 
 let editingManualPaymentId=null;
+function populateManualPaymentAdjustments(selectedId=''){
+  const el=document.getElementById('mpLinkedAdjustment');
+  if(!el)return;
+  const list=Array.isArray(adjustments)?adjustments:[];
+  el.innerHTML='<option value="">No adjustment linked</option>'+list.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(a=>{
+    const label=(a.date||'')+' · '+money(a.amount)+' · '+(a.deductFrom||a.paidBy||'Unassigned')+' · '+(a.reason||'Adjustment');
+    return '<option value="'+esc(a.id)+'" '+(a.id===selectedId?'selected':'')+'>'+esc(label)+'</option>';
+  }).join('');
+}
 function saveManualPayment(){
-  const description=document.getElementById('mpDescription').value.trim();
-  const amount=Number(document.getElementById('mpAmount').value||0);
-  const date=document.getElementById('mpDate').value;
-  const paidBy=document.getElementById('mpPaidBy').value;
-  const month=document.getElementById('mpMonth').value;
-  const notes=document.getElementById('mpNotes').value.trim();
+  const category=document.getElementById('mpCategory')?.value||'';
+  const description=document.getElementById('mpDescription')?.value.trim()||'';
+  const amount=Number(document.getElementById('mpAmount')?.value||0);
+  const date=document.getElementById('mpDate')?.value||'';
+  const paidBy=document.getElementById('mpPaidBy')?.value||'';
+  const month=document.getElementById('mpMonth')?.value||'';
+  const linkedAdjustmentId=document.getElementById('mpLinkedAdjustment')?.value||'';
+  const notes=document.getElementById('mpNotes')?.value.trim()||'';
+  if(!category){alert('Please select a payment category.');return;}
   if(!description){alert('Please enter a payment description.');return;}
   if(amount<=0){alert('Please enter a valid payment amount.');return;}
   if(!date){alert('Please enter Date.');return;}
-  if(!paidBy){alert('Please select Paid By.');return;}
+  if(!paidBy){alert('Please select Payment Made By.');return;}
   if(!month){alert('Please enter Payment Month.');return;}
-  const item={id:editingManualPaymentId||crypto.randomUUID(),description,amount,date,paidBy,month,notes};
+  const item={id:editingManualPaymentId||('mp_'+Date.now()),category,description,amount,date,paidBy,month,linkedAdjustmentId,notes};
   const existing=editingManualPaymentId?manualPayments.find(x=>x.id===editingManualPaymentId):null;
   if(existing)Object.assign(existing,item);else manualPayments.push(item);
+  if(linkedAdjustmentId){
+    const adj=adjustments.find(a=>a.id===linkedAdjustmentId);
+    if(adj)adj.linkedPaymentId=item.id;
+    saveFinanceLocal();
+  }
   localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
-  clearManualPaymentForm();renderManualPayments();
+  clearManualPaymentForm();
+  populateManualPaymentAdjustments();
+  renderManualPayments();
+  if(typeof syncFinanceCloud==='function')syncFinanceCloud();
   if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();
 }
 function editManualPayment(id){
   const x=manualPayments.find(a=>a.id===id);if(!x)return;
   editingManualPaymentId=id;
+  document.getElementById('mpCategory').value=x.category||'Other';
   document.getElementById('mpDescription').value=x.description||'';
   document.getElementById('mpAmount').value=x.amount||0;
   document.getElementById('mpDate').value=x.date||'';
   document.getElementById('mpPaidBy').value=x.paidBy||'';
   document.getElementById('mpMonth').value=x.month||'';
   document.getElementById('mpNotes').value=x.notes||'';
+  populateManualPaymentAdjustments(x.linkedAdjustmentId||'');
 }
 function deleteManualPayment(id){
   if(!confirm('Delete this manual payment?'))return;
-  manualPayments=manualPayments.filter(x=>x.id!==id);
+  const x=manualPayments.find(a=>a.id===id);
+  manualPayments=manualPayments.filter(a=>a.id!==id);
+  if(x?.linkedAdjustmentId){
+    const adj=adjustments.find(a=>a.id===x.linkedAdjustmentId);
+    if(adj&&adj.linkedPaymentId===id)delete adj.linkedPaymentId;
+    saveFinanceLocal();
+  }
   localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
   renderManualPayments();
+  populateManualPaymentAdjustments();
+  if(typeof syncFinanceCloud==='function')syncFinanceCloud();
   if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();
 }
 function clearManualPaymentForm(){
   editingManualPaymentId=null;
-  ['mpDescription','mpAmount','mpDate','mpPaidBy','mpMonth','mpNotes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['mpCategory','mpDescription','mpAmount','mpDate','mpPaidBy','mpMonth','mpLinkedAdjustment','mpNotes'].forEach(id=>{
+    const e=document.getElementById(id);if(e)e.value='';
+  });
+  populateManualPaymentAdjustments();
 }
 function renderManualPayments(){
   const body=document.getElementById('manualPaymentRows');if(!body)return;
-  if(!manualPayments.length){body.innerHTML='<tr><td colspan="7" class="empty">No manual payments yet.</td></tr>';return;}
-  body.innerHTML=[...manualPayments].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>'<tr class="manual-payment-row"><td>'+esc(x.description)+'</td><td class="amount">'+money(x.amount)+'</td><td>'+esc(x.date||'')+'</td><td>'+esc(x.paidBy||'')+'</td><td>'+esc(x.month||'')+'</td><td>'+esc(x.notes||'')+'</td><td class="actions"><button onclick="editManualPayment(\''+x.id+'\')">Edit</button><button class="danger" onclick="deleteManualPayment(\''+x.id+'\')">Delete</button></td></tr>').join('');
+  if(!manualPayments.length){
+    body.innerHTML='<tr><td colspan="9" class="empty">No manual payments yet.</td></tr>';
+    return;
+  }
+  body.innerHTML=[...manualPayments].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>{
+    const adj=adjustments.find(a=>a.id===x.linkedAdjustmentId);
+    const linked=adj?money(adj.amount)+' · '+(adj.deductFrom||adj.paidBy||''):'—';
+    return `<tr class="manual-payment-row"><td>${esc(x.category||'Other')}</td><td>${esc(x.description||'')}</td><td class="amount">${money(x.amount)}</td><td>${esc(x.date||'')}</td><td>${esc(x.paidBy||'')}</td><td>${esc(linked)}</td><td>${esc(x.month||'')}</td><td>${esc(x.notes||'')}</td><td class="actions"><button onclick="editManualPayment('${x.id}')">Edit</button><button class="danger" onclick="deleteManualPayment('${x.id}')">Delete</button></td></tr>`;
+  }).join('');
 }
 const CONTRIBUTION_KEY='cricketMatchContributionsV1';
 let contributions=JSON.parse(localStorage.getItem(CONTRIBUTION_KEY)||'[]');
@@ -1160,6 +1202,7 @@ function showPayments(){
   document.querySelector('.cards').classList.add('hidden');
   refreshPaymentGroundDropdown();
   renderGroundPayments();
+  populateManualPaymentAdjustments();
   renderManualPayments();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -2116,7 +2159,7 @@ function buildFinanceLedger(){
     if(Number(e.amount||0)>0)ledger.push({date:e.date||'',type:'Regular contribution',description:(p.name||'Player')+(e.comment?' · '+e.comment:''),person:e.receivedBy||'',in:Number(e.amount||0),out:0,month:(e.date||'').slice(0,7)});
   }));
   (manualPayments||[]).forEach(p=>{
-    if(Number(p.amount||0)>0)ledger.push({date:p.date||'',type:'Other payment',description:p.description||'Manual payment',person:p.paidBy||'',in:0,out:Number(p.amount||0),month:p.month||(p.date||'').slice(0,7)});
+    if(Number(p.amount||0)>0)ledger.push({date:p.date||'',type:'Other payment',description:(p.category?p.category+' · ':'')+(p.description||'Manual payment')+(p.linkedAdjustmentId?' · ↔ Linked adjustment':''),person:p.paidBy||'',in:0,out:Number(p.amount||0),month:p.month||(p.date||'').slice(0,7)});
   });
   (groundPayments||[]).forEach(p=>{
     if(Number(p.amount||0)>0)ledger.push({date:p.date||'',type:'Ground payment',description:(p.ground||'Ground')+(p.payee?' · '+p.payee:''),person:p.paidBy||'',in:0,out:Number(p.amount||0),month:p.month||(p.date||'').slice(0,7)});
@@ -2143,7 +2186,7 @@ function fmtFinanceDate(d){return d?new Date(d+'T00:00:00').toLocaleDateString('
 function openAdjustmentForm(id=null){
   const a=id?adjustments.find(x=>x.id===id):null;
   const host=document.getElementById('financeModalHost');
-  host.innerHTML='<div class="backup-modal-backdrop"><div class="backup-modal"><h2>'+ (a?'Edit':'Add') +' Adjustment</h2><p>Use this for reciprocal ground-slot arrangements or any amount that must be applied to a different month.</p><div class="finance-form"><div><label>Adjustment Date</label><input id="fAdjDate" type="date" value="'+(a?.date||new Date().toISOString().slice(0,10))+'"></div><div><label>Apply To Month</label><input id="fAdjMonth" type="month" value="'+(a?.applyMonth||new Date().toISOString().slice(0,7))+'"></div><div><label>Amount</label><input id="fAdjAmount" type="number" min="0" step="1" value="'+(a?.amount||'')+'"></div><div><label>Deduct From Net Balance</label><select id="fAdjPaidBy">'+financePersonOptions(a?.paidBy||'')+'</select></div><div><label>Payee / From</label><input id="fAdjPayee" value="'+esc(a?.payee||'')+'" placeholder="e.g. Team B"></div><div style="grid-column:span 2"><label>Reason</label><input id="fAdjReason" value="'+esc(a?.reason||'')+'" placeholder="e.g. Reciprocal ground slot adjustment"></div><div class="form-actions"><button class="primary" onclick="saveAdjustment(\''+(id||'')+'\')">Save Adjustment</button><button class="secondary" onclick="closeFinanceModal()">Cancel</button></div></div></div></div>';
+  host.innerHTML='<div class="backup-modal-backdrop"><div class="backup-modal"><h2>'+ (a?'Edit':'Add') +' Adjustment</h2><p>Use this for reciprocal ground-slot arrangements or any amount that must be applied to a different month.</p><div class="finance-form"><div><label>Adjustment Date</label><input id="fAdjDate" type="date" value="'+(a?.date||new Date().toISOString().slice(0,10))+'"></div><div><label>Apply To Month</label><input id="fAdjMonth" type="month" value="'+(a?.applyMonth||new Date().toISOString().slice(0,7))+'"></div><div><label>Amount</label><input id="fAdjAmount" type="number" min="0" step="1" value="'+(a?.amount||'')+'"></div><div><label>Deduct From Net Balance</label><select id="fAdjPaidBy">'+financePersonOptions(a?.deductFrom||a?.paidBy||'')+'</select></div><div><label>Linked Manual Payment</label><select id="fAdjLinkedPayment"><option value="">No payment linked</option>'+((Array.isArray(manualPayments)?manualPayments:[]).map(p=>'<option value="'+esc(p.id)+'" '+(a?.linkedPaymentId===p.id?'selected':'')+'>'+esc((p.date||'')+' · '+money(p.amount)+' · '+(p.description||'Payment')+' · '+(p.paidBy||''))+'</option>').join(''))+'</select></div><div><label>Payee / From</label><input id="fAdjPayee" value="'+esc(a?.payee||'')+'" placeholder="e.g. Team B"></div><div style="grid-column:span 2"><label>Reason</label><input id="fAdjReason" value="'+esc(a?.reason||'')+'" placeholder="e.g. Reciprocal ground slot adjustment"></div><div class="form-actions"><button class="primary" onclick="saveAdjustment(\''+(id||'')+'\')">Save Adjustment</button><button class="secondary" onclick="closeFinanceModal()">Cancel</button></div></div></div></div>';
 }
 function saveAdjustment(id){
   const date=document.getElementById('fAdjDate')?.value||'';
@@ -2152,13 +2195,19 @@ function saveAdjustment(id){
   const deductFrom=document.getElementById('fAdjPaidBy')?.value||'';
   const payee=document.getElementById('fAdjPayee')?.value.trim()||'';
   const reason=document.getElementById('fAdjReason')?.value.trim()||'';
+  const linkedPaymentId=document.getElementById('fAdjLinkedPayment')?.value||'';
   if(!date||!applyMonth||amount<=0||!deductFrom||!reason){
     alert('Please enter date, month, amount, person and reason.');
     return;
   }
-  const item={id:id||('adj_'+Date.now()),date,applyMonth,amount,paidBy:deductFrom,deductFrom,payee,reason};
+  const item={id:id||('adj_'+Date.now()),date,applyMonth,amount,paidBy:deductFrom,deductFrom,payee,reason,linkedPaymentId};
   const i=adjustments.findIndex(x=>x.id===item.id);
   if(i>=0)adjustments[i]=item;else adjustments.push(item);
+  if(linkedPaymentId){
+    const p=manualPayments.find(x=>x.id===linkedPaymentId);
+    if(p)p.linkedAdjustmentId=item.id;
+    localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
+  }
   saveFinanceLocal();
   closeFinanceModal();
   if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();
