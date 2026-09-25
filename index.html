@@ -928,15 +928,18 @@ function syncManualPaymentContribution(payment){
     if(idx>=0)player.recentEntries.splice(idx,1);
     return idx>=0;
   }
+  const existingEntry=idx>=0?player.recentEntries[idx]:null;
   const contributionEntry={
-    id:idx>=0?player.recentEntries[idx].id:('mpe_'+Date.now()),
+    id:existingEntry?.id||('mpe_'+Date.now()),
     manualPaymentId:payment.id,
     amount,
     date:payment.date||'',
     comment:payment.settledAgainstContribution
       ? 'Adjusted against recent contribution · '+(payment.description||'Payment')
       : 'Manual payment · '+(payment.description||'Payment'),
-    receivedBy:player.name
+    // Preserve the manually selected owner. The payment payer is not automatically
+    // the owner of the contribution amount, so the owner checkboxes remain editable.
+    receivedBy:existingEntry?.receivedBy||''
   };
   if(idx>=0)Object.assign(player.recentEntries[idx],contributionEntry);
   else player.recentEntries.push(contributionEntry);
