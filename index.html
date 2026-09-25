@@ -5,18 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ArezoKings</title>
 <style>
-:root{--bg:#f4f7fb;--card:#fff;--text:#172033;--muted:#687386;--line:#e3e8ef;--accent:#1769aa;--accent2:#0d8a5b;--danger:#c0392b;--shadow:0 8px 24px rgba(25,45,75,.08)}
+:root{--bg:#f3f7f2;--card:#fff;--text:#17251b;--muted:#68756b;--line:#dfe8df;--accent:#176b3a;--accent2:#0b8f5a;--danger:#c0392b;--pitch:#176b3a;--pitch-light:#eaf5ed;--ball:#d85b45;--shadow:0 6px 18px rgba(31,73,43,.08)}
 *{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}
-.container{max-width:1500px;margin:auto;padding:20px}.hero{background:linear-gradient(135deg,#12385d,#1769aa);color:#fff;border-radius:18px;padding:24px;box-shadow:var(--shadow);margin-bottom:18px}
-.hero h1{margin:0 0 6px;font-size:28px}.hero p{margin:0;opacity:.9}
-.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.toolbar select,.toolbar button,.form-grid input,.form-grid select{font:inherit;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fff}
-button{cursor:pointer}.primary{background:var(--accent)!important;color:#fff;border-color:var(--accent)!important}.secondary{background:#eef4fa!important;color:#174a72;border-color:#d5e1ed!important}
+.container{max-width:1500px;margin:auto;padding:18px}.hero{background:linear-gradient(135deg,#124b2d,#1b7a45);color:#fff;border-radius:14px;padding:20px 22px;box-shadow:var(--shadow);margin-bottom:14px;border-bottom:4px solid #d6b25e;position:relative;overflow:hidden}.hero:after{content:"";position:absolute;right:-40px;bottom:-70px;width:190px;height:190px;border:2px solid rgba(255,255,255,.14);border-radius:50%}
+.hero h1{margin:0 0 5px;font-size:27px}.hero p{margin:0;opacity:.9}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.toolbar select,.toolbar button,.form-grid input,.form-grid select{font:inherit;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fff}
+button{cursor:pointer}.primary{background:var(--pitch)!important;color:#fff;border-color:var(--pitch)!important}.secondary{background:#eef4fa!important;color:#174a72;border-color:#d5e1ed!important}.nav-summary{background:#eaf2fb!important;color:#1c5b91!important;border-color:#cddff0!important}.nav-contrib{background:#eaf7ef!important;color:#176b3a!important;border-color:#cce6d5!important}.nav-payments{background:#fff7e8!important;color:#8a5a00!important;border-color:#ecd9ae!important}.nav-accounts{background:#f3edfb!important;color:#68418d!important;border-color:#dfd0ef!important}
 .danger{background:#fff0ee!important;color:var(--danger);border-color:#f1cbc6!important}
-.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}.card .label{color:var(--muted);font-size:13px}.card .value{font-size:25px;font-weight:700;margin-top:7px}
-.section{background:var(--card);border:1px solid var(--line);border-radius:14px;margin:16px 0;box-shadow:var(--shadow);overflow:hidden}.section-head{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.section-head h2{margin:0;font-size:18px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:900px}th,td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}th{background:#f7f9fc;color:#566173;font-size:12px;text-transform:uppercase}td.amount{text-align:right;font-weight:600}th.amount{text-align:right}.total-row td{font-weight:700;background:#fafbfd}.date-day{font-size:11px;color:#1769aa;font-weight:700;margin-top:3px}.actions{white-space:nowrap;min-width:155px;width:155px}.actions button{padding:7px 10px;margin-right:5px;margin-bottom:3px;border-radius:7px;border:1px solid var(--line);background:#fff;display:inline-block;white-space:nowrap}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:16px;box-shadow:var(--shadow);border-top:3px solid #d6b25e}.card .label{color:var(--muted);font-size:13px}.card .value{font-size:25px;font-weight:700;margin-top:7px}
+.section{background:var(--card);border:1px solid var(--line);border-radius:11px;margin:14px 0;box-shadow:var(--shadow);overflow:hidden}.section-head{padding:13px 16px;border-bottom:1px solid var(--line);background:#fbfdfb;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.section-head h2{margin:0;font-size:18px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:900px}th,td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}th{background:#f1f6f1;color:#536257;font-size:12px;text-transform:uppercase}td.amount{text-align:right;font-weight:600}th.amount{text-align:right}.total-row td{font-weight:700;background:#fafbfd}.date-day{font-size:11px;color:#1769aa;font-weight:700;margin-top:3px}.actions{white-space:nowrap;min-width:155px;width:155px}.actions button{padding:7px 10px;margin-right:5px;margin-bottom:3px;border-radius:7px;border:1px solid var(--line);background:#fff;display:inline-block;white-space:nowrap}
 .form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px;border-bottom:1px solid var(--line)}.form-grid label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px}.form-actions{grid-column:1/-1;display:flex;gap:8px}.hidden{display:none!important}.empty{padding:28px;text-align:center;color:var(--muted)}
 .table-owners{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}.table-owner{font-size:10px;display:inline-flex;align-items:center;gap:2px;white-space:nowrap;color:var(--muted)}.table-owner input{margin:0}.notes-cell{min-width:220px;max-width:280px;font-size:12px;line-height:1.35}.owner-picker{display:flex;gap:8px;flex-wrap:wrap;padding:7px 0}.owner-option{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:#fff;font-size:12px}.owner-option input{margin:0}.owner-field{min-width:0}.match-table{min-width:1350px;width:100%;table-layout:fixed}.match-table th{vertical-align:middle;line-height:1.15;text-align:left}.match-table th.amount,.match-table td.amount{text-align:right}.match-table th:nth-child(1){width:8%}.match-table th:nth-child(2){width:9%}.match-table th:nth-child(3){width:8%}.match-table th:nth-child(4){width:11%}.match-table th:nth-child(5){width:11%}.match-table th:nth-child(6){width:11%}.match-table th:nth-child(7){width:11%}.match-table th:nth-child(8){width:9%}.match-table th:nth-child(9){width:14%}.match-table th:nth-child(10){width:8%}.match-table th:nth-child(5),.match-table td:nth-child(5),.match-table th:nth-child(6),.match-table td:nth-child(6),.match-table th:nth-child(7),.match-table td:nth-child(7){text-align:left!important}.match-table td{vertical-align:top}.match-table .table-owners{justify-content:flex-start}.match-table td.amount .table-owners{justify-content:flex-start;text-align:left}.match-table .actions{white-space:nowrap}.match-table .notes-cell{overflow-wrap:anywhere}.inline-match-editor{margin:10px 0 0!important;border:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.06)}.adjustment-link-back{font-size:11px;color:#1769aa;font-weight:700;margin-top:4px;line-height:1.25}.inline-match-editor .section-head{position:sticky;top:0;z-index:2;background:#fff}.inline-match-editor .form-grid{padding:16px}.player-table{min-width:520px}
-.badge{padding:4px 8px;border-radius:20px;background:#e9f6f0;color:#16734e;font-size:12px}
+.badge{padding:4px 8px;border-radius:20px;background:#e6f3ea;color:#176b3a;font-size:12px}.week-header{border-left:4px solid var(--pitch)}
 footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 @media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}.form-grid{grid-template-columns:1fr 1fr}.hero h1{font-size:23px}}
 @media(max-width:520px){.container{padding:12px}.cards{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}.hero{padding:18px}.toolbar{display:grid;grid-template-columns:1fr 1fr}.toolbar button,.toolbar select{width:100%}}
@@ -110,6 +110,23 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .accounts-month-selector select{min-width:220px;font:inherit;border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff}
 .accounts-month-selector button{padding:9px 16px}
 .accounts-month-empty{padding-top:12px}
+.accounts-available-card{margin:14px 16px;padding:16px 18px;border:1px solid #cfe2d3;border-left:5px solid var(--pitch);border-radius:10px;background:linear-gradient(90deg,#f0f8f2,#fff);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.accounts-available-label{font-size:12px;color:#55705c;text-transform:uppercase;font-weight:800;letter-spacing:.04em}
+.accounts-available-value{font-size:30px;font-weight:800;color:#124b2d;margin-top:3px}
+.accounts-available-note{font-size:12px;color:var(--muted);margin-top:3px}
+.accounts-available-badge{background:#e4f2e8;color:#176b3a;border:1px solid #c7dfce;border-radius:20px;padding:6px 10px;font-size:11px;font-weight:800;white-space:nowrap}
+.accounts-source-grid{grid-template-columns:repeat(5,1fr)}
+.account-source-opponent{border-top:3px solid #3b82c4}
+.account-source-players{border-top:3px solid #2d9b63}
+.account-source-contrib{border-top:3px solid #7c5aa6}
+.account-source-ground{border-top:3px solid #d19a32}
+.account-source-adjustment{border-top:3px solid #c45b4b}
+.owner-balance-table th,.owner-balance-table td{text-align:center!important}
+.owner-balance-table td:first-child,.owner-balance-table th:first-child{text-align:left!important}
+.finance-summary-title{font-weight:800;padding:14px 16px;font-size:17px;color:#124b2d}
+.finance-section-title{padding:13px 16px;border-bottom:1px solid var(--line);font-weight:800;color:#31543b}
+@media(max-width:900px){.accounts-source-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.accounts-available-card{align-items:flex-start;flex-direction:column}.accounts-source-grid{grid-template-columns:1fr}.accounts-available-value{font-size:26px}}
 .player-table th,.player-table td{vertical-align:middle}
 .match-financial-owner{font-size:10px;color:var(--muted);margin-top:3px}
 .match-table td:nth-child(7) .table-owners{min-width:145px}
@@ -177,16 +194,16 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <div id="appShell" style="display:none">
 <header class="hero">
   <h1>🏏 ArezoKings</h1>
-  <p>Track matches, opponent payments and player contributions — week by week and month by month.</p>
+  <p>Cricket match tracker — fixtures, collections, player contributions and team settlement.</p>
 </header>
 
 <div class="toolbar">
   <select id="monthFilter"></select>
   <button class="primary" onclick="openMatchForm()">＋ Add Match</button>
-  <button class="secondary" onclick="showSummary()">📊 Summary</button>
-  <button class="secondary" onclick="showContributions()">💰 Contributions</button>
-  <button class="secondary" onclick="showPayments()">💳 Payments</button>
-<button class="secondary" id="accountsNavButton" onclick="showAccounts()">🧾 Accounts & Settlement</button>
+  <button class="secondary nav-summary" onclick="showSummary()">📊 Summary</button>
+  <button class="secondary nav-contrib" onclick="showContributions()">🏏 Contributions</button>
+  <button class="secondary nav-payments" onclick="showPayments()">🏟️ Payments</button>
+<button class="secondary nav-accounts" id="accountsNavButton" onclick="showAccounts()">💰 Accounts & Settlement</button>
 
   <button class="secondary" onclick="exportCSV()">Export CSV</button>
   <button class="secondary" onclick="backupData()">Backup Data</button>
@@ -2176,19 +2193,19 @@ ensureFinanceFields();wrapLegacyFunctions();
     }
 
     overall.innerHTML=
-      '<div class="finance-summary-title">📊 Consolidated Team Summary</div>'+
-      '<div class="finance-summary-grid">'+
+      '<div class="finance-summary-title">🏏 Consolidated Team Summary</div>'+
+      '<div class="accounts-available-card"><div><div class="accounts-available-label">Total Available Amount</div><div class="accounts-available-value">'+cash(totals.opponent+totals.players+totals.regular)+'</div><div class="accounts-available-note">Opponent fees + Player 11 collections + Contributions</div></div><span class="accounts-available-badge">Team Pool</span></div>'+
+      '<div class="finance-summary-grid accounts-source-grid">'+
       [
-        ['Total ground booking',totals.groundBooking,'All matches'],
-        ['Total ground paid',totals.groundPaid,'From Payments'],
-        ['Total opponent collected',totals.opponent,'All opponent match fees'],
-        ['Total players collected',totals.players,'Playing players'],
-        ['Total regular contributions',totals.regular,'Contributions tab'],
-        ['Total adjustments',totals.adjustments,'Match + manual']
-      ].map(x=>'<div class="finance-summary-item"><div class="label">'+safe(x[0])+'</div><div class="value">'+cash(x[1])+'</div><div class="hint">'+safe(x[2])+'</div></div>').join('')+
+        ['Opponent fees',totals.opponent,'From Matches','account-source-opponent'],
+        ['Player 11 collections',totals.players,'From Matches','account-source-players'],
+        ['Player contributions',totals.regular,'From Contributions','account-source-contrib'],
+        ['Ground paid',totals.groundPaid,'From Payments','account-source-ground'],
+        ['Adjustments',totals.adjustments,'Match + manual','account-source-adjustment']
+      ].map(x=>'<div class="finance-summary-item '+x[3]+'"><div class="label">'+safe(x[0])+'</div><div class="value">'+cash(x[1])+'</div><div class="hint">'+safe(x[2])+'</div></div>').join('')+
       '</div>'+
-      '<div class="finance-section-title">💰 Current Amount with Each Person</div>'+
-      '<div class="accounts-help">Cumulative across all recorded months. <strong>Net balance = money received − ground payments − adjustments − settlements.</strong></div>'+
+      '<div class="finance-section-title">💰 Amount Currently Held by Each Person</div>'+
+      '<div class="accounts-help">Cumulative across all recorded months. <strong>Money Received</strong> is the amount collected by that person; <strong>Net Balance</strong> subtracts ground payments, adjustments and settlements.</div>'+
       '<div class="table-wrap"><table class="finance-table owner-balance-table"><thead><tr><th>Person</th><th class="amount">Money Received</th><th class="amount">Ground Paid</th><th class="amount">Adjustments</th><th class="amount">Settled</th><th class="amount">Net Balance</th></tr></thead><tbody>'+
       ['Neeraj','Suyog','Prashant'].map(n=>'<tr><td><strong>'+n+'</strong></td><td class="amount">'+cash(people[n].received)+'</td><td class="amount">'+cash(people[n].gp)+'</td><td class="amount">'+cash(people[n].adj)+'</td><td class="amount">'+cash(people[n].settlements)+'</td><td class="amount"><strong>'+cash(people[n].net)+'</strong></td></tr>').join('')+
       '</tbody></table></div>';
