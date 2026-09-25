@@ -99,6 +99,9 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .accounts-month-empty{padding-top:12px}
 .player-table th,.player-table td{vertical-align:middle}
 .match-financial-owner{font-size:10px;color:var(--muted);margin-top:3px}
+.match-table td:nth-child(7) .table-owners{min-width:145px}
+.match-table td:nth-child(7) .table-owner{cursor:pointer}
+.match-table td:nth-child(7) .table-owner input{cursor:pointer}
 .match-table th:nth-child(5),.match-table td:nth-child(5),.match-table th:nth-child(6),.match-table td:nth-child(6),.match-table th:nth-child(7),.match-table td:nth-child(7){text-align:left!important}
 @media(max-width:900px){.finance-cards{grid-template-columns:repeat(2,1fr)}.finance-form{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.finance-cards{grid-template-columns:1fr 1fr}.finance-form{grid-template-columns:1fr}}
@@ -1025,6 +1028,7 @@ function showContributions(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function showSummary(){
+  document.getElementById('accountsSection')?.classList.add('hidden');
   document.getElementById('paymentsSection').classList.add('hidden');
   document.getElementById('contributionsSection').classList.add('hidden');
   document.getElementById('playerContributionSummarySection').classList.remove('hidden');
@@ -1382,6 +1386,29 @@ document.addEventListener('change', async function(e){
   }
 });
 
+function setPlayersOwner(matchId, person, checked){
+  const match=(data||[]).find(x=>x.id===matchId);
+  if(!match)return;
+  if(checked){
+    (Array.isArray(match.players)?match.players:[]).forEach(p=>p.collectedBy=person);
+  }else{
+    (Array.isArray(match.players)?match.players:[]).forEach(p=>{
+      if((p.collectedBy||'')===person)p.collectedBy='';
+    });
+  }
+  save();
+  render();
+}
+
+function playerOwnerChecks(match){
+  const players=Array.isArray(match?.players)?match.players:[];
+  const owners=[...new Set(players.map(p=>p.collectedBy||'').filter(Boolean))];
+  return ['Neeraj','Suyog','Prashant'].map(n=>{
+    const checked=owners.length===1&&owners[0]===n;
+    return '<label class="table-owner"><input type="checkbox" '+(checked?'checked':'')+' onchange="setPlayersOwner(\''+match.id+'\',\''+n+'\',this.checked)"><span>'+n+'</span></label>';
+  }).join('');
+}
+
 function render(){
   refreshMonths();
   const month=selectedMonth();
@@ -1447,7 +1474,7 @@ function render(){
         '<td><div><strong>'+money(x.adjustmentAmount||0)+'</strong></div>'+adjustmentLink+
         (incomingAdjustmentLabel(x.id)?'<div class="adjustment-link-back">'+esc(incomingAdjustmentLabel(x.id)).replace(/\n/g,'<br>')+'</div>':'')+
         '<div class="table-owners">'+ownerChecks('adjustmentOwner')+'</div></td>'+
-        '<td class="amount"><div>'+money(other)+'</div><div class="table-owners">'+((x.players||[]).length ? [...new Set((x.players||[]).map(p=>p.collectedBy||'').filter(Boolean))].map(ownerName=>'<label class="table-owner"><input type="checkbox" checked disabled><span>'+esc(ownerName)+'</span></label>').join('') : '')+'</div></td>'+
+        '<td class="amount"><div>'+money(other)+'</div><div class="table-owners">'+((x.players||[]).length ? playerOwnerChecks(x) : '')+'</div></td>'+
         '<td class="amount">'+money(total)+'</td>'+
         '<td class="notes-cell">'+(notes?esc(notes).replace(/\n/g,'<br>'):'<span class="muted">—</span>')+'</td>'+
         '<td class="actions"><button onclick="openMatchForm(\''+x.id+'\')">Edit</button><button class="danger" onclick="deleteMatch(\''+x.id+'\')">Delete</button></td>'+
