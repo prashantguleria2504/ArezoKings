@@ -2138,13 +2138,27 @@ function fmtFinanceDate(d){return d?new Date(d+'T00:00:00').toLocaleDateString('
 function openAdjustmentForm(id=null){
   const a=id?adjustments.find(x=>x.id===id):null;
   const host=document.getElementById('financeModalHost');
-  host.innerHTML='<div class="backup-modal-backdrop"><div class="backup-modal"><h2>'+ (a?'Edit':'Add') +' Adjustment</h2><p>Use this for reciprocal ground-slot arrangements or any amount that must be applied to a different month.</p><div class="finance-form"><div><label>Adjustment Date</label><input id="fAdjDate" type="date" value="'+(a?.date||new Date().toISOString().slice(0,10))+'"></div><div><label>Apply To Month</label><input id="fAdjMonth" type="month" value="'+(a?.applyMonth||new Date().toISOString().slice(0,7))+'"></div><div><label>Amount</label><input id="fAdjAmount" type="number" min="0" step="1" value="'+(a?.amount||'')+'"></div><div><label>Paid By</label><select id="fAdjPaidBy">'+financePersonOptions(a?.paidBy||'')+'</select></div><div><label>Payee / From</label><input id="fAdjPayee" value="'+esc(a?.payee||'')+'" placeholder="e.g. Team B"></div><div style="grid-column:span 2"><label>Reason</label><input id="fAdjReason" value="'+esc(a?.reason||'')+'" placeholder="e.g. Reciprocal ground slot adjustment"></div><div class="form-actions"><button class="primary" onclick="saveAdjustment(\''+(id||'')+'\')">Save Adjustment</button><button class="secondary" onclick="closeFinanceModal()">Cancel</button></div></div></div></div>';
+  host.innerHTML='<div class="backup-modal-backdrop"><div class="backup-modal"><h2>'+ (a?'Edit':'Add') +' Adjustment</h2><p>Use this for reciprocal ground-slot arrangements or any amount that must be applied to a different month.</p><div class="finance-form"><div><label>Adjustment Date</label><input id="fAdjDate" type="date" value="'+(a?.date||new Date().toISOString().slice(0,10))+'"></div><div><label>Apply To Month</label><input id="fAdjMonth" type="month" value="'+(a?.applyMonth||new Date().toISOString().slice(0,7))+'"></div><div><label>Amount</label><input id="fAdjAmount" type="number" min="0" step="1" value="'+(a?.amount||'')+'"></div><div><label>Deduct From Net Balance</label><select id="fAdjPaidBy">'+financePersonOptions(a?.paidBy||'')+'</select></div><div><label>Payee / From</label><input id="fAdjPayee" value="'+esc(a?.payee||'')+'" placeholder="e.g. Team B"></div><div style="grid-column:span 2"><label>Reason</label><input id="fAdjReason" value="'+esc(a?.reason||'')+'" placeholder="e.g. Reciprocal ground slot adjustment"></div><div class="form-actions"><button class="primary" onclick="saveAdjustment(\''+(id||'')+'\')">Save Adjustment</button><button class="secondary" onclick="closeFinanceModal()">Cancel</button></div></div></div></div>';
 }
 function saveAdjustment(id){
-  const item={id:id||crypto.randomUUID(),date:document.getElementById('fAdjDate').value,applyMonth:document.getElementById('fAdjMonth').value,amount:Number(document.getElementById('fAdjAmount').value||0),paidBy:document.getElementById('fAdjPaidBy').value,payee:document.getElementById('fAdjPayee').value.trim(),reason:document.getElementById('fAdjReason').value.trim()};
-  if(!item.date||!item.applyMonth||item.amount<=0||!item.reason){alert('Please enter date, month, amount and reason.');return;}
-  const i=adjustments.findIndex(x=>x.id===item.id); if(i>=0)adjustments[i]=item;else adjustments.push(item);
-  saveFinanceLocal();closeFinanceModal();renderAccounts();syncFinanceCloud();
+  const date=document.getElementById('fAdjDate')?.value||'';
+  const applyMonth=document.getElementById('fAdjMonth')?.value||'';
+  const amount=Number(document.getElementById('fAdjAmount')?.value||0);
+  const deductFrom=document.getElementById('fAdjPaidBy')?.value||'';
+  const payee=document.getElementById('fAdjPayee')?.value.trim()||'';
+  const reason=document.getElementById('fAdjReason')?.value.trim()||'';
+  if(!date||!applyMonth||amount<=0||!deductFrom||!reason){
+    alert('Please enter date, month, amount, person and reason.');
+    return;
+  }
+  const item={id:id||('adj_'+Date.now()),date,applyMonth,amount,paidBy:deductFrom,deductFrom,payee,reason};
+  const i=adjustments.findIndex(x=>x.id===item.id);
+  if(i>=0)adjustments[i]=item;else adjustments.push(item);
+  saveFinanceLocal();
+  closeFinanceModal();
+  if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();
+  else if(typeof renderAccounts==='function')renderAccounts();
+  syncFinanceCloud();
 }
 function deleteAdjustment(id){if(!confirm('Delete this adjustment?'))return;adjustments=adjustments.filter(x=>x.id!==id);saveFinanceLocal();renderAccounts();syncFinanceCloud();}
 function openSettlementForm(){
@@ -2154,7 +2168,7 @@ function openSettlementForm(){
 function saveSettlement(){
   const item={id:crypto.randomUUID(),person:document.getElementById('fSetPerson').value,date:document.getElementById('fSetDate').value,amount:Number(document.getElementById('fSetAmount').value||0),month:document.getElementById('fSetMonth').value,note:document.getElementById('fSetNote').value.trim()};
   if(!item.person||!item.date||item.amount<=0){alert('Please select person and enter date and amount.');return;}
-  settlements.push(item);saveFinanceLocal();closeFinanceModal();renderAccounts();syncFinanceCloud();
+  settlements.push(item);saveFinanceLocal();closeFinanceModal();if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();else if(typeof renderAccounts==='function')renderAccounts();syncFinanceCloud();
 }
 function closeFinanceModal(){document.getElementById('financeModalHost').innerHTML='';}
 
@@ -2259,14 +2273,14 @@ ensureFinanceFields();wrapLegacyFunctions();
       const gp=payments.filter(p=>(p.paidBy||'')===person).reduce((s,p)=>s+num(p.amount),0);
       const otherPaidByPerson=otherPayments.filter(p=>(p.paidBy||'')===person).reduce((s,p)=>s+num(p.amount),0);
       const adj=matches.filter(m=>(m.adjustmentOwner||'')===person).reduce((s,m)=>s+num(m.adjustmentAmount),0)
-        +manual.filter(a=>(a.paidBy||'')===person).reduce((s,a)=>s+num(a.amount),0);
+        +manual.filter(a=>(a.deductFrom||a.paidBy||'')===person).reduce((s,a)=>s+num(a.amount),0);
       const settlementRows=Array.isArray(settlements)?settlements.filter(x=>(x.month||monthOf(x.date))===month&&(x.person||'')===person).reduce((s,x)=>s+num(x.amount),0):0;
       const received=opp+play+cont;
       const net=received-gp-otherPaidByPerson-adj-settlementRows;
       return {person,opp,play,cont,gp,adj,settlements:settlementRows,received,net};
     });
 
-    return {month,groundBooking,groundPaid,otherPaid,totalPaid,opponent,players,regular,adjustments:totalAdjustmentAmount,people,matches,payments,otherPayments};
+    return {month,groundBooking,groundPaid,otherPaid,totalPaid,opponent,players,regular,adjustments:totalAdjustmentAmount,monthAdjustments:manual,people,matches,payments,otherPayments};
   }
 
   function allMonths(){
@@ -2359,6 +2373,7 @@ ensureFinanceFields();wrapLegacyFunctions();
       r.people.map(p=>'<tr><td><strong>'+p.person+'</strong></td><td class="amount">'+cash(p.opp)+'</td><td class="amount">'+cash(p.play)+'</td><td class="amount">'+cash(p.cont)+'</td><td class="amount">'+cash(p.gp)+'</td><td class="amount">'+cash(p.adj)+'</td><td class="amount">'+cash(p.settlements)+'</td><td class="amount"><strong>'+cash(p.net)+'</strong></td></tr>').join('')+
       '</tbody></table></div>'+
       '<div class="accounts-month-foot">Money collected: <strong>'+cash(r.opponent+r.players+r.regular)+'</strong> · Team payments: <strong>'+cash(r.totalPaid)+'</strong> · Adjustments: <strong>'+cash(r.adjustments)+'</strong></div>'+
+      (r.monthAdjustments?.length ? '<div class="finance-section-title">↔ Adjustments</div><div class="table-wrap"><table class="finance-table"><thead><tr><th>Date</th><th>Deduct From</th><th class="amount">Amount</th><th>Payee / From</th><th>Reason</th><th>Actions</th></tr></thead><tbody>'+r.monthAdjustments.map(a=>'<tr><td>'+safe(a.date)+'</td><td><strong>'+safe(a.deductFrom||a.paidBy||'')+'</strong></td><td class="amount">'+cash(a.amount)+'</td><td>'+safe(a.payee||'')+'</td><td>'+safe(a.reason||'')+'</td><td><button onclick="openAdjustmentForm(\''+a.id+'\')">Edit</button> <button class="danger" onclick="deleteAdjustment(\''+a.id+'\')">Delete</button></td></tr>').join('')+'</tbody></table></div>' : '')+
       '</div>';
   };
 
