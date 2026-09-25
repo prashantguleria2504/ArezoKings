@@ -155,7 +155,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .manual-adjustments-table .actions{white-space:nowrap}
 .manual-adjustments-table .danger{color:#c0392b}
 .finance-section-title{padding:14px 16px;border-bottom:1px solid var(--line);font-weight:800}
-.accounts-carry-forward-mini{margin-top:8px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:#eef8f0;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:#176b3a}.accounts-carry-forward-mini strong{font-size:12px}.accounts-carry-forward-edit{display:flex;align-items:center;gap:5px}.accounts-carry-forward-edit input{width:120px;padding:6px 8px;border:1px solid #9cc8aa;border-radius:6px;font:inherit;background:#fff}.accounts-carry-forward-edit input:focus{outline:2px solid #b9dfc4;border-color:#176b3a}.accounts-carry-forward-edit input:disabled{background:#f1f3f1;color:#687386}.accounts-carry-forward-edit button{padding:4px 7px;font-size:10px}.accounts-carry-forward-readonly{font-size:10px;color:#687386}.accounts-month-selector{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line)}
+.accounts-carry-forward-mini{margin-top:8px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:#eef8f0;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:#176b3a}.accounts-carry-forward-mini strong{font-size:12px}.accounts-carry-forward-edit{display:flex;align-items:center;gap:5px}.accounts-carry-forward-edit input{width:120px;padding:6px 8px;border:1px solid #9cc8aa;border-radius:6px;font:inherit;background:#fff}.accounts-carry-forward-edit input:focus{outline:2px solid #b9dfc4;border-color:#176b3a}.accounts-carry-forward-edit button{padding:4px 7px;font-size:10px}.accounts-carry-forward-edit .carry-edit-pencil{padding:3px 6px;font-size:13px;line-height:1;border:1px solid #9cc8aa;background:#fff;border-radius:5px;cursor:pointer}.accounts-carry-forward-edit .carry-edit-pencil:hover{background:#eaf6ed}.accounts-carry-forward-readonly{font-size:10px;color:#687386}.accounts-month-selector{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line)}
 .accounts-month-selector select{min-width:220px;font:inherit;border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff}
 .accounts-month-selector button{padding:9px 16px}
 .accounts-month-empty{padding-top:12px}
@@ -2452,18 +2452,23 @@ function canEditCarryForward(){
   return carryForwardAdmin===true;
 }
 
-function renderCarryForwardEditor(){
+function renderCarryForwardEditor(editing=false){
   const valueEl=document.getElementById('accountsCarryForwardValue');
   const editor=document.getElementById('accountsCarryForwardEditor');
   if(!valueEl||!editor)return;
   valueEl.textContent=cash(carryForwardAmount);
 
   const admin=canEditCarryForward();
-  editor.innerHTML=
-    '<input id="accountsCarryForwardInput" type="number" min="0" step="1" value="'+(carryForwardAmount||0)+'" aria-label="Carry forwarded amount"'+(admin?'':' disabled')+'>'+
-    (admin
-      ? '<button class="primary" type="button" onclick="saveCarryForwardAmount()">Save</button>'
-      : '<span class="accounts-carry-forward-readonly">Admin only</span>');
+  if(!admin){
+    editor.innerHTML='<span class="accounts-carry-forward-readonly">Admin only</span>';
+    return;
+  }
+
+  // Administrator gets a pencil first. Clicking it unlocks the amount field.
+  editor.innerHTML=editing
+    ? '<input id="accountsCarryForwardInput" type="number" min="0" step="1" value="'+(carryForwardAmount||0)+'" aria-label="Carry forwarded amount">'+
+      '<button class="primary" type="button" onclick="saveCarryForwardAmount()">Save</button>'
+    : '<button class="carry-edit-pencil" type="button" title="Edit carry forwarded amount" aria-label="Edit carry forwarded amount" onclick="renderCarryForwardEditor(true)">✎</button>';
 }
 
 window.saveCarryForwardAmount=async function(){
@@ -2997,19 +3002,17 @@ ensureFinanceFields();wrapLegacyFunctions();
   };
 
   window.showAccounts=async function(){
-    document.getElementById('manualPaymentsSection')?.classList.add('hidden');
-    ['summarySection','playerContributionSummarySection','paymentsSection','contributionsSection','matchFormSection','weeks'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
+    // Accounts must be an exclusive page: Configuration and every other page are hidden.
+    ['summarySection','playerContributionSummarySection','paymentsSection','manualPaymentsSection','contributionsSection','matchFormSection','weeks','configurationSection'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
     document.querySelector('.cards')?.classList.add('hidden');
     document.getElementById('accountsSection')?.classList.remove('hidden');
 
-    // Load the same Configuration profile used by the Configuration page.
-    // This guarantees the Administrator sees the editable control.
     if(cloudUser && typeof loadConfiguration==='function'){
       try{ await loadConfiguration(); }catch(err){ console.error('Accounts configuration load failed:',err); }
     }
     await refreshCarryForwardAdminStatus();
     renderAccountsDashboard();
-    renderCarryForwardEditor();
+    renderCarryForwardEditor(false);
     window.scrollTo({top:0,behavior:'smooth'});
   };
 
