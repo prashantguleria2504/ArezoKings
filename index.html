@@ -909,14 +909,23 @@ function syncManualPaymentContribution(payment){
   if(!payment?.addToContribution)return false;
   const player=resolveContributionPlayer(payment.paidBy);
   if(!player)return false;
-  const remaining=getPaymentRemaining(payment);
   player.recentEntries=Array.isArray(player.recentEntries)?player.recentEntries:[];
   const idx=player.recentEntries.findIndex(e=>e.manualPaymentId===payment.id);
-  if(remaining<=0.000001){
+  const amount=payment.settledAgainstContribution ? Number(payment.amount||0) : getPaymentRemaining(payment);
+  if(amount<=0.000001){
     if(idx>=0)player.recentEntries.splice(idx,1);
     return idx>=0;
   }
-  const contributionEntry={id:idx>=0?player.recentEntries[idx].id:('mpe_'+Date.now()),manualPaymentId:payment.id,amount:remaining,date:payment.date||'',comment:'Manual payment · '+(payment.description||'Payment'),receivedBy:player.name};
+  const contributionEntry={
+    id:idx>=0?player.recentEntries[idx].id:('mpe_'+Date.now()),
+    manualPaymentId:payment.id,
+    amount,
+    date:payment.date||'',
+    comment:payment.settledAgainstContribution
+      ? 'Adjusted against recent contribution · '+(payment.description||'Payment')
+      : 'Manual payment · '+(payment.description||'Payment'),
+    receivedBy:player.name
+  };
   if(idx>=0)Object.assign(player.recentEntries[idx],contributionEntry);
   else player.recentEntries.push(contributionEntry);
   payment.paidBy=player.name;
@@ -969,7 +978,9 @@ function syncPaymentAdjustmentState(paymentId){
       a.status=fully?'settled':'partial';
     }
   });
-  if(fully)removeManualPaymentContribution(payment.id);
+  if(payment.settledAgainstContribution){
+    syncManualPaymentContribution(payment);
+  }else if(fully)removeManualPaymentContribution(payment.id);
   else restoreManualPaymentContribution(payment.id);
 }
 function populateManualPaymentAdjustments(selectedId=''){
@@ -1000,7 +1011,7 @@ function saveManualPayment(){
   if(!date){alert('Please enter Date.');return;}
   if(!paidBy){alert('Please select Payment Made By.');return;}
 
-  const item={id:editingManualPaymentId||('PAY-'+Date.now().toString(36).toUpperCase()),category,description,amount,date,paidBy,month,linkedAdjustmentIds:[],linkedAdjustmentId:'',addToContribution,notes};
+  const item={id:editingManualPaymentId||('PAY-'+Date.now().toString(36).toUpperCase()),category,description,amount,date,paidBy,month,linkedAdjustmentIds:[],linkedAdjustmentId:'',addToContribution,settledAgainstContribution:addToContribution,notes:addToContribution ? ((notes?notes+' · ':'')+'Adjusted against recent contribution') : notes};
   const existing=editingManualPaymentId?manualPayments.find(x=>x.id===editingManualPaymentId):null;
   const oldIds=existing?getPaymentAdjustmentIds(existing):[];
   if(existing){
@@ -1008,7 +1019,11 @@ function saveManualPayment(){
     item.linkedAdjustmentIds=oldIds;
   }else manualPayments.push(item);
 
-  if(linkedAdjustmentId&&!item.linkedAdjustmentIds.includes(linkedAdjustmentId)){
+  if(addToContribution){
+    item.linkedAdjustmentIds=[];
+    item.linkedAdjustmentId='';
+    item.settledAgainstContribution=true;
+  }else if(linkedAdjustmentId&&!item.linkedAdjustmentIds.includes(linkedAdjustmentId)){
     const adj=adjustments.find(a=>a.id===linkedAdjustmentId);
     if(adj){
       const otherPaymentId=getAdjustmentPaymentId(adj);
@@ -1037,7 +1052,13 @@ function saveManualPayment(){
     contributions.forEach(p=>{p.recentEntries=(Array.isArray(p.recentEntries)?p.recentEntries:[]).filter(e=>e.manualPaymentId!==item.id);});
   }
 
-  syncPaymentAdjustmentState(item.id);
+  if(item.settledAgainstContribution){
+    item.linkedAdjustmentIds=[];
+    item.linkedAdjustmentId='';
+    syncManualPaymentContribution(item);
+  }else{
+    syncPaymentAdjustmentState(item.id);
+  }
   saveFinanceLocal();
   localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
   localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
@@ -1099,12 +1120,12 @@ function renderManualPayments(){
     const ids=getPaymentAdjustmentIds(x);
     const adjusted=getPaymentAdjustmentTotal(x);
     const remaining=getPaymentRemaining(x);
-    const status=paymentIsFullySettled(x)?'<span class="payment-paid-status">PAID</span>':'<span class="payment-pending-status">PENDING</span>';
+    const status=(x.settledAgainstContribution||paymentIsFullySettled(x))?'<span class="payment-paid-status">PAID</span>':'<span class="payment-pending-status">PENDING</span>';
     const linked=ids.length?ids.map(id=>{
       const a=adjustments.find(z=>z.id===id);
       return a?money(a.amount)+' · '+esc(a.id)+' · '+esc(a.deductFrom||a.paidBy||''):'';
     }).filter(Boolean).join('<br>'):'—';
-    return `<tr class="manual-payment-row"><td>${esc(x.category||'Other')}</td><td>${esc(x.description||'')}</td><td class="amount">${money(remaining)}<div class="payment-linked-adjustment">Original: ${money(x.amount)} · Adjusted: ${money(adjusted)}</div></td><td>${esc(x.date||'')}</td><td>${esc(x.paidBy||'')}</td><td>${status}<div class="payment-id">Payment ID: <strong>${esc(x.id||'')}</strong></div><div class="payment-linked-adjustment">Adjustment ID(s): ${linked}</div></td><td>${esc(x.month||'')}</td><td>${esc(x.notes||'')}</td><td class="actions"><button onclick="editManualPayment('${x.id}')">Edit</button><button class="danger" onclick="deleteManualPayment('${x.id}')">Delete</button></td></tr>`;
+    return `<tr class="manual-payment-row"><td>${esc(x.category||'Other')}</td><td>${esc(x.description||'')}</td><td class="amount">${money(remaining)}<div class="payment-linked-adjustment">Original: ${money(x.amount)} · Adjusted: ${money(adjusted)}</div></td><td>${esc(x.date||'')}</td><td>${esc(x.paidBy||'')}</td><td>${status}<div class="payment-id">Payment ID: <strong>${esc(x.id||'')}</strong></div><div class="payment-linked-adjustment">${x.settledAgainstContribution ? 'Adjusted against recent contribution' : 'Adjustment ID(s): '+linked}</div></td><td>${esc(x.month||'')}</td><td>${esc(x.notes||'')}</td><td class="actions"><button onclick="editManualPayment('${x.id}')">Edit</button><button class="danger" onclick="deleteManualPayment('${x.id}')">Delete</button></td></tr>`;
   }).join('');
 }
 const CONTRIBUTION_KEY='cricketMatchContributionsV1';
