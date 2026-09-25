@@ -36,17 +36,19 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 @media(max-width:520px){.summary-grid{grid-template-columns:1fr}}
 
 .contribution-table{min-width:1120px;table-layout:fixed}
-.contribution-table th,.contribution-table td{vertical-align:middle}
+.contribution-table th,.contribution-table td{vertical-align:middle;text-align:center!important}
 .contribution-table th:nth-child(1),.contribution-table td:nth-child(1){width:18%}
 .contribution-table th:nth-child(2),.contribution-table td:nth-child(2){width:17%}
 .contribution-table th:nth-child(3),.contribution-table td:nth-child(3){width:28%;padding-left:12px}
 .contribution-table th:nth-child(4),.contribution-table td:nth-child(4){width:14%}
 .contribution-table th:nth-child(5),.contribution-table td:nth-child(5){width:13%}
 .contribution-table th:nth-child(6),.contribution-table td:nth-child(6){width:10%}
-.contribution-table th.amount,.contribution-table td.amount{text-align:right}
-.contribution-table th:nth-child(1),.contribution-table td:nth-child(1){text-align:left}
-.contribution-table th:nth-child(3),.contribution-table td:nth-child(3){text-align:left}
-.contribution-table th:nth-child(6),.contribution-table td:nth-child(6){text-align:left}
+.contribution-table .amount{text-align:center!important}
+.contribution-table .recent-entry{margin:0 auto;max-width:250px;text-align:center}
+.contribution-table .recent-entry-main{grid-template-columns:1fr auto auto;justify-items:center}
+.contribution-table .recent-entry-main strong{margin:0;text-align:center}
+.contribution-table .recent-entry-actions{justify-content:center}
+.contribution-table .contrib-comment{text-align:center}
 .balance-positive{color:#16734e;font-weight:800}.balance-zero{color:#687386;font-weight:700}.balance-negative{color:#c0392b;font-weight:800}
 .contrib-form{display:grid;grid-template-columns:1.1fr 1.4fr 1.7fr 1fr;gap:14px;padding:16px;border-bottom:1px solid var(--line)}
 .contrib-form label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px}
