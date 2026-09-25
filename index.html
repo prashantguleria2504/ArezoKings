@@ -1288,23 +1288,20 @@ function contributionOwnerChecks(playerIndex,entryIndex,owner){
 
 function reconcileSettledPaymentContributions(){
   let changed=false;
-  const paymentById=new Map((Array.isArray(manualPayments)?manualPayments:[]).map(p=>[p.id,p]));
-  // Rebuild the payment-side link from any existing adjustment link.
-  (Array.isArray(adjustments)?adjustments:[]).forEach(a=>{
-    if(!a?.linkedPaymentId)return;
-    const p=paymentById.get(a.linkedPaymentId);
-    if(p && p.linkedAdjustmentId!==a.id){p.linkedAdjustmentId=a.id;changed=true;}
-    if(a.status!=='settled'){a.status='settled';changed=true;}
-  });
-  // Any contribution generated from a payment that is now settled must disappear.
-  (Array.isArray(contributions)?contributions:[]).forEach(player=>{
-    const entries=Array.isArray(player.recentEntries)?player.recentEntries:[];
-    const kept=entries.filter(e=>{
-      if(!e?.manualPaymentId)return true;
-      const p=paymentById.get(e.manualPaymentId);
-      return !(p?.linkedAdjustmentId);
-    });
-    if(kept.length!==entries.length){player.recentEntries=kept;changed=true;}
+  const payments=Array.isArray(manualPayments)?manualPayments:[];
+  // Reconcile contribution entries from the payment's CURRENT outstanding balance.
+  // A partial adjustment must leave the remaining balance in Recent Contribution.
+  payments.forEach(payment=>{
+    const beforeIds=JSON.stringify(payment.linkedAdjustmentIds||[]);
+    const beforeLegacy=payment.linkedAdjustmentId||'';
+    const beforePaidBy=payment.paidBy||'';
+    const beforeStatus=payment.status||'';
+    if(typeof syncPaymentAdjustmentState==='function') syncPaymentAdjustmentState(payment.id);
+    if(typeof syncManualPaymentContribution==='function') syncManualPaymentContribution(payment);
+    if(beforeIds!==JSON.stringify(payment.linkedAdjustmentIds||[]) ||
+       beforeLegacy!==(payment.linkedAdjustmentId||'') ||
+       beforePaidBy!==(payment.paidBy||'') ||
+       beforeStatus!==(payment.status||'')) changed=true;
   });
   if(changed){
     localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
