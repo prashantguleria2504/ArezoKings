@@ -109,6 +109,11 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .finance-form input,.finance-form select{width:100%;font:inherit;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fff}
 .finance-form .form-actions{grid-column:1/-1;display:flex;gap:8px}
 .finance-note{font-size:12px;color:var(--muted);padding:0 16px 14px}
+.manual-adjustments-title{border-left:4px solid #c95b4a;background:#fff8f6;color:#8f3e31}
+.manual-adjustments-wrap{margin-bottom:18px}
+.manual-adjustments-table th,.manual-adjustments-table td{vertical-align:middle}
+.manual-adjustments-table .actions{white-space:nowrap}
+.manual-adjustments-table .danger{color:#c0392b}
 .finance-section-title{padding:14px 16px;border-bottom:1px solid var(--line);font-weight:800}
 .accounts-month-selector{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line)}
 .accounts-month-selector select{min-width:220px;font:inherit;border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff}
@@ -2335,7 +2340,7 @@ ensureFinanceFields();wrapLegacyFunctions();
       '<div class="accounts-funds-grid">'+
       '<div class="accounts-available-card accounts-total-card"><div><div class="accounts-available-label">Total Amount</div><div class="accounts-available-value">'+cash(totals.opponent+totals.players+totals.regular)+'</div><div class="accounts-available-note">Opponent fees + Player 11 collections + Contributions</div></div></div>'+
       '<div class="accounts-available-card accounts-paid-card"><div style="width:100%"><div class="accounts-available-label">Amount Paid</div><div class="accounts-paid-total">'+cash(totals.groundPaid+totals.manualPaid)+'</div><div class="accounts-paid-breakdown"><div class="payment-mini payment-mini-ground"><span>Ground Payments</span><strong>'+cash(totals.groundPaid)+'</strong></div><div class="payment-mini payment-mini-manual"><span>Manual Payments</span><strong>'+cash(totals.manualPaid)+'</strong></div></div><div class="accounts-available-note">Payments tab · Ground + manual payments</div></div></div>'+
-      '<div class="accounts-available-card accounts-balance-card"><div><div class="accounts-available-label">Total Available Amount</div><div class="accounts-available-value">'+cash((totals.opponent+totals.players+totals.regular)-totals.groundPaid)+'</div><div class="accounts-available-note">Total Amount − Amount Paid</div></div><span class="accounts-available-badge">Team Pool</span></div>'+
+      '<div class="accounts-available-card accounts-balance-card"><div><div class="accounts-available-label">Total Available Amount</div><div class="accounts-available-value">'+cash((totals.opponent+totals.players+totals.regular)-(totals.groundPaid+totals.manualPaid))+'</div><div class="accounts-available-note">Total Amount − Amount Paid</div></div><span class="accounts-available-badge">Team Pool</span></div>'+
       '</div>'+
       '<div class="finance-summary-grid accounts-source-grid">'+
       [
@@ -2350,6 +2355,13 @@ ensureFinanceFields();wrapLegacyFunctions();
       '<div class="accounts-help">Cumulative across all recorded months. <strong>Money Received</strong> is the amount collected by that person; <strong>Net Balance</strong> subtracts ground payments, adjustments and settlements.</div>'+
       '<div class="table-wrap"><table class="finance-table owner-balance-table"><thead><tr><th>Person</th><th class="amount">Money Received</th><th class="amount">Ground Paid</th><th class="amount">Adjustments</th><th class="amount">Settled</th><th class="amount">Net Balance</th></tr></thead><tbody>'+
       ['Neeraj','Suyog','Prashant'].map(n=>'<tr><td><strong>'+n+'</strong></td><td class="amount">'+cash(people[n].received)+'</td><td class="amount">'+cash(people[n].gp)+'</td><td class="amount">'+cash(people[n].adj)+'</td><td class="amount">'+cash(people[n].settlements)+'</td><td class="amount"><strong>'+cash(people[n].net)+'</strong></td></tr>').join('')+
+      '</tbody></table></div>';+
+      '<div class="finance-section-title manual-adjustments-title">↔ Manual Adjustments</div>'+
+      '<div class="accounts-help">All manual adjustments created in Accounts & Settlement. The selected person is deducted from the adjustment amount.</div>'+
+      '<div class="table-wrap manual-adjustments-wrap"><table class="finance-table manual-adjustments-table"><thead><tr><th>Date</th><th>Apply Month</th><th>Deduct From</th><th class="amount">Amount</th><th>Payee / From</th><th>Reason</th></tr></thead><tbody>'+
+      (Array.isArray(adjustments)&&adjustments.length
+        ? adjustments.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(a=>'<tr><td>'+safe(a.date||'')+'</td><td>'+safe(a.applyMonth?monthLabel(a.applyMonth):'')+'</td><td><strong>'+safe(a.deductFrom||a.paidBy||'')+'</strong></td><td class="amount"><strong>'+cash(a.amount)+'</strong></td><td>'+safe(a.payee||'')+'</td><td>'+safe(a.reason||'')+'</td></tr>').join('')
+        : '<tr><td colspan="6" class="empty">No manual adjustments recorded.</td></tr>')+
       '</tbody></table></div>';
 
     if(!showMonth){
