@@ -880,21 +880,23 @@ function renderGroundPayments(){
 
 let editingManualPaymentId=null;
 function populateManualPaymentAdjustments(selectedId=''){
-  const el=document.getElementById('mpLinkedAdjustment');if(!el)return;
-  el.innerHTML='<option value="">No adjustment linked</option>'+
-    (Array.isArray(adjustments)?adjustments:[]).slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(a=>
-      '<option value="'+esc(a.id)+'" '+(a.id===selectedId?'selected':'')+'>'+esc((a.date||'')+' · '+money(a.amount)+' · '+(a.deductFrom||a.paidBy||'Unassigned')+' · '+(a.reason||'Adjustment'))+'</option>'
-    ).join('');
+  const el=document.getElementById('mpLinkedAdjustment');
+  if(!el)return;
+  const list=Array.isArray(adjustments)?adjustments:[];
+  el.innerHTML='<option value="">No adjustment linked</option>'+list.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(a=>{
+    const label=(a.date||'')+' · '+money(a.amount)+' · '+(a.deductFrom||a.paidBy||'Unassigned')+' · '+(a.reason||'Adjustment');
+    return '<option value="'+esc(a.id)+'" '+(a.id===selectedId?'selected':'')+'>'+esc(label)+'</option>';
+  }).join('');
 }
 function saveManualPayment(){
-  const category=document.getElementById('mpCategory').value;
-  const description=document.getElementById('mpDescription').value.trim();
-  const amount=Number(document.getElementById('mpAmount').value||0);
-  const date=document.getElementById('mpDate').value;
-  const paidBy=document.getElementById('mpPaidBy').value;
-  const month=document.getElementById('mpMonth').value;
+  const category=document.getElementById('mpCategory')?.value||'';
+  const description=document.getElementById('mpDescription')?.value.trim()||'';
+  const amount=Number(document.getElementById('mpAmount')?.value||0);
+  const date=document.getElementById('mpDate')?.value||'';
+  const paidBy=document.getElementById('mpPaidBy')?.value||'';
+  const month=document.getElementById('mpMonth')?.value||'';
   const linkedAdjustmentId=document.getElementById('mpLinkedAdjustment')?.value||'';
-  const notes=document.getElementById('mpNotes').value.trim();
+  const notes=document.getElementById('mpNotes')?.value.trim()||'';
   if(!category){alert('Please select a payment category.');return;}
   if(!description){alert('Please enter a payment description.');return;}
   if(amount<=0){alert('Please enter a valid payment amount.');return;}
@@ -910,7 +912,9 @@ function saveManualPayment(){
     saveFinanceLocal();
   }
   localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
-  clearManualPaymentForm();renderManualPayments();populateManualPaymentAdjustments();
+  clearManualPaymentForm();
+  populateManualPaymentAdjustments();
+  renderManualPayments();
   if(typeof syncFinanceCloud==='function')syncFinanceCloud();
   if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();
 }
@@ -929,28 +933,35 @@ function editManualPayment(id){
 function deleteManualPayment(id){
   if(!confirm('Delete this manual payment?'))return;
   const x=manualPayments.find(a=>a.id===id);
-  manualPayments=manualPayments.filter(x=>x.id!==id);
+  manualPayments=manualPayments.filter(a=>a.id!==id);
   if(x?.linkedAdjustmentId){
     const adj=adjustments.find(a=>a.id===x.linkedAdjustmentId);
     if(adj&&adj.linkedPaymentId===id)delete adj.linkedPaymentId;
     saveFinanceLocal();
   }
   localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
-  renderManualPayments();populateManualPaymentAdjustments();
+  renderManualPayments();
+  populateManualPaymentAdjustments();
   if(typeof syncFinanceCloud==='function')syncFinanceCloud();
   if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();
 }
 function clearManualPaymentForm(){
   editingManualPaymentId=null;
-  ['mpCategory','mpDescription','mpAmount','mpDate','mpPaidBy','mpMonth','mpLinkedAdjustment','mpNotes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['mpCategory','mpDescription','mpAmount','mpDate','mpPaidBy','mpMonth','mpLinkedAdjustment','mpNotes'].forEach(id=>{
+    const e=document.getElementById(id);if(e)e.value='';
+  });
   populateManualPaymentAdjustments();
 }
 function renderManualPayments(){
   const body=document.getElementById('manualPaymentRows');if(!body)return;
-  if(!manualPayments.length){body.innerHTML='<tr><td colspan="9" class="empty">No manual payments yet.</td></tr>';return;}
+  if(!manualPayments.length){
+    body.innerHTML='<tr><td colspan="9" class="empty">No manual payments yet.</td></tr>';
+    return;
+  }
   body.innerHTML=[...manualPayments].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>{
     const adj=adjustments.find(a=>a.id===x.linkedAdjustmentId);
-    return '<tr class="manual-payment-row"><td>'+esc(x.category||'Other')+'</td><td>'+esc(x.description)+'</td><td class="amount">'+money(x.amount)+'</td><td>'+esc(x.date||'')+'</td><td>'+esc(x.paidBy||'')+'</td><td>'+(adj?'<strong>'+money(adj.amount)+'</strong> · '+esc(adj.deductFrom||adj.paidBy||''):'—')+'</td><td>'+esc(x.month||'')+'</td><td>'+esc(x.notes||'')+'</td><td class="actions"><button onclick="editManualPayment(&quot;'+x.id+'&quot;)">Edit</button><button class="danger" onclick="deleteManualPayment(&quot;'+x.id+'&quot;)">Delete</button></td></tr>';
+    const linked=adj?money(adj.amount)+' · '+(adj.deductFrom||adj.paidBy||''):'—';
+    return `<tr class="manual-payment-row"><td>${esc(x.category||'Other')}</td><td>${esc(x.description||'')}</td><td class="amount">${money(x.amount)}</td><td>${esc(x.date||'')}</td><td>${esc(x.paidBy||'')}</td><td>${esc(linked)}</td><td>${esc(x.month||'')}</td><td>${esc(x.notes||'')}</td><td class="actions"><button onclick="editManualPayment('${x.id}')">Edit</button><button class="danger" onclick="deleteManualPayment('${x.id}')">Delete</button></td></tr>`;
   }).join('');
 }
 const CONTRIBUTION_KEY='cricketMatchContributionsV1';
