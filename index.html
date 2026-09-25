@@ -2165,7 +2165,7 @@ ensureFinanceFields();wrapLegacyFunctions();
       const gp=payments.filter(p=>(p.paidBy||'')===person).reduce((s,p)=>s+num(p.amount),0);
       const adj=matches.filter(m=>(m.adjustmentOwner||'')===person).reduce((s,m)=>s+num(m.adjustmentAmount),0)
         +manual.filter(a=>(a.paidBy||'')===person).reduce((s,a)=>s+num(a.amount),0);
-      const settlementRows=Array.isArray(window.settlements)?window.settlements.filter(x=>(x.month||monthOf(x.date))===month&&(x.person||'')===person).reduce((s,x)=>s+num(x.amount),0):0;
+      const settlementRows=Array.isArray(settlements)?settlements.filter(x=>(x.month||monthOf(x.date))===month&&(x.person||'')===person).reduce((s,x)=>s+num(x.amount),0):0;
       const received=opp+play+cont;
       const net=received-gp-adj-settlementRows;
       return {person,opp,play,cont,gp,adj,settlements:settlementRows,received,net};
@@ -2184,7 +2184,7 @@ ensureFinanceFields();wrapLegacyFunctions();
     return [...set].sort();
   }
 
-  renderAccountsDashboard=function(){
+  window.renderAccountsDashboard=function(){
     const overall=document.getElementById('accountsOverall');
     const byMonth=document.getElementById('accountsByMonth');
     if(!overall||!byMonth)return;
