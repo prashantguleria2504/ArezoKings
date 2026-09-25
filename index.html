@@ -336,7 +336,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
     <div><label>Payment Description</label><input id="mpDescription" placeholder="e.g. Equipment, snacks, transport"></div>
     <div><label>Amount</label><input id="mpAmount" type="number" min="0" step="1" placeholder="0"></div>
     <div><label>Date</label><input id="mpDate" type="date"></div>
-    <div><label>Payment Made By</label><select id="mpPaidBy"><option value="">Select person</option><option>Neeraj</option><option>Suyog</option><option>Prashant</option></select></div>
+    <div><label>Payment Made By</label><select id="mpPaidBy"><option value="">Select person</option></select></div>
     <div><label>Payment Month</label><input id="mpMonth" type="month"></div>
     <div><label>Linked Adjustment</label><select id="mpLinkedAdjustment"><option value="">No adjustment linked</option></select></div>
     <div class="manual-payment-contribution-option"><label><input id="mpAddToContribution" type="checkbox"> Add this payment to payer's Recent Contribution</label><small>If checked, the payment amount is added as a new Recent Contribution for the selected team member.</small></div>
@@ -881,6 +881,54 @@ function renderGroundPayments(){
 }
 
 let editingManualPaymentId=null;
+function getContributionPeople(){
+  return (Array.isArray(contributions)?contributions:[])
+    .map(p=>String(p.name||'').trim())
+    .filter(Boolean)
+    .filter((name,i,arr)=>arr.findIndex(x=>x.toLowerCase()===name.toLowerCase())===i);
+}
+function resolveContributionPlayer(paidBy){
+  const name=String(paidBy||'').trim();
+  if(!name)return null;
+  const list=Array.isArray(contributions)?contributions:[];
+  let player=list.find(p=>String(p.name||'').trim().toLowerCase()===name.toLowerCase());
+  if(player)return player;
+  // Backward compatibility for older payments that used short names such as
+  // "Prashant" while Contributions stores "Prashant Guleria".
+  const first=name.split(/\s+/)[0].toLowerCase();
+  const matches=list.filter(p=>String(p.name||'').trim().split(/\s+/)[0].toLowerCase()===first);
+  return matches.length===1?matches[0]:null;
+}
+function populateManualPaymentPeople(selected=''){
+  const el=document.getElementById('mpPaidBy');
+  if(!el)return;
+  const people=getContributionPeople();
+  const options=people.length?people:['Neeraj','Suyog','Prashant'];
+  const current=selected||el.value||'';
+  el.innerHTML='<option value="">Select person</option>'+options.map(n=>'<option value="'+esc(n)+'" '+(n===current?'selected':'')+'>'+esc(n)+'</option>').join('');
+}
+function syncManualPaymentContribution(payment){
+  if(!payment?.addToContribution)return false;
+  const player=resolveContributionPlayer(payment.paidBy);
+  if(!player)return false;
+  player.recentEntries=Array.isArray(player.recentEntries)?player.recentEntries:[];
+  let entry=player.recentEntries.find(e=>e.manualPaymentId===payment.id);
+  const contributionEntry={id:entry?.id||('mpe_'+Date.now()),manualPaymentId:payment.id,amount:Number(payment.amount||0),date:payment.date||'',comment:'Manual payment · '+(payment.description||'Payment'),receivedBy:player.name};
+  if(entry)Object.assign(entry,contributionEntry);else player.recentEntries.push(contributionEntry);
+  // Keep the payment's payer name exactly aligned with Contributions.
+  payment.paidBy=player.name;
+  return true;
+}
+function syncAllManualPaymentContributions(){
+  let changed=false;
+  (Array.isArray(manualPayments)?manualPayments:[]).forEach(p=>{if(syncManualPaymentContribution(p))changed=true;});
+  if(changed){
+    localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
+    localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
+  }
+  return changed;
+}
+
 function populateManualPaymentAdjustments(selectedId=''){
   const el=document.getElementById('mpLinkedAdjustment');
   if(!el)return;
@@ -895,7 +943,9 @@ function saveManualPayment(){
   const description=document.getElementById('mpDescription')?.value.trim()||'';
   const amount=Number(document.getElementById('mpAmount')?.value||0);
   const date=document.getElementById('mpDate')?.value||'';
-  const paidBy=document.getElementById('mpPaidBy')?.value||'';
+  const paidByInput=document.getElementById('mpPaidBy')?.value||'';
+  const matchedPlayer=resolveContributionPlayer(paidByInput);
+  const paidBy=matchedPlayer?.name||paidByInput;
   const month=document.getElementById('mpMonth')?.value||'';
   const linkedAdjustmentId=document.getElementById('mpLinkedAdjustment')?.value||'';
   const addToContribution=!!document.getElementById('mpAddToContribution')?.checked;
@@ -923,22 +973,22 @@ function saveManualPayment(){
   }
 
   // A checked payment creates/updates one Recent Contribution for the payer.
-  // The source id makes it safe to edit/uncheck/delete without duplicate entries.
+  // The contribution player name is always the exact name used in Contributions.
   contributions=Array.isArray(contributions)?contributions:[];
-  let player=contributions.find(p=>String(p.name||'').trim().toLowerCase()===paidBy.toLowerCase());
   if(addToContribution){
-    if(!player){
-      player={id:'contrib_'+Date.now(),name:paidBy,carry:0,recentEntries:[]};
-      contributions.push(player);
+    const player=resolveContributionPlayer(paidBy);
+    if(player){
+      player.recentEntries=Array.isArray(player.recentEntries)?player.recentEntries:[];
+      let entry=player.recentEntries.find(e=>e.manualPaymentId===item.id);
+      const contributionEntry={id:entry?.id||('mpe_'+Date.now()),manualPaymentId:item.id,amount,date,comment:'Manual payment · '+description,receivedBy:player.name};
+      if(entry)Object.assign(entry,contributionEntry);else player.recentEntries.push(contributionEntry);
+      item.paidBy=player.name;
+    }else{
+      alert('The selected person is not present in Contributions. Please add that player in Contributions first.');
+      return;
     }
-    player.recentEntries=Array.isArray(player.recentEntries)?player.recentEntries:[];
-    let entry=player.recentEntries.find(e=>e.manualPaymentId===item.id);
-    const contributionEntry={id:entry?.id||('mpe_'+Date.now()),manualPaymentId:item.id,amount,date,comment:'Manual payment · '+description,receivedBy:paidBy};
-    if(entry)Object.assign(entry,contributionEntry);else player.recentEntries.push(contributionEntry);
   }else{
-    contributions.forEach(p=>{
-      p.recentEntries=(Array.isArray(p.recentEntries)?p.recentEntries:[]).filter(e=>e.manualPaymentId!==item.id);
-    });
+    contributions.forEach(p=>{p.recentEntries=(Array.isArray(p.recentEntries)?p.recentEntries:[]).filter(e=>e.manualPaymentId!==item.id);});
   }
 
   saveFinanceLocal();
@@ -957,10 +1007,11 @@ function editManualPayment(id){
   document.getElementById('mpDescription').value=x.description||'';
   document.getElementById('mpAmount').value=x.amount||0;
   document.getElementById('mpDate').value=x.date||'';
-  document.getElementById('mpPaidBy').value=x.paidBy||'';
+  populateManualPaymentPeople(x.paidBy||'');
   document.getElementById('mpMonth').value=x.month||'';
   document.getElementById('mpNotes').value=x.notes||'';
   document.getElementById('mpAddToContribution').checked=!!x.addToContribution;
+  populateManualPaymentPeople(x.paidBy||'');
   populateManualPaymentAdjustments(x.linkedAdjustmentId||'');
 }
 function deleteManualPayment(id){
@@ -984,6 +1035,7 @@ function deleteManualPayment(id){
 }
 function clearManualPaymentForm(){
   editingManualPaymentId=null;
+  populateManualPaymentPeople();
   ['mpCategory','mpDescription','mpAmount','mpDate','mpPaidBy','mpMonth','mpLinkedAdjustment','mpNotes'].forEach(id=>{
     const e=document.getElementById(id);if(e)e.value='';
   });
@@ -991,6 +1043,7 @@ function clearManualPaymentForm(){
   populateManualPaymentAdjustments();
 }
 function renderManualPayments(){
+  syncAllManualPaymentContributions();
   const body=document.getElementById('manualPaymentRows');if(!body)return;
   if(!manualPayments.length){
     body.innerHTML='<tr><td colspan="9" class="empty">No manual payments yet.</td></tr>';
@@ -1239,6 +1292,8 @@ function showPayments(){
   document.getElementById('manualPaymentsSection')?.classList.remove('hidden');
   document.querySelector('.cards').classList.add('hidden');
   refreshPaymentGroundDropdown();
+  populateManualPaymentPeople();
+  syncAllManualPaymentContributions();
   renderGroundPayments();
   populateManualPaymentAdjustments();
   renderManualPayments();
