@@ -1036,7 +1036,7 @@ function deleteManualPayment(id){
 function clearManualPaymentForm(){
   editingManualPaymentId=null;
   populateManualPaymentPeople();
-  ['mpCategory,'mpDescription','mpAmount','mpDate','mpPaidBy','mpMonth','mpLinkedAdjustment','mpNotes'].forEach(id=>{
+  ['mpCategory','mpDescription','mpAmount','mpDate','mpPaidBy','mpMonth','mpLinkedAdjustment','mpNotes'].forEach(id=>{
     const e=document.getElementById(id);if(e)e.value='';
   });
   const cb=document.getElementById('mpAddToContribution');if(cb)cb.checked=false;
