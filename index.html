@@ -1372,7 +1372,8 @@ function buildBackupPayload(){
     matches:Array.isArray(data)?data:[],
     contributions:Array.isArray(contributions)?contributions:[],
     groundPayments:Array.isArray(groundPayments)?groundPayments:[],
-    groundNames:getGrounds()
+    groundNames:getGrounds(),
+    finance:{version:1,adjustments:Array.isArray(adjustments)?adjustments:[],settlements:Array.isArray(settlements)?settlements:[]}
   };
 }
 function closeBackupModal(){
@@ -1445,6 +1446,7 @@ async function restoreData(e){
     let restoredContributions=[];
     let restoredGroundPayments=[];
     let restoredGroundNames=[];
+    let restoredFinance=null;
 
     if(Array.isArray(x)){
       // Legacy backup containing matches only.
@@ -1455,6 +1457,7 @@ async function restoreData(e){
       restoredContributions=Array.isArray(x.contributions)?x.contributions:[];
       restoredGroundPayments=Array.isArray(x.groundPayments)?x.groundPayments:[];
       restoredGroundNames=Array.isArray(x.groundNames)?x.groundNames:[];
+      restoredFinance=x.finance||null;
     }else{
       throw new Error('Unsupported backup format');
     }
@@ -1462,6 +1465,11 @@ async function restoreData(e){
     data=restoredMatches;
     contributions=restoredContributions;
     groundPayments=restoredGroundPayments;
+    if(restoredFinance){
+      adjustments=Array.isArray(restoredFinance.adjustments)?restoredFinance.adjustments:[];
+      settlements=Array.isArray(restoredFinance.settlements)?restoredFinance.settlements:[];
+      saveFinanceLocal();
+    }
 
     if(restoredGroundNames.length){
       saveGrounds(restoredGroundNames);
@@ -1751,7 +1759,7 @@ function renderAccounts(){
     const settlementsOut=settlements.filter(x=>x.person===person&&((x.month||'')===month.month)).reduce((s,x)=>s+Number(x.amount||0),0);
     // Positive = team owes the person; negative = person holds more team money than
     // the team's expenses they have paid.
-    const net=paid-settlementsOut+incoming;
+    const net=paid-incoming-settlementsOut;
     return {person,incoming,paid,settlementsOut,net};
   });
   document.getElementById('accountOwnerRows').innerHTML=people.map(x=>'<tr><td><strong>'+esc(x.person)+'</strong></td><td class="amount in">'+money(x.incoming)+'</td><td class="amount out">'+money(x.paid)+'</td><td class="amount out">'+money(x.settlementsOut)+'</td><td class="amount '+(x.net<0?'net-negative':'net-positive')+'">'+money(x.net)+'</td></tr>').join('');
