@@ -1661,11 +1661,25 @@ async function initializeCloudApp(){
     startCloudRefresh();
     showApp();
   }catch(err){
-    console.error(err);
-    setAuthMessage('loginMessage',
-      'Signed in, but cloud data could not be loaded. Please check the Supabase database permissions.',
-      'error'
-    );
+    console.error('Cloud initialization failed after successful authentication:',err);
+    // Authentication succeeded. Do not trap the user on the login screen just
+    // because loading the optional team_state record failed.
+    // Keep any browser-local data available and let the user enter the app.
+    try{
+      render();
+      renderContributions();
+      renderGroundPayments();
+      refreshGroundDropdown();
+      refreshPaymentGroundDropdown();
+      startCloudRefresh();
+    }catch(renderErr){
+      console.error('Local app render failed:',renderErr);
+    }
+    showApp();
+    setTimeout(()=>{
+      const msg=document.getElementById('loginMessage');
+      if(msg) setAuthMessage('loginMessage','Signed in. Cloud data could not be loaded; local data is being used until the connection is fixed.','error');
+    },0);
   }
 }
 async function initAuth(){
