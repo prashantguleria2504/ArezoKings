@@ -332,7 +332,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
     <button class="primary" onclick="showTracker()">← Back to Matches</button>
   </div>
   <div class="accounts-intro">
-    <strong>Complete team financial view</strong> — automatically calculated from Matches, Payments and Contributions. No month selection is required.
+    <strong>Complete team financial view</strong> — the consolidated balance is calculated automatically from Matches, Payments and Contributions across all recorded months.
   </div>
   <div class="finance-toolbar">
     <button class="secondary" onclick="openAdjustmentForm()">＋ Add Manual Adjustment</button>
@@ -340,6 +340,14 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
   </div>
 
   <div id="accountsOverall"></div>
+
+  <div class="finance-section-title">📅 View a Specific Month</div>
+  <div class="accounts-month-selector">
+    <select id="accountsMonth">
+      <option value="">Select month</option>
+    </select>
+    <button class="primary" type="button" onclick="showSelectedAccountsMonth()">Show</button>
+  </div>
   <div id="accountsByMonth"></div>
 </section>>>
 <div id="financeModalHost"></div>
@@ -2104,8 +2112,9 @@ ensureFinanceFields();wrapLegacyFunctions();
     const people=['Neeraj','Suyog','Prashant'].map(person=>{
       const opp=matches.filter(m=>(m.opponentOwner||m.opponentReceivedBy||'')===person)
         .reduce((s,m)=>s+num(m.opponentAmount),0);
-      const play=matches.filter(m=>(m.playersOwner||'')===person)
-        .reduce((s,m)=>s+(Array.isArray(m.players)?m.players:[]).reduce((a,p)=>a+num(p.amount),0),0);
+      const play=matches.reduce((s,m)=>s+(Array.isArray(m.players)?m.players:[])
+        .filter(p=>(p.collectedBy||p.playersOwner||'')===person)
+        .reduce((a,p)=>a+num(p.amount),0),0);
       const cont=contrib.reduce((s,p)=>s+(Array.isArray(p.recentEntries)?p.recentEntries:[])
         .filter(e=>monthOf(e.date)===month&&(e.receivedBy||'')===person)
         .reduce((a,e)=>a+num(e.amount),0),0);
@@ -2131,25 +2140,42 @@ ensureFinanceFields();wrapLegacyFunctions();
     return [...set].sort();
   }
 
-  window.renderAccountsDashboard=function(){
+  window.renderAccountsDashboard=function(showMonth){
     const overall=document.getElementById('accountsOverall');
     const byMonth=document.getElementById('accountsByMonth');
+    const selector=document.getElementById('accountsMonth');
     if(!overall||!byMonth)return;
 
     const months=allMonths();
     const totals={groundBooking:0,groundPaid:0,opponent:0,players:0,regular:0,adjustments:0};
-    const people={Neeraj:{},Suyog:{},Prashant:{}};
-    Object.values(people).forEach(p=>Object.assign(p,{received:0,gp:0,adj:0,settlements:0,net:0}));
-
+    const people={Neeraj:{received:0,gp:0,adj:0,settlements:0,net:0},Suyog:{received:0,gp:0,adj:0,settlements:0,net:0},Prashant:{received:0,gp:0,adj:0,settlements:0,net:0}};
     const results=months.map(m=>calculate(m));
+
     results.forEach(r=>{
-      totals.groundBooking+=r.groundBooking; totals.groundPaid+=r.groundPaid; totals.opponent+=r.opponent;
-      totals.players+=r.players; totals.regular+=r.regular; totals.adjustments+=r.adjustments;
-      r.people.forEach(p=>{people[p.person].received+=p.received;people[p.person].gp+=p.gp;people[p.person].adj+=p.adj;people[p.person].settlements+=p.settlements;people[p.person].net+=p.net;});
+      totals.groundBooking+=r.groundBooking;
+      totals.groundPaid+=r.groundPaid;
+      totals.opponent+=r.opponent;
+      totals.players+=r.players;
+      totals.regular+=r.regular;
+      totals.adjustments+=r.adjustments;
+      r.people.forEach(p=>{
+        people[p.person].received+=p.received;
+        people[p.person].gp+=p.gp;
+        people[p.person].adj+=p.adj;
+        people[p.person].settlements+=p.settlements;
+        people[p.person].net+=p.net;
+      });
     });
 
+    if(selector){
+      const current=selector.value;
+      selector.innerHTML='<option value="">Select month</option>'+
+        months.slice().sort().reverse().map(k=>'<option value="'+safe(k)+'">'+safe(monthLabel(k))+'</option>').join('');
+      if(current && months.includes(current))selector.value=current;
+    }
+
     overall.innerHTML=
-      '<div class="finance-summary-title">📊 Overall Team Summary</div>'+
+      '<div class="finance-summary-title">📊 Consolidated Team Summary</div>'+
       '<div class="finance-summary-grid">'+
       [
         ['Total ground booking',totals.groundBooking,'All matches'],
@@ -2166,22 +2192,40 @@ ensureFinanceFields();wrapLegacyFunctions();
       ['Neeraj','Suyog','Prashant'].map(n=>'<tr><td><strong>'+n+'</strong></td><td class="amount">'+cash(people[n].received)+'</td><td class="amount">'+cash(people[n].gp)+'</td><td class="amount">'+cash(people[n].adj)+'</td><td class="amount">'+cash(people[n].settlements)+'</td><td class="amount"><strong>'+cash(people[n].net)+'</strong></td></tr>').join('')+
       '</tbody></table></div>';
 
-    byMonth.innerHTML='<div class="finance-section-title">📅 Month-by-Month Breakdown</div>'+
-      (results.length?results.map(r=>
-        '<div class="accounts-month-card">'+
-        '<div class="accounts-month-head"><h3>'+safe(monthLabel(r.month))+'</h3><span>'+r.matches.length+' match'+(r.matches.length===1?'':'es')+'</span></div>'+
-        '<div class="finance-summary-grid">'+
-        [['Ground booking',r.groundBooking,'Matches'],['Ground paid',r.groundPaid,'Payments'],['Opponent',r.opponent,'Opponent fees'],['Players',r.players,'Playing players'],['Contributions',r.regular,'Regular contributions'],['Adjustments',r.adjustments,'Match + manual']].map(x=>'<div class="finance-summary-item"><div class="label">'+safe(x[0])+'</div><div class="value">'+cash(x[1])+'</div><div class="hint">'+safe(x[2])+'</div></div>').join('')+
-        '</div>'+
-        '<div class="table-wrap"><table class="finance-table"><thead><tr><th>Person</th><th class="amount">Opponent</th><th class="amount">Players</th><th class="amount">Contributions</th><th class="amount">Ground Paid</th><th class="amount">Adjustments</th><th class="amount">Net Balance</th></tr></thead><tbody>'+
-        r.people.map(p=>'<tr><td><strong>'+p.person+'</strong></td><td class="amount">'+cash(p.opp)+'</td><td class="amount">'+cash(p.play)+'</td><td class="amount">'+cash(p.cont)+'</td><td class="amount">'+cash(p.gp)+'</td><td class="amount">'+cash(p.adj)+'</td><td class="amount"><strong>'+cash(p.net)+'</strong></td></tr>').join('')+
-        '</tbody></table></div>'+
-        '<div class="accounts-month-foot">Money collected: <strong>'+cash(r.opponent+r.players+r.regular)+'</strong> · Team payments: <strong>'+cash(r.groundPaid)+'</strong> · Adjustments: <strong>'+cash(r.adjustments)+'</strong></div>'+
-        '</div>'
-      ).join(''):'<div class="empty">No financial data has been recorded yet.</div>');
+    if(!showMonth){
+      byMonth.innerHTML='<div class="accounts-help accounts-month-empty">Select a month above and click <strong>Show</strong> to view that month\'s financial details.</div>';
+      return;
+    }
+
+    const r=results.find(x=>x.month===showMonth);
+    if(!r){
+      byMonth.innerHTML='<div class="empty">No financial data has been recorded for the selected month.</div>';
+      return;
+    }
+
+    byMonth.innerHTML=
+      '<div class="accounts-month-card">'+
+      '<div class="accounts-month-head"><h3>'+safe(monthLabel(r.month))+'</h3><span>'+r.matches.length+' match'+(r.matches.length===1?'':'es')+'</span></div>'+
+      '<div class="finance-summary-grid">'+
+      [['Ground booking',r.groundBooking,'Matches'],['Ground paid',r.groundPaid,'Payments'],['Opponent',r.opponent,'Opponent fees'],['Players',r.players,'Playing players'],['Contributions',r.regular,'Regular contributions'],['Adjustments',r.adjustments,'Match + manual']].map(x=>'<div class="finance-summary-item"><div class="label">'+safe(x[0])+'</div><div class="value">'+cash(x[1])+'</div><div class="hint">'+safe(x[2])+'</div></div>').join('')+
+      '</div>'+
+      '<div class="table-wrap"><table class="finance-table"><thead><tr><th>Person</th><th class="amount">Opponent</th><th class="amount">Players</th><th class="amount">Contributions</th><th class="amount">Ground Paid</th><th class="amount">Adjustments</th><th class="amount">Settled</th><th class="amount">Net Balance</th></tr></thead><tbody>'+
+      r.people.map(p=>'<tr><td><strong>'+p.person+'</strong></td><td class="amount">'+cash(p.opp)+'</td><td class="amount">'+cash(p.play)+'</td><td class="amount">'+cash(p.cont)+'</td><td class="amount">'+cash(p.gp)+'</td><td class="amount">'+cash(p.adj)+'</td><td class="amount">'+cash(p.settlements)+'</td><td class="amount"><strong>'+cash(p.net)+'</strong></td></tr>').join('')+
+      '</tbody></table></div>'+
+      '<div class="accounts-month-foot">Money collected: <strong>'+cash(r.opponent+r.players+r.regular)+'</strong> · Team payments: <strong>'+cash(r.groundPaid)+'</strong> · Adjustments: <strong>'+cash(r.adjustments)+'</strong></div>'+
+      '</div>';
   };
 
-  showAccounts=function(){
+  window.showSelectedAccountsMonth=function(){
+    const selector=document.getElementById('accountsMonth');
+    if(!selector?.value){
+      alert('Please select a month first.');
+      return;
+    }
+    renderAccountsDashboard(selector.value);
+  };
+
+  window.showAccounts=function(){
     ['summarySection','playerContributionSummarySection','paymentsSection','contributionsSection','matchFormSection','weeks'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
     document.querySelector('.cards')?.classList.add('hidden');
     document.getElementById('accountsSection')?.classList.remove('hidden');
