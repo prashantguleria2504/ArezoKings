@@ -2127,7 +2127,7 @@ window.showAccounts=function(){
 document.addEventListener('change',e=>{if(e.target?.id==='accountsMonth')window.renderAccounts();});
 document.addEventListener('DOMContentLoaded',()=>{ensureFinanceFields();wrapLegacyFunctions();});
 ensureFinanceFields();wrapLegacyFunctions();
-<script id="accountsDashboardFinal">
+
 (function(){
   function num(v){return Number(v||0)||0;}
   function monthOf(date){return (date||'').slice(0,7);}
@@ -2152,7 +2152,7 @@ ensureFinanceFields();wrapLegacyFunctions();
       .filter(e=>monthOf(e.date)===month).reduce((a,e)=>a+num(e.amount),0),0);
     const matchAdj=matches.reduce((s,m)=>s+num(m.adjustmentAmount),0);
     const manualAdj=manual.reduce((s,a)=>s+num(a.amount),0);
-    const adjustments=matchAdj+manualAdj;
+    const totalAdjustmentAmount=matchAdj+manualAdj;
 
     const people=['Neeraj','Suyog','Prashant'].map(person=>{
       const opp=matches.filter(m=>(m.opponentOwner||m.opponentReceivedBy||'')===person)
@@ -2165,13 +2165,13 @@ ensureFinanceFields();wrapLegacyFunctions();
       const gp=payments.filter(p=>(p.paidBy||'')===person).reduce((s,p)=>s+num(p.amount),0);
       const adj=matches.filter(m=>(m.adjustmentOwner||'')===person).reduce((s,m)=>s+num(m.adjustmentAmount),0)
         +manual.filter(a=>(a.paidBy||'')===person).reduce((s,a)=>s+num(a.amount),0);
-      const settlements=Array.isArray(settlements)?settlements.filter(x=>(x.month||monthOf(x.date))===month&&(x.person||'')===person).reduce((s,x)=>s+num(x.amount),0):0;
+      const settlementRows=Array.isArray(window.settlements)?window.settlements.filter(x=>(x.month||monthOf(x.date))===month&&(x.person||'')===person).reduce((s,x)=>s+num(x.amount),0):0;
       const received=opp+play+cont;
-      const net=received-gp-adj-settlements;
-      return {person,opp,play,cont,gp,adj,settlements,received,net};
+      const net=received-gp-adj-settlementRows;
+      return {person,opp,play,cont,gp,adj,settlements:settlementRows,received,net};
     });
 
-    return {month,groundBooking,groundPaid,opponent,players,regular,adjustments,people,matches,payments};
+    return {month,groundBooking,groundPaid,opponent,players,regular,adjustments:totalAdjustmentAmount,people,matches,payments};
   }
 
   function allMonths(){
