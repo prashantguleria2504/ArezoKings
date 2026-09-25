@@ -77,7 +77,25 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .backup-download-link{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;border-radius:9px;padding:10px 12px;font-weight:700;background:var(--accent);color:#fff;border:1px solid var(--accent)}
 .backup-modal-close{margin-left:auto}
 
-</style>
+
+<style id="financeStyles">
+.finance-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--line)}
+.finance-toolbar select,.finance-toolbar input{font:inherit;border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff}
+.finance-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px}
+.finance-card{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:14px}
+.finance-card .label{font-size:12px;color:var(--muted)}.finance-card .value{font-size:22px;font-weight:800;margin-top:5px}
+.finance-table{min-width:1050px}
+.finance-table .in{color:#16734e;font-weight:800}.finance-table .out{color:#c0392b;font-weight:800}
+.finance-table .net-positive{color:#16734e;font-weight:800}.finance-table .net-negative{color:#c0392b;font-weight:800}
+.finance-form{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px;border-bottom:1px solid var(--line)}
+.finance-form label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+.finance-form input,.finance-form select{width:100%;font:inherit;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fff}
+.finance-form .form-actions{grid-column:1/-1;display:flex;gap:8px}
+.finance-note{font-size:12px;color:var(--muted);padding:0 16px 14px}
+.finance-section-title{padding:14px 16px;border-bottom:1px solid var(--line);font-weight:800}
+@media(max-width:900px){.finance-cards{grid-template-columns:repeat(2,1fr)}.finance-form{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.finance-cards{grid-template-columns:1fr 1fr}.finance-form{grid-template-columns:1fr}}
+</style></style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -143,6 +161,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
   <button class="secondary" onclick="showSummary()">📊 Summary</button>
   <button class="secondary" onclick="showContributions()">💰 Contributions</button>
   <button class="secondary" onclick="showPayments()">💳 Payments</button>
+<button class="secondary" id="accountsNavButton" onclick="showAccounts()">🧾 Accounts & Settlement</button>
+
   <button class="secondary" onclick="exportCSV()">Export CSV</button>
   <button class="secondary" onclick="backupData()">Backup Data</button>
   <span style="font-size:11px;color:#687386;align-self:center">Backup opens a downloadable JSON window.</span>
@@ -304,7 +324,47 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
   </div>
 </section>
 
-<div id="weeks"></div>
+<div id="weeks"></div><section class="section hidden" id="accountsSection">
+  <div class="section-head">
+    <h2>🧾 Accounts & Settlement</h2>
+    <button class="primary" onclick="showTracker()">← Back to Matches</button>
+  </div>
+  <div class="finance-toolbar">
+    <label style="font-size:12px;color:var(--muted);font-weight:700">Month</label>
+    <select id="accountsMonth"></select>
+    <button class="secondary" onclick="openAdjustmentForm()">＋ Add Adjustment</button>
+    <button class="secondary" onclick="openSettlementForm()">↔ Settle Account</button>
+  </div>
+  <div class="finance-cards">
+    <div class="finance-card"><div class="label">Money Collected</div><div class="value" id="finIn">₹0</div></div>
+    <div class="finance-card"><div class="label">Team Expenses Paid</div><div class="value" id="finOut">₹0</div></div>
+    <div class="finance-card"><div class="label">Adjustments</div><div class="value" id="finAdj">₹0</div></div>
+    <div class="finance-card"><div class="label">Net Team Position</div><div class="value" id="finNet">₹0</div></div>
+  </div>
+  <div class="section" style="margin:0 16px 16px">
+    <div class="finance-section-title">Who is holding / owed what?</div>
+    <div class="table-wrap"><table class="finance-table">
+      <thead><tr><th>Person</th><th class="amount">Money Received</th><th class="amount">Paid for Team</th><th class="amount">Settlements</th><th class="amount">Net Balance</th></tr></thead>
+      <tbody id="accountOwnerRows"></tbody>
+    </table></div>
+  </div>
+  <div class="section" style="margin:0 16px 16px">
+    <div class="finance-section-title">Transaction Ledger</div>
+    <div class="table-wrap"><table class="finance-table">
+      <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Person</th><th class="amount">Money In</th><th class="amount">Money Out</th><th>Month</th></tr></thead>
+      <tbody id="financeLedgerRows"></tbody>
+    </table></div>
+  </div>
+  <div class="section" style="margin:0 16px 16px">
+    <div class="finance-section-title">Adjustments</div>
+    <div class="table-wrap"><table class="finance-table">
+      <thead><tr><th>Date</th><th>Applied Month</th><th>Reason</th><th>Paid/Received By</th><th>Payee / From</th><th class="amount">Amount</th><th>Actions</th></tr></thead>
+      <tbody id="adjustmentRows"></tbody>
+    </table></div>
+  </div>
+  <div class="finance-note">Balances are calculated from transactions. Do not manually edit balances. A positive balance means the team currently owes that person; a negative balance means that person has received more team money than they have paid for the team.</div>
+</section>
+<div id="financeModalHost"></div>
 <footer>Data is stored in this browser. Use “Backup Data” regularly if you want a portable copy.</footer>
 </div>
 </div>
@@ -1512,5 +1572,271 @@ document.addEventListener('submit', function(e){
 }, true);
 
 </script>
+
+<script id="financeLayer">
+/* ArezoKings Finance Layer
+   Keeps the existing match/contribution/payment data intact while adding a
+   single calculated financial ledger and explicit ownership of money. */
+const FINANCE_KEY='arezoKingsFinanceV1';
+let financeState=JSON.parse(localStorage.getItem(FINANCE_KEY)||'{}');
+let adjustments=Array.isArray(financeState.adjustments)?financeState.adjustments:[];
+let settlements=Array.isArray(financeState.settlements)?financeState.settlements:[];
+const ACCOUNT_PEOPLE=['Neeraj','Suyog','Prashant'];
+
+function saveFinanceLocal(){
+  financeState={version:1,adjustments,settlements};
+  localStorage.setItem(FINANCE_KEY,JSON.stringify(financeState));
+}
+function financePersonOptions(selected=''){
+  return '<option value="">Not assigned</option>'+ACCOUNT_PEOPLE.map(p=>'<option value="'+esc(p)+'" '+(p===selected?'selected':'')+'>'+esc(p)+'</option>').join('');
+}
+function financeMonthOptions(selected=''){
+  const keys=new Set(data.map(x=>monthKey(x.date)));
+  const now=new Date().toISOString().slice(0,7); keys.add(now);
+  [...adjustments,...settlements].forEach(x=>{if(x.applyMonth)keys.add(x.applyMonth);if(x.month)keys.add(x.month);});
+  return [...keys].sort().reverse().map(k=>'<option value="'+k+'" '+(k===selected?'selected':'')+'>'+monthName(k)+'</option>').join('');
+}
+function ensureFinanceFields(){
+  if(document.getElementById('mOpponentReceivedBy'))return;
+  const amount=document.getElementById('mAmount');
+  if(amount?.parentElement){
+    const d=document.createElement('div');
+    d.innerHTML='<label>Opponent received by</label><select id="mOpponentReceivedBy">'+financePersonOptions()+'</select>';
+    amount.parentElement.insertAdjacentElement('afterend',d);
+  }
+  const payee=document.getElementById('pPayee');
+  if(payee?.parentElement){
+    const d=document.createElement('div');
+    d.innerHTML='<label>Paid by</label><select id="pPaidBy">'+financePersonOptions()+'</select>';
+    payee.parentElement.insertAdjacentElement('afterend',d);
+  }
+  const recent=document.getElementById('cRecentComment');
+  if(recent?.parentElement){
+    const d=document.createElement('div');
+    d.innerHTML='<label style="font-size:12px;color:var(--muted);display:block;margin:6px 0 5px">Received by</label><select id="cReceivedBy" style="width:100%;font:inherit;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fff">'+financePersonOptions()+'</select>';
+    recent.parentElement.appendChild(d);
+  }
+}
+function addCollectorToPlayerPanel(mid){
+  const panel=document.getElementById('addPlayerPanel-'+mid);
+  if(!panel || document.getElementById('matchPlayerCollector-'+mid))return;
+  const d=document.createElement('div');
+  d.style.display='inline-block';
+  d.innerHTML='<label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Collected by</label><select id="matchPlayerCollector-'+mid+'" style="font:inherit;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff">'+financePersonOptions()+'</select>';
+  panel.insertBefore(d,panel.querySelector('button.primary'));
+}
+function wrapLegacyFunctions(){
+  if(window.__financeWrapped)return;
+  window.__financeWrapped=true;
+
+  const oldSaveMatch=window.saveMatch;
+  window.saveMatch=function(){
+    const targetId=editingId;
+    const receiver=document.getElementById('mOpponentReceivedBy')?.value||'';
+    oldSaveMatch();
+    let x=targetId?data.find(a=>a.id===targetId):null;
+    if(!x){
+      const date=document.getElementById('mDate')?.value;
+      const ground=document.getElementById('mGround')?.value;
+      const opponent=document.getElementById('mOpponent')?.value?.trim();
+      x=[...data].reverse().find(a=>a.date===date&&a.ground===ground&&a.opponent===opponent);
+    }
+    if(x){x.opponentReceivedBy=receiver;save();}
+  };
+
+  const oldSavePayment=window.saveGroundPayment;
+  window.saveGroundPayment=function(){
+    const targetId=editingPaymentId;
+    const paidBy=document.getElementById('pPaidBy')?.value||'';
+    const before=groundPayments.length;
+    oldSavePayment();
+    let x=targetId?groundPayments.find(a=>a.id===targetId):null;
+    if(!x && groundPayments.length>before){
+      x=groundPayments[groundPayments.length-1];
+    }
+    if(x){x.paidBy=paidBy;localStorage.setItem(PAYMENT_KEY,JSON.stringify(groundPayments));saveFinanceLocal();renderGroundPayments();if(cloudUser)saveCloudState().catch(console.error);}
+  };
+
+  const oldSaveContribution=window.saveContribution;
+  window.saveContribution=function(){
+    const playerId=editingContributionId;
+    const entryIndex=editingRecentContributionId;
+    const receivedBy=document.getElementById('cReceivedBy')?.value||'';
+    oldSaveContribution();
+    let player=playerId?contributions.find(x=>x.id===playerId):null;
+    if(!player){
+      const name=document.getElementById('cPlayerName')?.value?.trim();
+      player=[...contributions].reverse().find(x=>String(x.name||'').trim().toLowerCase()===String(name||'').toLowerCase());
+    }
+    if(player){
+      const entries=Array.isArray(player.recentEntries)?player.recentEntries:[];
+      let entry=entryIndex!==null&&entryIndex!==undefined?entries[Number(entryIndex)]:entries[entries.length-1];
+      if(entry)entry.receivedBy=receivedBy;
+      localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
+      saveFinanceLocal();
+      renderContributions();
+      if(cloudUser)saveCloudState().catch(console.error);
+    }
+  };
+
+  const oldToggle=window.toggleAddPlayer;
+  window.toggleAddPlayer=function(id){oldToggle(id);addCollectorToPlayerPanel(id);};
+
+  const oldSavePlayer=window.saveMatchPlayer;
+  window.saveMatchPlayer=function(mid){
+    const collector=document.getElementById('matchPlayerCollector-'+mid)?.value||'';
+    oldSavePlayer(mid);
+    const x=data.find(a=>a.id===mid);
+    if(x?.players?.length){x.players[x.players.length-1].collectedBy=collector;save();}
+  };
+
+  const oldOpenMatch=window.openMatchForm;
+  window.openMatchForm=function(id=null){
+    oldOpenMatch(id);ensureFinanceFields();
+    const x=id&&data.find(a=>a.id===id);
+    document.getElementById('mOpponentReceivedBy').value=x?.opponentReceivedBy||'';
+  };
+  const oldEditPayment=window.editGroundPayment;
+  window.editGroundPayment=function(id){oldEditPayment(id);ensureFinanceFields();const x=groundPayments.find(a=>a.id===id);document.getElementById('pPaidBy').value=x?.paidBy||'';};
+  const oldEditRecent=window.editRecentContributionByIndex;
+  window.editRecentContributionByIndex=function(pi,ei){oldEditRecent(pi,ei);ensureFinanceFields();const p=contributions[Number(pi)],e=p?.recentEntries?.[Number(ei)];document.getElementById('cReceivedBy').value=e?.receivedBy||'';};
+  const oldEditContribution=window.editContribution;
+  window.editContribution=function(id){oldEditContribution(id);ensureFinanceFields();document.getElementById('cReceivedBy').value='';};
+}
+function buildFinanceLedger(){
+  const ledger=[];
+  (data||[]).forEach(m=>{
+    if(Number(m.opponentAmount||0)>0){
+      ledger.push({date:m.date,type:'Opponent collection',description:'vs '+(m.opponent||'Opponent'),person:m.opponentReceivedBy||'',in:Number(m.opponentAmount||0),out:0,month:monthKey(m.date)});
+    }
+    (m.players||[]).forEach(p=>{
+      if(Number(p.amount||0)>0)ledger.push({date:m.date,type:'Playing player collection',description:(p.name||'Player')+' · '+(m.ground||''),person:p.collectedBy||'',in:Number(p.amount||0),out:0,month:monthKey(m.date)});
+    });
+    if(Number(m.neerajAmount||0)>0)ledger.push({date:m.date,type:'Match amount',description:'Amount recorded with Neeraj',person:'Neeraj',in:Number(m.neerajAmount||0),out:0,month:monthKey(m.date)});
+    if(Number(m.suyogAmount||0)>0)ledger.push({date:m.date,type:'Match amount',description:'Amount recorded with Suyog',person:'Suyog',in:Number(m.suyogAmount||0),out:0,month:monthKey(m.date)});
+  });
+  (contributions||[]).forEach(p=>(p.recentEntries||[]).forEach(e=>{
+    if(Number(e.amount||0)>0)ledger.push({date:e.date||'',type:'Regular contribution',description:(p.name||'Player')+(e.comment?' · '+e.comment:''),person:e.receivedBy||'',in:Number(e.amount||0),out:0,month:(e.date||'').slice(0,7)});
+  }));
+  (groundPayments||[]).forEach(p=>{
+    if(Number(p.amount||0)>0)ledger.push({date:p.date||'',type:'Ground payment',description:(p.ground||'Ground')+(p.payee?' · '+p.payee:''),person:p.paidBy||'',in:0,out:Number(p.amount||0),month:p.month||(p.date||'').slice(0,7)});
+  });
+  adjustments.forEach(a=>{
+    const amt=Number(a.amount||0); if(!amt)return;
+    ledger.push({date:a.date||'',type:'Adjustment',description:a.reason||'Adjustment',person:a.paidBy||'',in:0,out:amt,month:a.applyMonth||''});
+  });
+  settlements.forEach(s=>{
+    const amt=Number(s.amount||0); if(!amt)return;
+    ledger.push({date:s.date||'',type:'Settlement',description:'Settlement with '+s.person,person:s.person||'',in:0,out:amt,month:s.month||(s.date||'').slice(0,7)});
+  });
+  return ledger.filter(x=>x.date||x.month);
+}
+function financeForMonth(){
+  const month=document.getElementById('accountsMonth')?.value||new Date().toISOString().slice(0,7);
+  return {month,ledger:buildFinanceLedger().filter(x=>x.month===month)};
+}
+function renderAccounts(){
+  const month=financeForMonth();
+  const all=month.ledger;
+  const totalIn=all.reduce((s,x)=>s+x.in,0),totalOut=all.reduce((s,x)=>s+x.out,0);
+  const adj=all.filter(x=>x.type==='Adjustment').reduce((s,x)=>s+x.out,0);
+  document.getElementById('finIn').innerHTML=money(totalIn);
+  document.getElementById('finOut').innerHTML=money(totalOut-adj);
+  document.getElementById('finAdj').innerHTML=money(adj);
+  document.getElementById('finNet').innerHTML=money(totalIn-totalOut);
+
+  const people=ACCOUNT_PEOPLE.map(person=>{
+    const incoming=all.filter(x=>x.person===person).reduce((s,x)=>s+x.in,0);
+    const paid=all.filter(x=>x.person===person).reduce((s,x)=>s+x.out,0);
+    const settlementsOut=settlements.filter(x=>x.person===person&&((x.month||'')===month.month)).reduce((s,x)=>s+Number(x.amount||0),0);
+    // Positive = team owes the person; negative = person holds more team money than
+    // the team's expenses they have paid.
+    const net=paid-settlementsOut+incoming;
+    return {person,incoming,paid,settlementsOut,net};
+  });
+  document.getElementById('accountOwnerRows').innerHTML=people.map(x=>'<tr><td><strong>'+esc(x.person)+'</strong></td><td class="amount in">'+money(x.incoming)+'</td><td class="amount out">'+money(x.paid)+'</td><td class="amount out">'+money(x.settlementsOut)+'</td><td class="amount '+(x.net<0?'net-negative':'net-positive')+'">'+money(x.net)+'</td></tr>').join('');
+
+  const rows=[...all].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  document.getElementById('financeLedgerRows').innerHTML=rows.length?rows.map(x=>'<tr><td>'+fmtFinanceDate(x.date)+'</td><td>'+esc(x.type)+'</td><td>'+esc(x.description)+'</td><td>'+esc(x.person||'Unassigned')+'</td><td class="amount in">'+(x.in?money(x.in):'—')+'</td><td class="amount out">'+(x.out?money(x.out):'—')+'</td><td>'+monthName(x.month)+'</td></tr>').join(''):'<tr><td colspan="7" class="empty">No financial transactions for this month.</td></tr>';
+
+  const ars=adjustments.filter(a=>(a.applyMonth||'')===month.month).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  document.getElementById('adjustmentRows').innerHTML=ars.length?ars.map(a=>'<tr><td>'+fmtFinanceDate(a.date)+'</td><td>'+monthName(a.applyMonth)+'</td><td>'+esc(a.reason||'')+'</td><td>'+esc(a.paidBy||'Unassigned')+'</td><td>'+esc(a.payee||'')+'</td><td class="amount out">'+money(a.amount)+'</td><td class="actions"><button onclick="openAdjustmentForm(\''+a.id+'\')">Edit</button><button class="danger" onclick="deleteAdjustment(\''+a.id+'\')">Delete</button></td></tr>').join(''):'<tr><td colspan="7" class="empty">No adjustments for this month.</td></tr>';
+}
+function fmtFinanceDate(d){return d?new Date(d+'T00:00:00').toLocaleDateString('en-IN'):'';}
+
+function openAdjustmentForm(id=null){
+  const a=id?adjustments.find(x=>x.id===id):null;
+  const host=document.getElementById('financeModalHost');
+  host.innerHTML='<div class="backup-modal-backdrop"><div class="backup-modal"><h2>'+ (a?'Edit':'Add') +' Adjustment</h2><p>Use this for reciprocal ground-slot arrangements or any amount that must be applied to a different month.</p><div class="finance-form"><div><label>Adjustment Date</label><input id="fAdjDate" type="date" value="'+(a?.date||new Date().toISOString().slice(0,10))+'"></div><div><label>Apply To Month</label><input id="fAdjMonth" type="month" value="'+(a?.applyMonth||new Date().toISOString().slice(0,7))+'"></div><div><label>Amount</label><input id="fAdjAmount" type="number" min="0" step="1" value="'+(a?.amount||'')+'"></div><div><label>Paid By</label><select id="fAdjPaidBy">'+financePersonOptions(a?.paidBy||'')+'</select></div><div><label>Payee / From</label><input id="fAdjPayee" value="'+esc(a?.payee||'')+'" placeholder="e.g. Team B"></div><div style="grid-column:span 2"><label>Reason</label><input id="fAdjReason" value="'+esc(a?.reason||'')+'" placeholder="e.g. Reciprocal ground slot adjustment"></div><div class="form-actions"><button class="primary" onclick="saveAdjustment(\''+(id||'')+'\')">Save Adjustment</button><button class="secondary" onclick="closeFinanceModal()">Cancel</button></div></div></div></div>';
+}
+function saveAdjustment(id){
+  const item={id:id||crypto.randomUUID(),date:document.getElementById('fAdjDate').value,applyMonth:document.getElementById('fAdjMonth').value,amount:Number(document.getElementById('fAdjAmount').value||0),paidBy:document.getElementById('fAdjPaidBy').value,payee:document.getElementById('fAdjPayee').value.trim(),reason:document.getElementById('fAdjReason').value.trim()};
+  if(!item.date||!item.applyMonth||item.amount<=0||!item.reason){alert('Please enter date, month, amount and reason.');return;}
+  const i=adjustments.findIndex(x=>x.id===item.id); if(i>=0)adjustments[i]=item;else adjustments.push(item);
+  saveFinanceLocal();closeFinanceModal();renderAccounts();syncFinanceCloud();
+}
+function deleteAdjustment(id){if(!confirm('Delete this adjustment?'))return;adjustments=adjustments.filter(x=>x.id!==id);saveFinanceLocal();renderAccounts();syncFinanceCloud();}
+function openSettlementForm(){
+  const host=document.getElementById('financeModalHost');
+  host.innerHTML='<div class="backup-modal-backdrop"><div class="backup-modal"><h2>↔ Settle Account</h2><p>Record money returned to a person. This reduces the amount the team owes them without changing historical transactions.</p><div class="finance-form"><div><label>Person</label><select id="fSetPerson">'+financePersonOptions()+'</select></div><div><label>Settlement Date</label><input id="fSetDate" type="date" value="'+new Date().toISOString().slice(0,10)+'"></div><div><label>Amount</label><input id="fSetAmount" type="number" min="0" step="1"></div><div><label>Month</label><input id="fSetMonth" type="month" value="'+(document.getElementById('accountsMonth')?.value||new Date().toISOString().slice(0,7))+'"></div><div style="grid-column:1/-1"><label>Note</label><input id="fSetNote" placeholder="e.g. September closing settlement"></div><div class="form-actions"><button class="primary" onclick="saveSettlement()">Save Settlement</button><button class="secondary" onclick="closeFinanceModal()">Cancel</button></div></div></div></div>';
+}
+function saveSettlement(){
+  const item={id:crypto.randomUUID(),person:document.getElementById('fSetPerson').value,date:document.getElementById('fSetDate').value,amount:Number(document.getElementById('fSetAmount').value||0),month:document.getElementById('fSetMonth').value,note:document.getElementById('fSetNote').value.trim()};
+  if(!item.person||!item.date||item.amount<=0){alert('Please select person and enter date and amount.');return;}
+  settlements.push(item);saveFinanceLocal();closeFinanceModal();renderAccounts();syncFinanceCloud();
+}
+function closeFinanceModal(){document.getElementById('financeModalHost').innerHTML='';}
+
+function syncFinanceCloud(){
+  if(cloudUser&&typeof saveCloudState==='function')saveCloudState().catch(err=>console.error('Finance cloud sync failed',err));
+}
+const oldSaveCloudState=window.saveCloudState;
+window.saveCloudState=async function(){
+  if(!supabaseClient||!cloudUser)return;
+  const result=await supabaseClient.from('team_state').upsert({
+    id:true,matches:Array.isArray(data)?data:[],contributions:Array.isArray(contributions)?contributions:[],
+    ground_payments:Array.isArray(groundPayments)?groundPayments:[],ground_names:getGrounds(),
+    finance_adjustments:Array.isArray(adjustments)?adjustments:[],finance_settlements:Array.isArray(settlements)?settlements:[],
+    updated_at:new Date().toISOString()
+  },{onConflict:'id'});
+  if(result.error)throw result.error;
+};
+const oldLoadCloudState=window.loadCloudState;
+window.loadCloudState=async function(){
+  if(!supabaseClient||!cloudUser)return false;
+  const result=await supabaseClient.from('team_state').select('matches,contributions,ground_payments,ground_names,finance_adjustments,finance_settlements').eq('id',true).maybeSingle();
+  if(result.error)throw result.error;
+  const row=result.data;
+  if(row){
+    data=Array.isArray(row.matches)?row.matches:[];
+    contributions=Array.isArray(row.contributions)?row.contributions:[];
+    groundPayments=Array.isArray(row.ground_payments)?row.ground_payments:[];
+    adjustments=Array.isArray(row.finance_adjustments)?row.finance_adjustments:[];
+    settlements=Array.isArray(row.finance_settlements)?row.finance_settlements:[];
+    financeState={version:1,adjustments,settlements};
+    saveFinanceLocal();
+    if(Array.isArray(row.ground_names))saveGrounds(row.ground_names);
+    localStorage.setItem(KEY,JSON.stringify(data));localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));localStorage.setItem(PAYMENT_KEY,JSON.stringify(groundPayments));
+    return true;
+  }
+  return false;
+};
+
+function showAccounts(){
+  ['summarySection','playerContributionSummarySection','paymentsSection','contributionsSection','matchFormSection','weeks'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
+  document.querySelector('.cards')?.classList.add('hidden');
+  document.getElementById('accountsSection')?.classList.remove('hidden');
+  const sel=document.getElementById('accountsMonth');
+  const current=selectedMonth()||new Date().toISOString().slice(0,7);
+  sel.innerHTML=financeMonthOptions(current);sel.value=current;
+  renderAccounts();window.scrollTo({top:0,behavior:'smooth'});
+}
+const oldShowTracker=window.showTracker;
+window.showTracker=function(){document.getElementById('accountsSection')?.classList.add('hidden');oldShowTracker();};
+const oldRender=window.render;
+window.render=function(){oldRender();ensureFinanceFields();};
+document.addEventListener('change',e=>{if(e.target?.id==='accountsMonth')renderAccounts();});
+document.addEventListener('DOMContentLoaded',()=>{ensureFinanceFields();wrapLegacyFunctions();});
+ensureFinanceFields();wrapLegacyFunctions();
 </body>
 </html>
