@@ -25,6 +25,27 @@ button{cursor:pointer}.primary{background:var(--pitch)!important;color:#fff;bord
 .config-role-admin{font-weight:800;color:#176b3a}
 .config-role-user{font-weight:700;color:#68418d}
 .config-security-note{margin:0 16px 16px;padding:10px 12px;border-radius:8px;background:#fff8e8;border:1px solid #ecd9ae;color:#735000;font-size:12px}
+.config-message{margin:0 16px 12px;font-size:12px;font-weight:700;color:#b42318;min-height:18px}
+.config-message.success{color:#16734e}
+.config-users-table{min-width:1500px;table-layout:fixed}
+.config-users-table th{white-space:normal;text-align:center}
+.config-users-table th:first-child,.config-users-table td:first-child{text-align:left;width:18%}
+.config-users-table th:nth-child(2),.config-users-table td:nth-child(2){width:7%}
+.config-users-table th:nth-child(3),.config-users-table td:nth-child(3){width:7%}
+.config-users-table th:nth-child(n+4):nth-child(-n+9),.config-users-table td:nth-child(n+4):nth-child(-n+9){width:9%}
+.config-users-table th:last-child,.config-users-table td:last-child{width:11%}
+.config-users-table th span{font-size:10px;font-weight:400;color:#687386;letter-spacing:4px}
+.config-perm-cell{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;align-items:center;justify-items:center}
+.config-perm-option{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;color:#687386;font-weight:700}
+.config-perm-option input{width:14px;height:14px;margin:0;accent-color:#176b3a}
+.config-perm-option input:checked+span{color:#176b3a;font-weight:800}
+.config-status{font-size:11px;font-weight:800}
+.config-status.active{color:#16734e}
+.config-status.inactive{color:#c0392b}
+.config-action-row{display:flex;gap:5px;flex-wrap:wrap;justify-content:center}
+.config-action-row button{font-size:11px;padding:6px 7px}
+.config-permission-legend{padding:10px 16px;border-top:1px solid var(--line);font-size:11px;color:#687386;background:#fafbfd}
+.config-permission-legend strong{color:#176b3a}
 @media(max-width:900px){.config-users-table{font-size:12px}.config-users-table th,.config-users-table td{padding:7px 4px}}
 .danger{background:#fff0ee!important;color:var(--danger);border-color:#f1cbc6!important}
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:16px;box-shadow:var(--shadow);border-top:3px solid #d6b25e}.card .label{color:var(--muted);font-size:13px}.card .value{font-size:25px;font-weight:700;margin-top:7px}
@@ -464,25 +485,37 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
     <button class="primary" onclick="showTracker()">← Back to Matches</button>
   </div>
   <div class="config-intro">
-    <strong>User access & permissions</strong> — manage the access level and page permissions assigned to ArezoKings users.
+    <strong>User access & permissions</strong> — permissions are loaded from Supabase and saved directly to <code>app_users</code> and <code>app_permissions</code>.
   </div>
   <div class="config-current-card" id="configCurrentUser"></div>
   <div class="config-toolbar">
-    <button class="primary" type="button" onclick="addConfigurationUser()">＋ Add / Register User</button>
-    <span class="config-note">Administrator access is required to change another user's permissions.</span>
+    <button class="primary" id="configAddUserButton" type="button" onclick="addConfigurationUser()">＋ Add Existing Login</button>
+    <button class="secondary" type="button" onclick="loadConfiguration()">↻ Refresh</button>
+    <span class="config-note">Only an Administrator can change roles or permissions. The login must already exist in Supabase Authentication.</span>
   </div>
+  <div id="configurationMessage" class="config-message"></div>
   <div class="table-wrap config-table-wrap">
     <table class="config-users-table">
       <thead>
         <tr>
-          <th>User</th><th>Role</th><th>Access</th><th>Matches</th><th>Contributions</th><th>Payments</th><th>Accounts</th><th>Backup</th><th>Actions</th>
+          <th>User</th><th>Role</th><th>Status</th>
+          <th>Matches<br><span>R C E D</span></th>
+          <th>Contributions<br><span>R C E D</span></th>
+          <th>Payments<br><span>R C E D</span></th>
+          <th>Accounts<br><span>R C E D</span></th>
+          <th>Configuration<br><span>R C E D</span></th>
+          <th>Backup / Restore<br><span>R C E D</span></th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody id="configurationUserRows"></tbody>
     </table>
   </div>
+  <div class="config-permission-legend">
+    <strong>R</strong> Read &nbsp; <strong>C</strong> Create &nbsp; <strong>E</strong> Edit &nbsp; <strong>D</strong> Delete
+  </div>
   <div class="config-security-note">
-    <strong>Security note:</strong> this page controls ArezoKings application permissions. Supabase authentication remains responsible for passwords and login sessions.
+    <strong>Security:</strong> the Configuration screen is only the administration interface. Supabase Row Level Security protects the permission tables, so non-admin users cannot change another user's permissions directly.
   </div>
 </section>
 
@@ -2281,6 +2314,7 @@ async function initializeCloudApp(){
       (Array.isArray(localPayments)&&localPayments.length>0);
 
     const cloudLoaded=await loadCloudState();
+    if(typeof loadConfigurationAccess==='function')await loadConfigurationAccess();
     let cloudHasData=data.length>0 || contributions.length>0 || groundPayments.length>0;
 
     // First cloud login: offer to migrate the data already stored in this browser.
@@ -2901,96 +2935,246 @@ ensureFinanceFields();wrapLegacyFunctions();
   window.renderAccounts=function(){if(document.getElementById('accountsSection')&&!document.getElementById('accountsSection').classList.contains('hidden'))renderAccountsDashboard();};
 })();
 </script><script id="configurationLayer">
-const CONFIG_KEY='arezoKingsConfigV1';
-const CONFIG_ADMIN_IDENTITIES=['prashant.guleria@gmail.com'];
-let configurationUsers=JSON.parse(localStorage.getItem(CONFIG_KEY)||'[]');
+const CONFIG_RESOURCES=[
+  {key:'matches',label:'Matches'},
+  {key:'contributions',label:'Contributions'},
+  {key:'payments',label:'Payments'},
+  {key:'accounts_settlement',label:'Accounts'},
+  {key:'configuration',label:'Configuration'},
+  {key:'backup_restore',label:'Backup / Restore'}
+];
+const CONFIG_ACTIONS=['can_read','can_create','can_edit','can_delete'];
+let configurationUsers=[];
+let configurationPermissions=[];
+let configurationLoaded=false;
 
 function configIdentity(){
-  return String(cloudUser?.email||cloudUser?.user_metadata?.username||'').trim().toLowerCase();
+  return String(cloudUser?.email||'').trim().toLowerCase();
+}
+function configCurrentProfile(){
+  const id=cloudUser?.id;
+  return configurationUsers.find(u=>u.user_id===id)||null;
 }
 function configIsAdmin(){
-  const id=configIdentity();
-  const entry=configurationUsers.find(x=>String(x.identity||'').toLowerCase()===id);
-  return CONFIG_ADMIN_IDENTITIES.includes(id) || entry?.role==='Admin';
+  return configCurrentProfile()?.role==='admin' && configCurrentProfile()?.active===true;
 }
-function configDefaultPermissions(){
-  return {matches:true,contributions:true,payments:true,accounts:true,backup:true};
+function configResource(key){
+  return CONFIG_RESOURCES.find(r=>r.key===key);
 }
-function configEnsureCurrentUser(){
-  const id=configIdentity();
-  if(!id)return;
-  let u=configurationUsers.find(x=>String(x.identity||'').toLowerCase()===id);
-  if(!u){
-    u={id:'USR-'+Date.now().toString(36).toUpperCase(),identity:id,name:cloudUser?.user_metadata?.username||cloudUser?.email||id,role:CONFIG_ADMIN_IDENTITIES.includes(id)?'Admin':'User',access:'Read & Write',permissions:configDefaultPermissions()};
-    configurationUsers.push(u);
-    localStorage.setItem(CONFIG_KEY,JSON.stringify(configurationUsers));
-  }
+function configPermissionRow(userId,resource){
+  return configurationPermissions.find(p=>p.user_id===userId&&p.resource===resource) || {
+    user_id:userId,resource,can_read:false,can_create:false,can_edit:false,can_delete:false
+  };
+}
+function hasPermission(resource,action){
+  const profile=configCurrentProfile();
+  if(profile?.role==='admin'&&profile?.active!==false)return true;
+  const row=configPermissionRow(cloudUser?.id,resource);
+  return !!row['can_'+action];
+}
+window.arezoHasPermission=hasPermission;
+
+function configSetMessage(message,type='error'){
+  const el=document.getElementById('configurationMessage');
+  if(!el)return;
+  el.className='config-message'+(type==='success'?' success':'');
+  el.textContent=message||'';
 }
 function configEscape(v){return esc(String(v??''));}
-function renderConfiguration(){
-  configEnsureCurrentUser();
-  const current=document.getElementById('configCurrentUser');
-  const body=document.getElementById('configurationUserRows');
-  if(!current||!body)return;
-  const admin=configIsAdmin();
-  const me=configIdentity();
-  current.innerHTML='<strong>Signed in:</strong> '+configEscape(cloudUser?.email||cloudUser?.user_metadata?.username||'')+
-    ' &nbsp; <span class="'+(admin?'config-role-admin':'config-role-user')+'">'+(admin?'Administrator':'User')+'</span>';
-  if(!configurationUsers.length){
-    body.innerHTML='<tr><td colspan="9" class="empty">No users have been registered in Configuration yet.</td></tr>';
+
+async function loadConfiguration(){
+  if(!supabaseClient||!cloudUser){
+    configSetMessage('Please sign in before opening Configuration.');
     return;
   }
+  const body=document.getElementById('configurationUserRows');
+  if(body)body.innerHTML='<tr><td colspan="10" class="empty">Loading users and permissions from Supabase…</td></tr>';
+  configSetMessage('');
+  try{
+    const usersResult=await supabaseClient
+      .from('app_users')
+      .select('user_id,email,display_name,role,active,created_at,updated_at')
+      .order('display_name',{ascending:true});
+    if(usersResult.error)throw usersResult.error;
+
+    const permissionsResult=await supabaseClient
+      .from('app_permissions')
+      .select('user_id,resource,can_read,can_create,can_edit,can_delete');
+    if(permissionsResult.error)throw permissionsResult.error;
+
+    configurationUsers=Array.isArray(usersResult.data)?usersResult.data:[];
+    configurationPermissions=Array.isArray(permissionsResult.data)?permissionsResult.data:[];
+    configurationLoaded=true;
+    renderConfiguration();
+  }catch(err){
+    console.error('Configuration load failed:',err);
+    configSetMessage('Unable to load Configuration from Supabase: '+(err.message||String(err)));
+    if(body)body.innerHTML='<tr><td colspan="10" class="empty">Configuration could not be loaded.</td></tr>';
+  }
+}
+
+function renderConfiguration(){
+  const current=document.getElementById('configCurrentUser');
+  const body=document.getElementById('configurationUserRows');
+  const addBtn=document.getElementById('configAddUserButton');
+  if(!current||!body)return;
+
+  const me=configCurrentProfile();
+  const admin=configIsAdmin();
+
+  if(!me){
+    current.innerHTML='<strong>Signed in:</strong> '+configEscape(configIdentity())+
+      ' &nbsp; <span class="config-role-user">No Configuration profile</span>';
+    body.innerHTML='<tr><td colspan="10" class="empty">Your login is authenticated, but it has no active entry in <strong>app_users</strong>. Ask the administrator to add this existing login.</td></tr>';
+    if(addBtn)addBtn.style.display='none';
+    return;
+  }
+
+  current.innerHTML='<strong>Signed in:</strong> '+configEscape(me.email||configIdentity())+
+    ' &nbsp; <span class="'+(admin?'config-role-admin':'config-role-user')+'">'+
+    (admin?'Administrator':'User')+'</span>'+
+    ' &nbsp; <span class="config-status '+(me.active?'active':'inactive')+'">'+
+    (me.active?'Active':'Inactive')+'</span>';
+
+  if(addBtn)addBtn.style.display=admin?'inline-block':'none';
+
+  if(!configurationUsers.length){
+    body.innerHTML='<tr><td colspan="10" class="empty">No users are configured.</td></tr>';
+    return;
+  }
+
   body.innerHTML=configurationUsers.map(u=>{
-    const self=String(u.identity||'').toLowerCase()===me;
-    const p=Object.assign(configDefaultPermissions(),u.permissions||{});
-    const disabled=(!admin||self)?'disabled':'';
+    const self=u.user_id===cloudUser?.id;
+    const protectedRow=self;
+    const controlsDisabled=!admin || protectedRow || u.active===false;
+    const roleLabel=u.role==='admin'?'Admin':'User';
+    const statusLabel=u.active?'Active':'Inactive';
+
+    const permissionCells=CONFIG_RESOURCES.map(resource=>{
+      const p=configPermissionRow(u.user_id,resource.key);
+      return '<td><div class="config-perm-cell">'+
+        CONFIG_ACTIONS.map(action=>{
+          const short=action==='can_read'?'R':action==='can_create'?'C':action==='can_edit'?'E':'D';
+          return '<label class="config-perm-option"><input type="checkbox" '+(p[action]?'checked':'')+
+            (controlsDisabled?' disabled':'')+
+            ' onchange="configUpdatePermission(\''+configEscape(u.user_id)+'\',\''+resource.key+'\',\''+action+'\',this.checked)"><span>'+short+'</span></label>';
+        }).join('')+
+      '</div></td>';
+    }).join('');
+
     return '<tr>'+
-      '<td><strong>'+configEscape(u.name||u.identity)+'</strong><br><small>'+configEscape(u.identity)+'</small></td>'+
-      '<td><span class="'+(u.role==='Admin'?'config-role-admin':'config-role-user')+'">'+configEscape(u.role)+'</span></td>'+
-      '<td><select '+disabled+' onchange="configUpdateUser(\''+configEscape(u.id)+'\',\'access\',this.value)"><option '+(u.access==='Read Only'?'selected':'')+'>Read Only</option><option '+(u.access==='Read & Write'?'selected':'')+'>Read & Write</option><option '+(u.access==='No Access'?'selected':'')+'>No Access</option></select></td>'+
-      ['matches','contributions','payments','accounts','backup'].map(k=>'<td><input class="config-check" type="checkbox" '+(p[k]?'checked':'')+' '+disabled+' onchange="configUpdatePermission(\''+configEscape(u.id)+'\',\''+k+'\',this.checked)"></td>').join('')+
-      '<td>'+((admin&&!self)?'<button class="secondary" onclick="configToggleRole(\''+configEscape(u.id)+'\')">'+(u.role==='Admin'?'Make User':'Make Admin')+'</button> <button class="danger" onclick="configDeleteUser(\''+configEscape(u.id)+'\')">Delete</button>':'<span style="font-size:11px;color:#687386">Protected</span>')+'</td>'+
+      '<td><strong>'+configEscape(u.display_name||u.email||u.user_id)+'</strong><br><small>'+configEscape(u.email||'')+'</small></td>'+
+      '<td><span class="'+(u.role==='admin'?'config-role-admin':'config-role-user')+'">'+roleLabel+'</span></td>'+
+      '<td><span class="config-status '+(u.active?'active':'inactive')+'">'+statusLabel+'</span></td>'+
+      permissionCells+
+      '<td><div class="config-action-row">'+
+        (admin&&!self?'<button class="secondary" onclick="configToggleRole(\''+configEscape(u.user_id)+'\')">'+(u.role==='admin'?'Make User':'Make Admin')+'</button>':'')+
+        (admin&&!self?'<button class="secondary" onclick="configToggleActive(\''+configEscape(u.user_id)+'\')">'+(u.active?'Disable':'Enable')+'</button>':'')+
+        (admin&&!self?'<button class="danger" onclick="configDeleteUser(\''+configEscape(u.user_id)+'\')">Remove</button>':'<span style="font-size:10px;color:#687386">'+(self?'Your account':'Protected')+'</span>')+
+      '</div></td>'+
       '</tr>';
   }).join('');
 }
-function configPersist(){localStorage.setItem(CONFIG_KEY,JSON.stringify(configurationUsers));}
-function configFind(id){return configurationUsers.find(x=>x.id===id);}
-function configUpdateUser(id,key,value){
+
+async function configUpdatePermission(userId,resource,action,value){
   if(!configIsAdmin())return;
-  const u=configFind(id);if(!u)return;
-  u[key]=value;configPersist();renderConfiguration();
+  try{
+    const payload={user_id:userId,resource};
+    payload[action]=!!value;
+    const result=await supabaseClient
+      .from('app_permissions')
+      .upsert(payload,{onConflict:'user_id,resource'})
+      .select()
+      .single();
+    if(result.error)throw result.error;
+
+    const index=configurationPermissions.findIndex(p=>p.user_id===userId&&p.resource===resource);
+    if(index>=0)configurationPermissions[index]=result.data;
+    else configurationPermissions.push(result.data);
+    configSetMessage('Permission saved.','success');
+    renderConfiguration();
+  }catch(err){
+    console.error('Permission update failed:',err);
+    configSetMessage('Permission could not be saved: '+(err.message||String(err)));
+    await loadConfiguration();
+  }
 }
-function configUpdatePermission(id,key,value){
-  if(!configIsAdmin())return;
-  const u=configFind(id);if(!u)return;
-  u.permissions=Object.assign(configDefaultPermissions(),u.permissions||{});u.permissions[key]=!!value;configPersist();renderConfiguration();
+
+async function configToggleRole(userId){
+  if(!configIsAdmin()||userId===cloudUser?.id)return;
+  const u=configurationUsers.find(x=>x.user_id===userId);
+  if(!u)return;
+  const next=u.role==='admin'?'user':'admin';
+  if(!confirm('Change '+(u.display_name||u.email)+' to '+(next==='admin'?'Administrator':'User')+'?'))return;
+  try{
+    const result=await supabaseClient.from('app_users').update({role:next,updated_at:new Date().toISOString()}).eq('user_id',userId);
+    if(result.error)throw result.error;
+    configSetMessage('Role updated.','success');
+    await loadConfiguration();
+  }catch(err){
+    configSetMessage('Role could not be updated: '+(err.message||String(err)));
+  }
 }
-function configToggleRole(id){
-  if(!configIsAdmin())return;
-  const u=configFind(id);if(!u)return;
-  u.role=u.role==='Admin'?'User':'Admin';configPersist();renderConfiguration();
+
+async function configToggleActive(userId){
+  if(!configIsAdmin()||userId===cloudUser?.id)return;
+  const u=configurationUsers.find(x=>x.user_id===userId);
+  if(!u)return;
+  const next=!u.active;
+  if(!confirm((next?'Enable ':'Disable ')+(u.display_name||u.email)+'?'))return;
+  try{
+    const result=await supabaseClient.from('app_users').update({active:next,updated_at:new Date().toISOString()}).eq('user_id',userId);
+    if(result.error)throw result.error;
+    configSetMessage('User status updated.','success');
+    await loadConfiguration();
+  }catch(err){
+    configSetMessage('User status could not be updated: '+(err.message||String(err)));
+  }
 }
-function configDeleteUser(id){
-  if(!configIsAdmin())return;
-  const u=configFind(id);if(!u)return;
-  if(confirm('Remove '+(u.name||u.identity)+' from the ArezoKings access list?')){configurationUsers=configurationUsers.filter(x=>x.id!==id);configPersist();renderConfiguration();}
+
+async function configDeleteUser(userId){
+  if(!configIsAdmin()||userId===cloudUser?.id)return;
+  const u=configurationUsers.find(x=>x.user_id===userId);
+  if(!u)return;
+  if(!confirm('Remove '+(u.display_name||u.email)+' from the ArezoKings access list? This does not delete the Supabase login.'))return;
+  try{
+    const result=await supabaseClient.from('app_users').delete().eq('user_id',userId);
+    if(result.error)throw result.error;
+    configSetMessage('User removed from ArezoKings access.','success');
+    await loadConfiguration();
+  }catch(err){
+    configSetMessage('User could not be removed: '+(err.message||String(err)));
+  }
 }
-function addConfigurationUser(){
+
+async function addConfigurationUser(){
   if(!configIsAdmin()){alert('Administrator access is required.');return;}
-  const identity=prompt('Enter the username or email used for the ArezoKings login:');
-  if(!identity)return;
-  const clean=identity.trim().toLowerCase();
-  if(configurationUsers.some(x=>String(x.identity||'').toLowerCase()===clean)){alert('That user is already in Configuration.');return;}
-  const name=prompt('Enter display name:',identity.trim())||identity.trim();
-  configurationUsers.push({id:'USR-'+Date.now().toString(36).toUpperCase(),identity:clean,name,role:'User',access:'Read & Write',permissions:configDefaultPermissions()});
-  configPersist();renderConfiguration();
+  alert('Create the login first in Supabase Authentication → Users. Then run the app_users SQL insert using that Auth user ID.\n\nThe Configuration page can then manage its role and permissions here.\n\nThis avoids exposing Supabase Auth user IDs or admin credentials in the browser.');
 }
-function showConfiguration(){
+
+async function loadConfigurationAccess(){
+  if(!supabaseClient||!cloudUser)return;
+  try{
+    const result=await supabaseClient.from('app_users').select('user_id,email,display_name,role,active').eq('user_id',cloudUser.id).maybeSingle();
+    if(result.error)throw result.error;
+    configurationUsers=result.data?[result.data]:[];
+    if(result.data){
+      const p=await supabaseClient.from('app_permissions').select('*').eq('user_id',cloudUser.id);
+      if(!p.error)configurationPermissions=p.data||[];
+    }
+  }catch(err){
+    console.error('Configuration access load failed:',err);
+  }
+}
+
+async function showConfiguration(){
   ['summarySection','playerContributionSummarySection','paymentsSection','manualPaymentsSection','contributionsSection','matchFormSection','weeks','accountsSection'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
   document.querySelector('.cards')?.classList.add('hidden');
   document.getElementById('configurationSection')?.classList.remove('hidden');
-  configEnsureCurrentUser();renderConfiguration();window.scrollTo({top:0,behavior:'smooth'});
+  await loadConfiguration();
+  window.scrollTo({top:0,behavior:'smooth'});
 }
+
 const originalShowTrackerForConfig=window.showTracker;
 window.showTracker=function(){
   document.getElementById('configurationSection')?.classList.add('hidden');
