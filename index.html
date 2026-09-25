@@ -2449,7 +2449,10 @@ async function refreshCarryForwardAdminStatus(){
 }
 
 function canEditCarryForward(){
-  return carryForwardAdmin===true;
+  if(carryForwardAdmin===true)return true;
+  const id=cloudUser?.id;
+  const profile=Array.isArray(configurationUsers)?configurationUsers.find(u=>u.user_id===id):null;
+  return profile?.role==='admin' && profile?.active===true;
 }
 
 function renderCarryForwardEditor(editing=false){
@@ -3002,17 +3005,25 @@ ensureFinanceFields();wrapLegacyFunctions();
   };
 
   window.showAccounts=async function(){
-    // Accounts must be an exclusive page: Configuration and every other page are hidden.
+    // Accounts is a standalone page. Hide every other application section first.
+    document.querySelectorAll('.section').forEach(section=>section.classList.add('hidden'));
     ['summarySection','playerContributionSummarySection','paymentsSection','manualPaymentsSection','contributionsSection','matchFormSection','weeks','configurationSection'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
     document.querySelector('.cards')?.classList.add('hidden');
-    document.getElementById('accountsSection')?.classList.remove('hidden');
 
+    const section=document.getElementById('accountsSection');
+    if(!section)return;
+    section.classList.remove('hidden');
+
+    // Configuration data is loaded only to determine the signed-in user's role.
     if(cloudUser && typeof loadConfiguration==='function'){
       try{ await loadConfiguration(); }catch(err){ console.error('Accounts configuration load failed:',err); }
     }
     await refreshCarryForwardAdminStatus();
     renderAccountsDashboard();
     renderCarryForwardEditor(false);
+
+    // Final visibility guard: Configuration must never remain visible under Accounts.
+    document.getElementById('configurationSection')?.classList.add('hidden');
     window.scrollTo({top:0,behavior:'smooth'});
   };
 
@@ -3282,7 +3293,9 @@ async function showConfiguration(){
 
 const originalShowTrackerForConfig=window.showTracker;
 window.showTracker=function(){
+  document.querySelectorAll('.section').forEach(section=>section.classList.add('hidden'));
   document.getElementById('configurationSection')?.classList.add('hidden');
+  document.getElementById('accountsSection')?.classList.add('hidden');
   if(typeof originalShowTrackerForConfig==='function')originalShowTrackerForConfig();
 };
 </script></body>
