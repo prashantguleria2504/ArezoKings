@@ -120,9 +120,20 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .accounts-month-selector button{padding:9px 16px}
 .accounts-month-empty{padding-top:12px}
 .ground-payment-row{background:#fffaf0;border-left:4px solid #d19a32}.ground-payment-row td:first-child{font-weight:700;color:#8a5a00}.manual-payment-contribution-option{grid-column:1/-1;padding:9px 11px;background:#f4f8f5;border:1px solid #cfe2d3;border-radius:7px}.manual-payment-contribution-option label{display:flex;align-items:center;gap:7px;font-weight:700;color:#31543b}.manual-payment-contribution-option input{width:15px;height:15px}.manual-payment-contribution-option small{display:block;margin:4px 0 0 22px;color:#687386}
-.manual-payment-row{background:#faf5ff;border-left:4px solid #7c5aa6}.payment-paid-status{display:inline-block;padding:3px 8px;border-radius:999px;background:#dff3e5;border:1px solid #9fd2ad;color:#18733a;font-weight:800;font-size:10px}.payment-pending-status{display:inline-block;padding:3px 8px;border-radius:999px;background:#fff3d8;border:1px solid #ead09a;color:#8a5a00;font-weight:800;font-size:10px}.payment-linked-adjustment{margin-top:4px;font-size:10px;color:#5f6873}.payment-id{margin-top:3px;font-size:10px;color:#53606b}.manual-adjustments-table th,.manual-adjustments-table td{white-space:nowrap}.manual-adjustments-table{min-width:980px}.manual-payment-row td:nth-child(6){min-width:160px}.manual-payment-row td:first-child{font-weight:700;color:#68418d}.accounts-paid-total{font-size:28px;font-weight:800;color:#6b4b00;margin:2px 0 8px}.accounts-paid-breakdown{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 8px}.payment-mini{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;font-size:11px;font-weight:700}.payment-mini-ground{background:#fff2cf;border:1px solid #ecd9ae;color:#8a5a00}.payment-mini-manual{background:#f2e8fb;border:1px solid #dfd0ef;color:#68418d}@media(max-width:520px){.accounts-paid-breakdown{grid-template-columns:1fr}.accounts-paid-total{font-size:25px}}.finance-manual-payment-section{border-left:4px solid #7c5aa6}
+.manual-payment-row{background:#faf5ff;border-left:4px solid #7c5aa6}.payment-paid-status{display:inline-block;padding:3px 8px;border-radius:999px;background:#dff3e5;border:1px solid #9fd2ad;color:#18733a;font-weight:800;font-size:10px}.payment-pending-status{display:inline-block;padding:3px 8px;border-radius:999px;background:#fff3d8;border:1px solid #ead09a;color:#8a5a00;font-weight:800;font-size:10px}.payment-partial-status{display:inline-block;padding:3px 8px;border-radius:999px;background:#fff0cf;border:1px solid #e0a52d;color:#9a6200;font-weight:800;font-size:10px}.payment-linked-adjustment{margin-top:4px;font-size:10px;color:#5f6873}.payment-id{margin-top:3px;font-size:10px;color:#53606b}.manual-adjustments-table th,.manual-adjustments-table td{white-space:nowrap}.manual-adjustments-table{min-width:980px}.manual-payment-row td:nth-child(6){min-width:160px}.manual-payment-row td:first-child{font-weight:700;color:#68418d}.accounts-paid-total{font-size:28px;font-weight:800;color:#6b4b00;margin:2px 0 8px}.accounts-paid-breakdown{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 8px}.payment-mini{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;font-size:11px;font-weight:700}.payment-mini-ground{background:#fff2cf;border:1px solid #ecd9ae;color:#8a5a00}.payment-mini-manual{background:#f2e8fb;border:1px solid #dfd0ef;color:#68418d}@media(max-width:520px){.accounts-paid-breakdown{grid-template-columns:1fr}.accounts-paid-total{font-size:25px}}.finance-manual-payment-section{border-left:4px solid #7c5aa6}
 .payment-note{font-size:12px;color:#7c5aa6;font-weight:700}
-.manual-payment-table{min-width:1150px}
+.manual-payment-table{min-width:1450px;table-layout:fixed}
+.manual-payment-table th:nth-child(1),.manual-payment-table td:nth-child(1){width:120px}
+.manual-payment-table th:nth-child(2),.manual-payment-table td:nth-child(2){width:230px}
+.manual-payment-table th:nth-child(3),.manual-payment-table td:nth-child(3){width:170px}
+.manual-payment-table th:nth-child(4),.manual-payment-table td:nth-child(4){width:130px}
+.manual-payment-table th:nth-child(5),.manual-payment-table td:nth-child(5){width:180px}
+.manual-payment-table th:nth-child(6),.manual-payment-table td:nth-child(6){width:270px}
+.manual-payment-table th:nth-child(7),.manual-payment-table td:nth-child(7){width:130px}
+.manual-payment-table th:nth-child(8),.manual-payment-table td:nth-child(8){width:170px}
+.manual-payment-table th:nth-child(9),.manual-payment-table td:nth-child(9){width:180px}
+.manual-payment-table td{vertical-align:top;overflow-wrap:anywhere}
+.manual-payment-table .actions{width:180px;min-width:180px}
 .manual-payment-row{background:#faf5ff}
 .manual-payment-row td:first-child{font-weight:700;color:#68418d}
 .accounts-funds-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:14px 16px}
@@ -911,7 +922,8 @@ function syncManualPaymentContribution(payment){
   if(!player)return false;
   player.recentEntries=Array.isArray(player.recentEntries)?player.recentEntries:[];
   const idx=player.recentEntries.findIndex(e=>e.manualPaymentId===payment.id);
-  const amount=payment.settledAgainstContribution ? Number(payment.amount||0) : getPaymentRemaining(payment);
+  const hasAdjustments=getPaymentAdjustmentIds(payment).length>0;
+  const amount=hasAdjustments ? getPaymentRemaining(payment) : (payment.settledAgainstContribution ? Number(payment.amount||0) : getPaymentRemaining(payment));
   if(amount<=0.000001){
     if(idx>=0)player.recentEntries.splice(idx,1);
     return idx>=0;
@@ -978,7 +990,7 @@ function syncPaymentAdjustmentState(paymentId){
       a.status=fully?'settled':'partial';
     }
   });
-  if(payment.settledAgainstContribution){
+  if(payment.settledAgainstContribution && !ids.length){
     syncManualPaymentContribution(payment);
   }else if(fully)removeManualPaymentContribution(payment.id);
   else restoreManualPaymentContribution(payment.id);
@@ -1120,7 +1132,13 @@ function renderManualPayments(){
     const ids=getPaymentAdjustmentIds(x);
     const adjusted=getPaymentAdjustmentTotal(x);
     const remaining=getPaymentRemaining(x);
-    const status=(x.settledAgainstContribution||paymentIsFullySettled(x))?'<span class="payment-paid-status">PAID</span>':'<span class="payment-pending-status">PENDING</span>';
+    const hasLinkedAdjustments=getPaymentAdjustmentIds(x).length>0;
+    const fullyPaid=paymentIsFullySettled(x);
+    const status=(x.settledAgainstContribution&&!hasLinkedAdjustments)||fullyPaid
+      ?'<span class="payment-paid-status">PAID</span>'
+      :(hasLinkedAdjustments&&getPaymentAdjustmentTotal(x)>0
+        ?'<span class="payment-partial-status">PARTIALLY PAID</span>'
+        :'<span class="payment-pending-status">PENDING</span>');
     const linked=ids.length?ids.map(id=>{
       const a=adjustments.find(z=>z.id===id);
       return a?money(a.amount)+' · '+esc(a.id)+' · '+esc(a.deductFrom||a.paidBy||''):'';
@@ -2432,6 +2450,7 @@ function saveAdjustment(id){
     }
     payment.linkedAdjustmentIds=[...currentIds,item.id];
     payment.linkedAdjustmentId=payment.linkedAdjustmentIds[0]||'';
+    payment.settledAgainstContribution=false;
     item.linkedPaymentId=payment.id;
     item.linkedPaymentIds=[payment.id];
     syncPaymentAdjustmentState(payment.id);
