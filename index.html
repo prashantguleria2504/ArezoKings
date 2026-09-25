@@ -2424,34 +2424,60 @@ function saveFinanceLocal(){
   localStorage.setItem(FINANCE_KEY,JSON.stringify(financeState));
 }
 let carryForwardAmount=Number(financeState.carryForwardAmount||0);
-function canEditCarryForward(){
-  return typeof configIsAdmin==='function' && configIsAdmin();
+let carryForwardAdmin=false;
+
+async function refreshCarryForwardAdminStatus(){
+  carryForwardAdmin=false;
+  if(!cloudUser||!supabaseClient)return false;
+  try{
+    const result=await supabaseClient
+      .from('app_users')
+      .select('role,active')
+      .eq('user_id',cloudUser.id)
+      .maybeSingle();
+    if(!result.error){
+      carryForwardAdmin=result.data?.role==='admin' && result.data?.active===true;
+    }
+  }catch(err){
+    console.error('Carry-forward admin check failed:',err);
+  }
+  return carryForwardAdmin;
 }
+
+function canEditCarryForward(){
+  return carryForwardAdmin===true;
+}
+
 function renderCarryForwardEditor(){
   const valueEl=document.getElementById('accountsCarryForwardValue');
   const editor=document.getElementById('accountsCarryForwardEditor');
   if(!valueEl||!editor)return;
   valueEl.textContent=cash(carryForwardAmount);
+
   const admin=canEditCarryForward();
-  // Always render the field so its state is obvious. Only administrators get
-  // an enabled input and Save button; regular users get a disabled field.
   editor.innerHTML=
     '<input id="accountsCarryForwardInput" type="number" min="0" step="1" value="'+(carryForwardAmount||0)+'" aria-label="Carry forwarded amount"'+(admin?'':' disabled')+'>'+
     (admin
       ? '<button class="primary" type="button" onclick="saveCarryForwardAmount()">Save</button>'
       : '<span class="accounts-carry-forward-readonly">Admin only</span>');
 }
-window.saveCarryForwardAmount=function(){
-  if(!canEditCarryForward()){
+
+window.saveCarryForwardAmount=async function(){
+  // Re-check the role from Supabase before allowing the update.
+  const admin=await refreshCarryForwardAdminStatus();
+  if(!admin){
     alert('Administrator access is required to update the carry-forward amount.');
+    renderCarryForwardEditor();
     return;
   }
+
   const input=document.getElementById('accountsCarryForwardInput');
   const amount=Number(input?.value||0);
   if(!Number.isFinite(amount)||amount<0){
     alert('Please enter a valid non-negative amount.');
     return;
   }
+
   carryForwardAmount=amount;
   saveFinanceLocal();
   renderCarryForwardEditor();
@@ -2975,6 +3001,7 @@ ensureFinanceFields();wrapLegacyFunctions();
     if(cloudUser && typeof loadConfigurationAccess==='function'){
       try{ await loadConfigurationAccess(); }catch(err){ console.error('Accounts role load failed:',err); }
     }
+    await refreshCarryForwardAdminStatus();
     renderAccountsDashboard();
     renderCarryForwardEditor();
     window.scrollTo({top:0,behavior:'smooth'});
