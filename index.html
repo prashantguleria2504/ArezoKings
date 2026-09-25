@@ -1595,14 +1595,16 @@ function showPayments(){
 function showContributions(){
   hideAllPageSections();
   document.getElementById('contributionsSection')?.classList.remove('hidden');
+  // Player Contribution Summary belongs to the Contributions page, not Summary.
+  document.getElementById('playerContributionSummarySection')?.classList.remove('hidden');
   renderContributions();
+  renderSummary();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
 function showSummary(){
   hideAllPageSections();
-  // Player Contribution Summary is intentionally part of the Summary page.
-  document.getElementById('playerContributionSummarySection')?.classList.remove('hidden');
+  // Summary page contains only the cricket/monthly summary.
   document.getElementById('summarySection')?.classList.remove('hidden');
   document.querySelector('.cards')?.classList.remove('hidden');
   renderSummary();
