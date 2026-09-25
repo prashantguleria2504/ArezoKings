@@ -1437,11 +1437,11 @@ function render(){
         '<button onclick="cancelAddPlayer(\''+x.id+'\')">Cancel</button></div></details></td></tr>';
 
       return '<tr data-match-id="'+esc(x.id)+'" class="'+((!x.opponent || !String(x.opponent).trim())?'match-not-scheduled-row':'')+'">'+
-        '<td><div>'+dateText+'</div><div class="date-day">'+dayText+'</div></td>'+
+        '<td><div>'+dateText+'</div><div class="date-day">'+dayText+'</div>'+((!x.opponent || !String(x.opponent).trim()) ? '<div class="match-not-scheduled-note">Match not scheduled yet.</div>' : '')+'</td>'+
         '<td>'+esc(x.ground)+'</td>'+
         '<td class="amount">'+money(x.groundAmount)+'</td>'+
         '<td>'+esc(x.opponent)+'</td>'+
-        '<td class="amount"><div>'+money(x.opponentAmount||0)+'</div><div class="table-owners">'+ownerChecks('opponentOwner',x.opponentReceivedBy)+'</div></td>'+
+        '<td class="amount"><div>'+money(x.opponentAmount||0)+'</div>'+(Number(x.opponentAmount||0)===0 && String(x.opponent||'').trim() ? '<div class="amount-not-received">Match fee not received.</div>' : '')+'<div class="table-owners">'+ownerChecks('opponentOwner',x.opponentReceivedBy)+'</div></td>'+
         '<td><div><strong>'+money(x.adjustmentAmount||0)+'</strong></div>'+adjustmentLink+
         (incomingAdjustmentLabel(x.id)?'<div class="adjustment-link-back">'+esc(incomingAdjustmentLabel(x.id)).replace(/\n/g,'<br>')+'</div>':'')+
         '<div class="table-owners">'+ownerChecks('adjustmentOwner')+'</div></td>'+
