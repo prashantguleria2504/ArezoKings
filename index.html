@@ -3172,6 +3172,12 @@ async function showConfiguration(){
   document.querySelector('.cards')?.classList.add('hidden');
   document.getElementById('configurationSection')?.classList.remove('hidden');
   await loadConfiguration();
+  if(!configIsAdmin()){
+    document.getElementById('configurationSection')?.classList.add('hidden');
+    showTracker();
+    alert('Administrator access is required to open Configuration.');
+    return;
+  }
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
