@@ -82,7 +82,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .finance-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--line)}
 .finance-toolbar select,.finance-toolbar input{font:inherit;border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff}
 .finance-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px}
-.finance-card{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:14px}
+.accounts-intro{padding:12px 16px;background:#f7fafc;border-bottom:1px solid var(--line);font-size:13px}.finance-summary-title{font-size:16px;font-weight:800;padding:16px 16px 4px}.finance-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:12px 16px 18px}.finance-summary-item{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}.finance-summary-item .label{font-size:12px;color:var(--muted);font-weight:700}.finance-summary-item .value{font-size:21px;font-weight:800;margin-top:5px}.finance-summary-item .hint{font-size:11px;color:var(--muted);margin-top:4px}.accounts-help{padding:0 16px 10px;font-size:12px;color:var(--muted)}.owner-balance-table th,.owner-balance-table td{white-space:nowrap}.accountsSectionHidden{display:none!important}@media(max-width:900px){.finance-summary-grid{grid-template-columns:1fr 1fr}}.finance-card{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:14px}
 .finance-card .label{font-size:12px;color:var(--muted)}.finance-card .value{font-size:22px;font-weight:800;margin-top:5px}
 .finance-table{min-width:1050px}
 .finance-table .in{color:#16734e;font-weight:800}.finance-table .out{color:#c0392b;font-weight:800}
@@ -325,46 +325,27 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 </section>
 
 <div id="weeks"></div><section class="section hidden" id="accountsSection">
-  <div class="section-head">
-    <h2>🧾 Accounts & Settlement</h2>
-    <button class="primary" onclick="showTracker()">← Back to Matches</button>
-  </div>
-  <div style="padding:12px 16px;background:#f7fafc;border-bottom:1px solid var(--line);font-size:13px;line-height:1.5"><strong>How adjustments work:</strong> link the two matches involved. The ledger will show the adjustment against the specific match instead of only showing a month or amount.</div>
-  <div class="finance-toolbar">
-    <label style="font-size:12px;color:var(--muted);font-weight:700">Month</label>
-    <select id="accountsMonth"></select>
-    <button class="secondary" onclick="openAdjustmentForm()">＋ Add Adjustment</button>
-    <button class="secondary" onclick="openSettlementForm()">↔ Settle Account</button>
-  </div>
-  <div class="finance-cards">
-    <div class="finance-card"><div class="label">Money Collected</div><div class="value" id="finIn">₹0</div></div>
-    <div class="finance-card"><div class="label">Team Expenses Paid</div><div class="value" id="finOut">₹0</div></div>
-    <div class="finance-card"><div class="label">Adjustments</div><div class="value" id="finAdj">₹0</div></div>
-    <div class="finance-card"><div class="label">Net Team Position</div><div class="value" id="finNet">₹0</div></div>
-  </div>
-  <div class="section" style="margin:0 16px 16px">
-    <div class="finance-section-title">Who is holding / owed what?</div>
-    <div class="table-wrap"><table class="finance-table">
-      <thead><tr><th>Person</th><th class="amount">Money Received</th><th class="amount">Paid for Team</th><th class="amount">Settlements</th><th class="amount">Net Balance</th></tr></thead>
-      <tbody id="accountOwnerRows"></tbody>
-    </table></div>
-  </div>
-  <div class="section" style="margin:0 16px 16px">
-    <div class="finance-section-title">Transaction Ledger</div>
-    <div class="table-wrap"><table class="finance-table">
-      <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Person</th><th class="amount">Money In</th><th class="amount">Money Out</th><th>Month</th></tr></thead>
-      <tbody id="financeLedgerRows"></tbody>
-    </table></div>
-  </div>
-  <div class="section" style="margin:0 16px 16px">
-    <div class="finance-section-title">Adjustments</div>
-    <div class="table-wrap"><table class="finance-table">
-      <thead><tr><th>Date</th><th>Applied Month</th><th>Reason</th><th>Paid/Received By</th><th>Payee / From</th><th class="amount">Amount</th><th>Type</th></tr></thead>
-      <tbody id="adjustmentRows"></tbody>
-    </table></div>
-  </div>
-  <div class="finance-note">Balances are calculated from transactions. Do not manually edit balances. A positive balance means the team currently owes that person; a negative balance means that person has received more team money than they have paid for the team.</div>
-</section>
+  <div class="section-head"><h2>🧾 Accounts & Settlement</h2><button class="primary" onclick="showTracker()">← Back to Matches</button></div>
+  <div class="accounts-intro">Select a month. All figures on this page are calculated automatically from <strong>Matches + Payments + Contributions</strong>.</div>
+  <div class="finance-toolbar"><label>Month</label><select id="accountsMonth"></select><button class="secondary" onclick="openAdjustmentForm()">＋ Add Manual Adjustment</button><button class="secondary" onclick="openSettlementForm()">↔ Record Settlement</button></div>
+
+  <div class="finance-summary-title">📊 Monthly Summary</div>
+  <div id="financeMonthSummary" class="finance-summary-grid"></div>
+
+  <div class="finance-section-title">💰 Amount with each person</div>
+  <div class="accounts-help">This shows where the money is currently held. <strong>Net Balance = money received − payments/adjustments made for the team.</strong></div>
+  <div class="table-wrap"><table class="finance-table owner-balance-table">
+    <thead><tr><th>Person</th><th class="amount">Opponent</th><th class="amount">Players</th><th class="amount">Contributions</th><th class="amount">Ground Paid</th><th class="amount">Adjustments Paid</th><th class="amount">Net Balance</th></tr></thead>
+    <tbody id="accountOwnerRows"></tbody>
+  </table></div>
+
+  <div class="finance-section-title">📒 Transaction Ledger</div>
+  <div class="table-wrap"><table class="finance-table"><thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Person</th><th class="amount">Money In</th><th class="amount">Money Out</th><th>Month</th></tr></thead><tbody id="financeLedgerRows"></tbody></table></div>
+
+  <div class="finance-section-title">↔ Adjustments</div>
+  <div class="table-wrap"><table class="finance-table"><thead><tr><th>Date</th><th>Month</th><th>Reason / Linked Match</th><th>Paid By</th><th>Payee / From</th><th class="amount">Amount</th><th>Type</th></tr></thead><tbody id="adjustmentRows"></tbody></table></div>
+  <div class="finance-note">Calculated automatically. To change a figure, edit the related Match, Payment or Contribution. Manual adjustments and settlements are available above.</div>
+</section>>
 <div id="financeModalHost"></div>
 <footer>Data is stored in this browser. Use “Backup Data” regularly if you want a portable copy.</footer>
 </div>
@@ -1031,6 +1012,7 @@ function showSummary(){
   renderSummary();
 }
 function showTracker(){
+  document.getElementById('accountsSection')?.classList.add('hidden');
   document.getElementById('paymentsSection').classList.add('hidden');
   document.getElementById('summarySection').classList.add('hidden');
   document.getElementById('playerContributionSummarySection').classList.add('hidden');
@@ -1942,34 +1924,79 @@ function financeForMonth(){
   return {month,ledger:buildFinanceLedger().filter(x=>x.month===month)};
 }
 function renderAccounts(){
-  const month=financeForMonth();
-  const all=month.ledger;
-  const totalIn=all.reduce((s,x)=>s+x.in,0),totalOut=all.reduce((s,x)=>s+x.out,0);
-  const adj=all.filter(x=>x.type==='Adjustment'||x.type==='Match adjustment').reduce((s,x)=>s+x.out,0);
-  document.getElementById('finIn').innerHTML=money(totalIn);
-  document.getElementById('finOut').innerHTML=money(totalOut-adj);
-  document.getElementById('finAdj').innerHTML=money(adj);
-  document.getElementById('finNet').innerHTML=money(totalIn-totalOut);
+  const selectedMonth=document.getElementById('accountsMonth')?.value||selectedMonth();
+  const monthMatches=(data||[]).filter(m=>monthKey(m.date||'')===selectedMonth);
+  const payments=(groundPayments||[]).filter(p=>(p.month||monthKey(p.date||''))===selectedMonth);
+  const groundBooking=monthMatches.reduce((s,m)=>s+Number(m.groundAmount||0),0);
+  const groundPaid=payments.reduce((s,p)=>s+Number(p.amount||0),0);
+  const opponentTotal=monthMatches.reduce((s,m)=>s+Number(m.opponentAmount||0),0);
+  const playerTotal=monthMatches.reduce((s,m)=>s+(m.players||[]).reduce((a,p)=>a+Number(p.amount||0),0),0);
+  const regularContributions=(contributions||[]).reduce((s,p)=>s+(p.recentEntries||[])
+    .filter(e=>(e.date||'').slice(0,7)===selectedMonth)
+    .reduce((a,e)=>a+Number(e.amount||0),0),0);
+  const matchAdjustments=monthMatches.reduce((s,m)=>s+Number(m.adjustmentAmount||0),0);
+  const manualAdjustments=(adjustments||[]).filter(a=>(a.applyMonth||'')===selectedMonth)
+    .reduce((s,a)=>s+Number(a.amount||0),0);
+  const totalAdjustments=matchAdjustments+manualAdjustments;
+
+  document.getElementById('finIn').textContent=money(opponentTotal+playerTotal+regularContributions);
+  document.getElementById('finOut').textContent=money(groundPaid);
+  document.getElementById('finAdj').textContent=money(totalAdjustments);
+  document.getElementById('finNet').textContent=money(opponentTotal+playerTotal+regularContributions-groundPaid-totalAdjustments);
+
+  const summary=document.getElementById('financeMonthSummary');
+  if(summary){
+    const items=[
+      ['Ground booking amount',groundBooking,'Total ground fees for matches'],
+      ['Ground paid',groundPaid,'Taken from Payments'],
+      ['Opponent amount',opponentTotal,'Opponent match fees received'],
+      ['Players amount',playerTotal,'Collected from playing players'],
+      ['Regular contributions',regularContributions,'Collected from Contribution tab'],
+      ['Total adjustments',totalAdjustments,'Match + manual adjustments']
+    ];
+    summary.innerHTML=items.map(i=>'<div class="finance-summary-item"><div class="label">'+esc(i[0])+'</div><div class="value">'+money(i[1])+'</div><div class="hint">'+esc(i[2])+'</div></div>').join('');
+  }
 
   const people=ACCOUNT_PEOPLE.map(person=>{
-    const incoming=all.filter(x=>x.person===person).reduce((s,x)=>s+x.in,0);
-    const paid=all.filter(x=>x.person===person).reduce((s,x)=>s+x.out,0);
-    const settlementsOut=settlements.filter(x=>x.person===person&&((x.month||'')===month.month)).reduce((s,x)=>s+Number(x.amount||0),0);
-    // Positive = team owes the person; negative = person holds more team money than
-    // the team's expenses they have paid.
-    const net=paid-incoming-settlementsOut;
-    return {person,incoming,paid,settlementsOut,net};
+    const opponent=monthMatches.filter(m=>(m.opponentOwner||m.opponentReceivedBy||'')===person)
+      .reduce((s,m)=>s+Number(m.opponentAmount||0),0);
+    const players=monthMatches.filter(m=>(m.playersOwner||'')===person)
+      .reduce((s,m)=>s+(m.players||[]).reduce((a,p)=>a+Number(p.amount||0),0),0);
+    const contrib=(contributions||[]).reduce((s,p)=>s+(p.recentEntries||[])
+      .filter(e=>(e.date||'').slice(0,7)===selectedMonth && (e.receivedBy||'')===person)
+      .reduce((a,e)=>a+Number(e.amount||0),0),0);
+    const ground=payments.filter(p=>(p.paidBy||'')===person)
+      .reduce((s,p)=>s+Number(p.amount||0),0);
+    const adjustment=monthMatches.filter(m=>(m.adjustmentOwner||'')===person)
+      .reduce((s,m)=>s+Number(m.adjustmentAmount||0),0)
+      +(adjustments||[]).filter(a=>(a.applyMonth||'')===selectedMonth && (a.paidBy||'')===person)
+      .reduce((s,a)=>s+Number(a.amount||0),0);
+    const received=opponent+players+contrib;
+    const paid=ground+adjustment;
+    return {person,opponent,players,contrib,ground,adjustment,received,paid,net:received-paid};
   });
-  document.getElementById('accountOwnerRows').innerHTML=people.map(x=>'<tr><td><strong>'+esc(x.person)+'</strong></td><td class="amount in">'+money(x.incoming)+'</td><td class="amount out">'+money(x.paid)+'</td><td class="amount out">'+money(x.settlementsOut)+'</td><td class="amount '+(x.net<0?'net-negative':'net-positive')+'">'+money(x.net)+'</td></tr>').join('');
+  document.getElementById('accountOwnerRows').innerHTML=people.map(x=>
+    '<tr><td><strong>'+esc(x.person)+'</strong></td>'+
+    '<td class="amount in">'+money(x.opponent)+'</td>'+
+    '<td class="amount in">'+money(x.players)+'</td>'+
+    '<td class="amount in">'+money(x.contrib)+'</td>'+
+    '<td class="amount out">'+money(x.ground)+'</td>'+
+    '<td class="amount out">'+money(x.adjustment)+'</td>'+
+    '<td class="amount '+(x.net<0?'net-negative':'net-positive')+'"><strong>'+money(x.net)+'</strong></td></tr>'
+  ).join('');
 
-  const rows=[...all].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  document.getElementById('financeLedgerRows').innerHTML=rows.length?rows.map(x=>'<tr><td>'+fmtFinanceDate(x.date)+'</td><td>'+esc(x.type)+'</td><td>'+esc(x.description)+'</td><td>'+esc(x.person||'Unassigned')+'</td><td class="amount in">'+(x.in?money(x.in):'—')+'</td><td class="amount out">'+(x.out?money(x.out):'—')+'</td><td>'+monthName(x.month)+'</td></tr>').join(''):'<tr><td colspan="7" class="empty">No financial transactions for this month.</td></tr>';
+  const all=buildFinanceLedger().filter(x=>x.month===selectedMonth);
+  document.getElementById('financeLedgerRows').innerHTML=all.length?all.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>
+    '<tr><td>'+fmtFinanceDate(x.date)+'</td><td>'+esc(x.type)+'</td><td>'+esc(x.description)+'</td><td>'+esc(x.person||'Unassigned')+'</td><td class="amount in">'+(x.in?money(x.in):'—')+'</td><td class="amount out">'+(x.out?money(x.out):'—')+'</td><td>'+monthName(x.month)+'</td></tr>'
+  ).join(''):'<tr><td colspan="7" class="empty">No financial transactions for this month.</td></tr>';
 
-  const genericAdjustments=adjustments.filter(a=>(a.applyMonth||'')===month.month).map(a=>({date:a.date,month:a.applyMonth,reason:a.reason||'Adjustment',owner:a.paidBy||'',payee:a.payee||'',amount:Number(a.amount||0),kind:'Adjustment'}));
-  const matchAdjustments=(data||[]).filter(m=>Number(m.adjustmentAmount||0)>0 && monthKey(m.adjustmentDate||m.date||'')===month.month).map(m=>({date:m.adjustmentDate||m.date,month:month.month,reason:'Match adjustment · '+(m.opponent||'Opponent'),owner:m.adjustmentOwner||'',payee:m.opponent||'',amount:Number(m.adjustmentAmount||0),kind:'Match adjustment',linked:m.adjustmentAgainstMatchId?adjustmentMatchLabel(m.adjustmentAgainstMatchId):''}));
-  const ars=[...genericAdjustments,...matchAdjustments].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  document.getElementById('adjustmentRows').innerHTML=ars.length?ars.map(a=>'<tr><td>'+fmtFinanceDate(a.date)+'</td><td>'+monthName(a.month)+'</td><td>'+esc(a.reason)+(a.linked?'<div class="date-day">↔ '+esc(a.linked)+'</div>':'')+'</td><td>'+esc(a.owner||'Unassigned')+'</td><td>'+esc(a.payee||'')+'</td><td class="amount out">'+money(a.amount)+'</td><td>'+esc(a.kind)+'</td></tr>').join(''):'<tr><td colspan="7" class="empty">No adjustments for this month.</td></tr>';
-  document.getElementById('adjustmentRows').innerHTML=ars.length?ars.map(a=>'<tr><td>'+fmtFinanceDate(a.date)+'</td><td>'+monthName(a.applyMonth)+'</td><td>'+esc(a.reason||'')+(a.againstMatchId?'<div class="date-day">↔ '+esc(adjustmentMatchLabel(a.againstMatchId))+'</div>':'')+'</td><td>'+esc(a.paidBy||'Unassigned')+'</td><td>'+esc(a.payee||'')+'</td><td class="amount out">'+money(a.amount)+'</td><td class="actions"><button onclick="openAdjustmentForm(\''+a.id+'\')">Edit</button><button class="danger" onclick="deleteAdjustment(\''+a.id+'\')">Delete</button></td></tr>').join(''):'<tr><td colspan="7" class="empty">No adjustments for this month.</td></tr>';
+  const ars=[
+    ...(adjustments||[]).filter(a=>(a.applyMonth||'')===selectedMonth).map(a=>({date:a.date,month:selectedMonth,reason:a.reason||'Adjustment',owner:a.paidBy||'',payee:a.payee||'',amount:Number(a.amount||0),kind:'Manual'})),
+    ...(data||[]).filter(m=>Number(m.adjustmentAmount||0)>0 && monthKey(m.adjustmentDate||m.date||'')===selectedMonth).map(m=>({date:m.adjustmentDate||m.date,month:selectedMonth,reason:'Match adjustment · '+(m.opponent||'Opponent'),owner:m.adjustmentOwner||'',payee:m.opponent||'',amount:Number(m.adjustmentAmount||0),kind:'Match',linked:m.adjustmentAgainstMatchId?adjustmentMatchLabel(m.adjustmentAgainstMatchId):''}))
+  ].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  document.getElementById('adjustmentRows').innerHTML=ars.length?ars.map(a=>
+    '<tr><td>'+fmtFinanceDate(a.date)+'</td><td>'+monthName(a.month)+'</td><td>'+esc(a.reason)+(a.linked?'<div class="date-day">↔ '+esc(a.linked)+'</div>':'')+'</td><td>'+esc(a.owner||'Unassigned')+'</td><td>'+esc(a.payee||'')+'</td><td class="amount out">'+money(a.amount)+'</td><td>'+esc(a.kind)+'</td></tr>'
+  ).join(''):'<tr><td colspan="7" class="empty">No adjustments for this month.</td></tr>';
 }
 function fmtFinanceDate(d){return d?new Date(d+'T00:00:00').toLocaleDateString('en-IN'):'';}
 
@@ -2002,11 +2029,13 @@ function syncFinanceCloud(){
 function showAccounts(){
   ['summarySection','playerContributionSummarySection','paymentsSection','contributionsSection','matchFormSection','weeks'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
   document.querySelector('.cards')?.classList.add('hidden');
-  document.getElementById('accountsSection')?.classList.remove('hidden');
+  const section=document.getElementById('accountsSection');
+  section?.classList.remove('hidden');
   const sel=document.getElementById('accountsMonth');
   const current=selectedMonth()||new Date().toISOString().slice(0,7);
-  sel.innerHTML=financeMonthOptions(current);sel.value=current;
-  renderAccounts();window.scrollTo({top:0,behavior:'smooth'});
+  if(sel){sel.innerHTML=financeMonthOptions(current);sel.value=current;}
+  renderAccounts();
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 const oldShowTracker=window.showTracker;
 window.showTracker=function(){document.getElementById('accountsSection')?.classList.add('hidden');oldShowTracker();};
