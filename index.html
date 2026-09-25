@@ -906,14 +906,19 @@ function populateManualPaymentPeople(selected=''){
   el.innerHTML='<option value="">Select person</option>'+options.map(n=>'<option value="'+esc(n)+'" '+(n===current?'selected':'')+'>'+esc(n)+'</option>').join('');
 }
 function syncManualPaymentContribution(payment){
-  if(!payment?.addToContribution || payment?.linkedAdjustmentId)return false;
+  if(!payment?.addToContribution)return false;
   const player=resolveContributionPlayer(payment.paidBy);
   if(!player)return false;
+  const remaining=getPaymentRemaining(payment);
   player.recentEntries=Array.isArray(player.recentEntries)?player.recentEntries:[];
-  let entry=player.recentEntries.find(e=>e.manualPaymentId===payment.id);
-  const contributionEntry={id:entry?.id||('mpe_'+Date.now()),manualPaymentId:payment.id,amount:Number(payment.amount||0),date:payment.date||'',comment:'Manual payment · '+(payment.description||'Payment'),receivedBy:player.name};
-  if(entry)Object.assign(entry,contributionEntry);else player.recentEntries.push(contributionEntry);
-  // Keep the payment's payer name exactly aligned with Contributions.
+  const idx=player.recentEntries.findIndex(e=>e.manualPaymentId===payment.id);
+  if(remaining<=0.000001){
+    if(idx>=0)player.recentEntries.splice(idx,1);
+    return idx>=0;
+  }
+  const contributionEntry={id:idx>=0?player.recentEntries[idx].id:('mpe_'+Date.now()),manualPaymentId:payment.id,amount:remaining,date:payment.date||'',comment:'Manual payment · '+(payment.description||'Payment'),receivedBy:player.name};
+  if(idx>=0)Object.assign(player.recentEntries[idx],contributionEntry);
+  else player.recentEntries.push(contributionEntry);
   payment.paidBy=player.name;
   return true;
 }
@@ -927,12 +932,53 @@ function syncAllManualPaymentContributions(){
   return changed;
 }
 
+function getPaymentAdjustmentIds(payment){
+  if(!payment)return [];
+  const ids=Array.isArray(payment.linkedAdjustmentIds)?payment.linkedAdjustmentIds.slice():[];
+  if(payment.linkedAdjustmentId&&!ids.includes(payment.linkedAdjustmentId))ids.push(payment.linkedAdjustmentId);
+  return ids.filter(Boolean);
+}
+function getAdjustmentPaymentId(adjustment){
+  return adjustment?.linkedPaymentId||((Array.isArray(adjustment?.linkedPaymentIds)&&adjustment.linkedPaymentIds[0])||'');
+}
+function getPaymentAdjustmentTotal(payment){
+  const ids=getPaymentAdjustmentIds(payment);
+  return ids.reduce((sum,id)=>{
+    const a=adjustments.find(x=>x.id===id);
+    return sum+(a?Number(a.amount||0):0);
+  },0);
+}
+function getPaymentRemaining(payment){
+  return Math.max(0,Number(payment?.amount||0)-getPaymentAdjustmentTotal(payment));
+}
+function paymentIsFullySettled(payment){
+  return !!payment && getPaymentRemaining(payment)<=0.000001;
+}
+function syncPaymentAdjustmentState(paymentId){
+  const payment=manualPayments.find(p=>p.id===paymentId);
+  if(!payment)return;
+  const ids=getPaymentAdjustmentIds(payment);
+  payment.linkedAdjustmentIds=ids;
+  payment.linkedAdjustmentId=ids[0]||'';
+  const fully=paymentIsFullySettled(payment);
+  ids.forEach(id=>{
+    const a=adjustments.find(x=>x.id===id);
+    if(a){
+      a.linkedPaymentId=payment.id;
+      a.linkedPaymentIds=[payment.id];
+      a.status=fully?'settled':'partial';
+    }
+  });
+  if(fully)removeManualPaymentContribution(payment.id);
+  else restoreManualPaymentContribution(payment.id);
+}
 function populateManualPaymentAdjustments(selectedId=''){
   const el=document.getElementById('mpLinkedAdjustment');
   if(!el)return;
   const list=Array.isArray(adjustments)?adjustments:[];
   el.innerHTML='<option value="">No adjustment linked</option>'+list.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(a=>{
-    const label=(a.date||'')+' · '+money(a.amount)+' · '+(a.deductFrom||a.paidBy||'Unassigned')+' · '+(a.reason||'Adjustment');
+    const linked=getAdjustmentPaymentId(a);
+    const label=(a.date||'')+' · '+money(a.amount)+' · '+(a.deductFrom||a.paidBy||'Unassigned')+' · '+(a.reason||'Adjustment')+(linked?' · '+linked:'');
     return '<option value="'+esc(a.id)+'" '+(a.id===selectedId?'selected':'')+'>'+esc(label)+'</option>';
   }).join('');
 }
@@ -953,42 +999,45 @@ function saveManualPayment(){
   if(amount<=0){alert('Please enter a valid payment amount.');return;}
   if(!date){alert('Please enter Date.');return;}
   if(!paidBy){alert('Please select Payment Made By.');return;}
-  if(!month){alert('Please enter Payment Month.');return;}
 
-  const item={id:editingManualPaymentId||('PAY-'+Date.now().toString(36).toUpperCase()),category,description,amount,date,paidBy,month,linkedAdjustmentId,addToContribution,notes};
+  const item={id:editingManualPaymentId||('PAY-'+Date.now().toString(36).toUpperCase()),category,description,amount,date,paidBy,month,linkedAdjustmentIds:[],linkedAdjustmentId:'',addToContribution,notes};
   const existing=editingManualPaymentId?manualPayments.find(x=>x.id===editingManualPaymentId):null;
-  const oldLinkedId=existing?.linkedAdjustmentId||'';
-  if(existing)Object.assign(existing,item);else manualPayments.push(item);
+  const oldIds=existing?getPaymentAdjustmentIds(existing):[];
+  if(existing){
+    Object.assign(existing,item);
+    item.linkedAdjustmentIds=oldIds;
+  }else manualPayments.push(item);
 
-  // Keep adjustment linkage in sync in both directions.
-  if(oldLinkedId && oldLinkedId!==linkedAdjustmentId){
-    const oldAdj=adjustments.find(a=>a.id===oldLinkedId);
-    if(oldAdj?.linkedPaymentId===item.id){delete oldAdj.linkedPaymentId;oldAdj.status='open';}
-  }
-  if(linkedAdjustmentId){
+  if(linkedAdjustmentId&&!item.linkedAdjustmentIds.includes(linkedAdjustmentId)){
     const adj=adjustments.find(a=>a.id===linkedAdjustmentId);
-    if(adj){adj.linkedPaymentId=item.id;adj.status='settled';removeManualPaymentContribution(item.id);}
+    if(adj){
+      const otherPaymentId=getAdjustmentPaymentId(adj);
+      if(otherPaymentId&&otherPaymentId!==item.id){
+        alert('This adjustment is already linked to another payment.');
+        return;
+      }
+      item.linkedAdjustmentIds.push(linkedAdjustmentId);
+    }
   }
+  item.linkedAdjustmentId=item.linkedAdjustmentIds[0]||'';
+  oldIds.forEach(id=>{if(!item.linkedAdjustmentIds.includes(id)){
+    const a=adjustments.find(x=>x.id===id);
+    if(a&&getAdjustmentPaymentId(a)===item.id){delete a.linkedPaymentId;delete a.linkedPaymentIds;a.status='open';}
+  }});
 
-  // A checked payment creates/updates one Recent Contribution for the payer.
-  // The contribution player name is always the exact name used in Contributions.
   contributions=Array.isArray(contributions)?contributions:[];
   if(addToContribution){
     const player=resolveContributionPlayer(paidBy);
-    if(player){
-      player.recentEntries=Array.isArray(player.recentEntries)?player.recentEntries:[];
-      let entry=player.recentEntries.find(e=>e.manualPaymentId===item.id);
-      const contributionEntry={id:entry?.id||('mpe_'+Date.now()),manualPaymentId:item.id,amount,date,comment:'Manual payment · '+description,receivedBy:player.name};
-      if(entry)Object.assign(entry,contributionEntry);else player.recentEntries.push(contributionEntry);
-      item.paidBy=player.name;
-    }else{
+    if(!player){
       alert('The selected person is not present in Contributions. Please add that player in Contributions first.');
       return;
     }
+    item.paidBy=player.name;
   }else{
     contributions.forEach(p=>{p.recentEntries=(Array.isArray(p.recentEntries)?p.recentEntries:[]).filter(e=>e.manualPaymentId!==item.id);});
   }
 
+  syncPaymentAdjustmentState(item.id);
   saveFinanceLocal();
   localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
   localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
@@ -1033,7 +1082,7 @@ function deleteManualPayment(id){
 function clearManualPaymentForm(){
   editingManualPaymentId=null;
   populateManualPaymentPeople();
-  ['mpCategory','mpDescription','mpAmount','mpDate','mpPaidBy','mpMonth','mpLinkedAdjustment','mpNotes'].forEach(id=>{
+  ['mpCategory','mpDescription','mpAmount','mpDate','mpPaidBy','mpLinkedAdjustment','mpNotes'].forEach(id=>{
     const e=document.getElementById(id);if(e)e.value='';
   });
   const cb=document.getElementById('mpAddToContribution');if(cb)cb.checked=false;
@@ -1047,11 +1096,15 @@ function renderManualPayments(){
     return;
   }
   body.innerHTML=[...manualPayments].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>{
-    const adj=adjustments.find(a=>a.id===x.linkedAdjustmentId);
-    const linked=adj?money(adj.amount)+' · Deducted from '+(adj.deductFrom||adj.paidBy||''):'—';
-    const status=adj?'<span class="payment-paid-status">PAID</span>':'<span class="payment-pending-status">PENDING</span>';
-    const linkedId=adj?(adj.id||''):'';
-    return `<tr class="manual-payment-row"><td>${esc(x.category||'Other')}</td><td>${esc(x.description||'')}</td><td class="amount">${money(x.amount)}</td><td>${esc(x.date||'')}</td><td>${esc(x.paidBy||'')}</td><td>${status}<div class="payment-id">Payment ID: <strong>${esc(x.id||'')}</strong></div><div class="payment-linked-adjustment">${esc(linked)}${linkedId?' · Adjustment ID: '+esc(linkedId):''}</div></td><td>${esc(x.month||'')}</td><td>${esc(x.notes||'')}</td><td class="actions"><button onclick="editManualPayment('${x.id}')">Edit</button><button class="danger" onclick="deleteManualPayment('${x.id}')">Delete</button></td></tr>`;
+    const ids=getPaymentAdjustmentIds(x);
+    const adjusted=getPaymentAdjustmentTotal(x);
+    const remaining=getPaymentRemaining(x);
+    const status=paymentIsFullySettled(x)?'<span class="payment-paid-status">PAID</span>':'<span class="payment-pending-status">PENDING</span>';
+    const linked=ids.length?ids.map(id=>{
+      const a=adjustments.find(z=>z.id===id);
+      return a?money(a.amount)+' · '+esc(a.id)+' · '+esc(a.deductFrom||a.paidBy||''):'';
+    }).filter(Boolean).join('<br>'):'—';
+    return `<tr class="manual-payment-row"><td>${esc(x.category||'Other')}</td><td>${esc(x.description||'')}</td><td class="amount">${money(remaining)}<div class="payment-linked-adjustment">Original: ${money(x.amount)} · Adjusted: ${money(adjusted)}</div></td><td>${esc(x.date||'')}</td><td>${esc(x.paidBy||'')}</td><td>${status}<div class="payment-id">Payment ID: <strong>${esc(x.id||'')}</strong></div><div class="payment-linked-adjustment">Adjustment ID(s): ${linked}</div></td><td>${esc(x.month||'')}</td><td>${esc(x.notes||'')}</td><td class="actions"><button onclick="editManualPayment('${x.id}')">Edit</button><button class="danger" onclick="deleteManualPayment('${x.id}')">Delete</button></td></tr>`;
   }).join('');
 }
 const CONTRIBUTION_KEY='cricketMatchContributionsV1';
@@ -2320,7 +2373,7 @@ function removeManualPaymentContribution(paymentId){
 }
 function restoreManualPaymentContribution(paymentId){
   const p=manualPayments.find(x=>x.id===paymentId);
-  if(!p||!p.addToContribution||p.linkedAdjustmentId)return;
+  if(!p||!p.addToContribution)return;
   syncManualPaymentContribution(p);
   localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
 }
@@ -2332,19 +2385,42 @@ function saveAdjustment(id){
   const reason=(document.getElementById('fAdjReason')?.value.trim()||'Manual adjustment');
   const linkedPaymentId=document.getElementById('fAdjLinkedPayment')?.value||'';
   if(!date||amount<=0||!deductFrom){alert('Please enter adjustment date, amount and the person to deduct from.');return;}
-  const item={id:id||('ADJ-'+Date.now().toString(36).toUpperCase()),date,applyMonth:'',amount,paidBy:deductFrom,deductFrom,payee,reason,linkedPaymentId,status:linkedPaymentId?'settled':'open'};
-  const existing=adjustments.find(x=>x.id===item.id), oldLinkedPaymentId=existing?.linkedPaymentId||'';
+
+  const item={id:id||('ADJ-'+Date.now().toString(36).toUpperCase()),date,applyMonth:'',amount,paidBy:deductFrom,deductFrom,payee,reason,linkedPaymentId:'',linkedPaymentIds:[],status:'open'};
+  const existing=adjustments.find(x=>x.id===item.id);
+  const oldPaymentId=getAdjustmentPaymentId(existing);
   const idx=adjustments.findIndex(x=>x.id===item.id);
   if(idx>=0)adjustments[idx]=item;else adjustments.push(item);
-  if(oldLinkedPaymentId&&oldLinkedPaymentId!==linkedPaymentId){
-    const oldPayment=manualPayments.find(x=>x.id===oldLinkedPaymentId);
-    if(oldPayment?.linkedAdjustmentId===item.id)delete oldPayment.linkedAdjustmentId;
-    restoreManualPaymentContribution(oldLinkedPaymentId);
+
+  if(oldPaymentId&&oldPaymentId!==linkedPaymentId){
+    const oldPayment=manualPayments.find(x=>x.id===oldPaymentId);
+    if(oldPayment){
+      oldPayment.linkedAdjustmentIds=getPaymentAdjustmentIds(oldPayment).filter(x=>x!==item.id);
+      oldPayment.linkedAdjustmentId=oldPayment.linkedAdjustmentIds[0]||'';
+      syncPaymentAdjustmentState(oldPayment.id);
+    }
   }
+
   if(linkedPaymentId){
     const payment=manualPayments.find(x=>x.id===linkedPaymentId);
-    if(payment){payment.linkedAdjustmentId=item.id;item.status='settled';removeManualPaymentContribution(payment.id);}
+    if(!payment){alert('The selected payment could not be found.');return;}
+    const currentIds=getPaymentAdjustmentIds(payment).filter(x=>x!==item.id);
+    const allocated=currentIds.reduce((sum,aid)=>sum+Number(adjustments.find(a=>a.id===aid)?.amount||0),0);
+    const available=Math.max(0,Number(payment.amount||0)-allocated);
+    if(amount>available+0.000001){
+      alert('This adjustment is greater than the remaining balance of the selected payment (₹'+available.toLocaleString('en-IN')+').');
+      if(idx>=0)adjustments.splice(idx,1);
+      return;
+    }
+    payment.linkedAdjustmentIds=[...currentIds,item.id];
+    payment.linkedAdjustmentId=payment.linkedAdjustmentIds[0]||'';
+    item.linkedPaymentId=payment.id;
+    item.linkedPaymentIds=[payment.id];
+    syncPaymentAdjustmentState(payment.id);
+  }else{
+    item.status='open';
   }
+
   saveFinanceLocal();localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
   closeFinanceModal();renderManualPayments();renderContributions();
   if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();else if(typeof renderAccounts==='function')renderAccounts();
@@ -2356,12 +2432,16 @@ function editAdjustment(id){
 }
 function deleteAdjustment(id){
   if(!confirm('Delete this adjustment?'))return;
-  const item=adjustments.find(x=>x.id===id);adjustments=adjustments.filter(x=>x.id!==id);
-  if(item?.linkedPaymentId){
-    const p=manualPayments.find(x=>x.id===item.linkedPaymentId);
-    if(p?.linkedAdjustmentId===id){delete p.linkedAdjustmentId;}
-    restoreManualPaymentContribution(item.linkedPaymentId);
-    localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
+  const item=adjustments.find(x=>x.id===id);
+  adjustments=adjustments.filter(x=>x.id!==id);
+  const paymentId=getAdjustmentPaymentId(item);
+  if(paymentId){
+    const p=manualPayments.find(x=>x.id===paymentId);
+    if(p){
+      p.linkedAdjustmentIds=getPaymentAdjustmentIds(p).filter(x=>x!==id);
+      p.linkedAdjustmentId=p.linkedAdjustmentIds[0]||'';
+      syncPaymentAdjustmentState(paymentId);
+    }
   }
   saveFinanceLocal();renderManualPayments();renderContributions();
   if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();else if(typeof renderAccounts==='function')renderAccounts();
@@ -2458,7 +2538,7 @@ ensureFinanceFields();wrapLegacyFunctions();
 
     const groundBooking=matches.reduce((s,m)=>s+num(m.groundAmount),0);
     const groundPaid=payments.reduce((s,p)=>s+num(p.amount),0);
-    const otherPaid=otherPayments.reduce((s,p)=>s+num(p.amount),0);
+    const otherPaid=otherPayments.reduce((s,p)=>s+getPaymentRemaining(p),0);
     const totalPaid=groundPaid+otherPaid;
     const opponent=matches.reduce((s,m)=>s+num(m.opponentAmount),0);
     const players=matches.reduce((s,m)=>s+(Array.isArray(m.players)?m.players:[]).reduce((a,p)=>a+num(p.amount),0),0);
@@ -2562,7 +2642,7 @@ ensureFinanceFields();wrapLegacyFunctions();
       '<div class="accounts-help">All manual adjustments created in Accounts & Settlement. The selected person is deducted from the adjustment amount.</div>'+
       '<div class="table-wrap manual-adjustments-wrap"><table class="finance-table manual-adjustments-table"><thead><tr><th>Date</th><th>Adjustment ID</th><th>Deduct From</th><th class="amount">Amount</th><th>Status</th><th>Linked Payment ID</th><th>Payee / From</th><th>Reason</th><th>Actions</th></tr></thead><tbody>'+
       (Array.isArray(adjustments)&&adjustments.length
-        ? adjustments.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(a=>'<tr><td>'+safe(a.date||'')+'</td><td><strong>'+safe(a.id||'')+'</strong></td><td><strong>'+safe(a.deductFrom||a.paidBy||'')+'</strong></td><td class="amount"><strong>'+cash(a.amount)+'</strong></td><td>'+(a.linkedPaymentId?'<span class="payment-paid-status">SETTLED</span>':'<span class="payment-pending-status">OPEN</span>')+'</td><td>'+safe(a.linkedPaymentId||'—')+'</td><td>'+safe(a.payee||'')+'</td><td>'+safe(a.reason||'')+'</td><td class="actions"><button onclick="editAdjustment(\''+safe(a.id||'')+'\')">Edit</button><button class="danger" onclick="deleteAdjustment(\''+safe(a.id||'')+'\')">Delete</button></td></tr>').join('')
+        ? adjustments.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(a=>'<tr><td>'+safe(a.date||'')+'</td><td><strong>'+safe(a.id||'')+'</strong></td><td><strong>'+safe(a.deductFrom||a.paidBy||'')+'</strong></td><td class="amount"><strong>'+cash(a.amount)+'</strong></td><td>'+((getAdjustmentPaymentId(a)&&manualPayments.find(p=>p.id===getAdjustmentPaymentId(a))&&paymentIsFullySettled(manualPayments.find(p=>p.id===getAdjustmentPaymentId(a))))?'<span class="payment-paid-status">SETTLED</span>':(getAdjustmentPaymentId(a)?'<span class="payment-pending-status">PARTIAL SETTLED</span>':'<span class="payment-pending-status">OPEN</span>'))+'</td><td>'+safe(getAdjustmentPaymentId(a)||'—')+'</td><td>'+safe(a.payee||'')+'</td><td>'+safe(a.reason||'')+'</td><td class="actions"><button onclick="editAdjustment(\''+safe(a.id||'')+'\')">Edit</button><button class="danger" onclick="deleteAdjustment(\''+safe(a.id||'')+'\')">Delete</button></td></tr>').join('')
         : '<tr><td colspan="9" class="empty">No manual adjustments recorded.</td></tr>')+
       '</tbody></table></div>';
 
