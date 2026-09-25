@@ -2139,10 +2139,10 @@ ensureFinanceFields();wrapLegacyFunctions();
   function cash(v){return typeof money==='function'?money(num(v)):'₹'+num(v).toLocaleString('en-IN');}
 
   function calculate(month){
-    const matches=Array.isArray(window.data)?window.data.filter(m=>monthOf(m.date)===month):[];
-    const payments=Array.isArray(window.groundPayments)?window.groundPayments.filter(p=>(p.month||monthOf(p.date))===month):[];
-    const contrib=Array.isArray(window.contributions)?window.contributions:[];
-    const manual=Array.isArray(window.adjustments)?window.adjustments.filter(a=>(a.applyMonth||'')===month):[];
+    const matches=Array.isArray(data)?data.filter(m=>monthOf(m.date)===month):[];
+    const payments=Array.isArray(groundPayments)?groundPayments.filter(p=>(p.month||monthOf(p.date))===month):[];
+    const contrib=Array.isArray(contributions)?contributions:[];
+    const manual=Array.isArray(adjustments)?adjustments.filter(a=>(a.applyMonth||'')===month):[];
 
     const groundBooking=matches.reduce((s,m)=>s+num(m.groundAmount),0);
     const groundPaid=payments.reduce((s,p)=>s+num(p.amount),0);
@@ -2165,7 +2165,7 @@ ensureFinanceFields();wrapLegacyFunctions();
       const gp=payments.filter(p=>(p.paidBy||'')===person).reduce((s,p)=>s+num(p.amount),0);
       const adj=matches.filter(m=>(m.adjustmentOwner||'')===person).reduce((s,m)=>s+num(m.adjustmentAmount),0)
         +manual.filter(a=>(a.paidBy||'')===person).reduce((s,a)=>s+num(a.amount),0);
-      const settlements=Array.isArray(window.settlements)?window.settlements.filter(x=>(x.month||monthOf(x.date))===month&&(x.person||'')===person).reduce((s,x)=>s+num(x.amount),0):0;
+      const settlements=Array.isArray(settlements)?settlements.filter(x=>(x.month||monthOf(x.date))===month&&(x.person||'')===person).reduce((s,x)=>s+num(x.amount),0):0;
       const received=opp+play+cont;
       const net=received-gp-adj-settlements;
       return {person,opp,play,cont,gp,adj,settlements,received,net};
@@ -2176,15 +2176,15 @@ ensureFinanceFields();wrapLegacyFunctions();
 
   function allMonths(){
     const set=new Set();
-    (Array.isArray(window.data)?window.data:[]).forEach(m=>{if(monthOf(m.date))set.add(monthOf(m.date));});
-    (Array.isArray(window.groundPayments)?window.groundPayments:[]).forEach(p=>{const m=p.month||monthOf(p.date);if(m)set.add(m);});
-    (Array.isArray(window.contributions)?window.contributions:[]).forEach(p=>(p.recentEntries||[]).forEach(e=>{if(monthOf(e.date))set.add(monthOf(e.date));}));
-    (Array.isArray(window.adjustments)?window.adjustments:[]).forEach(a=>{if(a.applyMonth)set.add(a.applyMonth);});
-    (Array.isArray(window.settlements)?window.settlements:[]).forEach(a=>{const m=a.month||monthOf(a.date);if(m)set.add(m);});
+    (Array.isArray(data)?data:[]).forEach(m=>{if(monthOf(m.date))set.add(monthOf(m.date));});
+    (Array.isArray(groundPayments)?groundPayments:[]).forEach(p=>{const m=p.month||monthOf(p.date);if(m)set.add(m);});
+    (Array.isArray(contributions)?contributions:[]).forEach(p=>(p.recentEntries||[]).forEach(e=>{if(monthOf(e.date))set.add(monthOf(e.date));}));
+    (Array.isArray(adjustments)?adjustments:[]).forEach(a=>{if(a.applyMonth)set.add(a.applyMonth);});
+    (Array.isArray(settlements)?settlements:[]).forEach(a=>{const m=a.month||monthOf(a.date);if(m)set.add(m);});
     return [...set].sort();
   }
 
-  window.renderAccountsDashboard=function(){
+  renderAccountsDashboard=function(){
     const overall=document.getElementById('accountsOverall');
     const byMonth=document.getElementById('accountsByMonth');
     if(!overall||!byMonth)return;
@@ -2234,17 +2234,17 @@ ensureFinanceFields();wrapLegacyFunctions();
       ).join(''):'<div class="empty">No financial data has been recorded yet.</div>');
   };
 
-  window.showAccounts=function(){
+  showAccounts=function(){
     ['summarySection','playerContributionSummarySection','paymentsSection','contributionsSection','matchFormSection','weeks'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
     document.querySelector('.cards')?.classList.add('hidden');
     document.getElementById('accountsSection')?.classList.remove('hidden');
-    window.renderAccountsDashboard();
+    renderAccountsDashboard();
     window.scrollTo({top:0,behavior:'smooth'});
   };
 
   // Keep Accounts refreshed after match/payment/contribution edits and after returning to the page.
   const oldRenderAccounts=window.renderAccounts;
-  window.renderAccounts=function(){if(document.getElementById('accountsSection')&&!document.getElementById('accountsSection').classList.contains('hidden'))window.renderAccountsDashboard();};
+  window.renderAccounts=function(){if(document.getElementById('accountsSection')&&!document.getElementById('accountsSection').classList.contains('hidden'))renderAccountsDashboard();};
 })();
 </script></body>
 </html>
