@@ -1224,21 +1224,44 @@ function saveContribution(){
   }
 
   localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
+  if(typeof cloudUser!=='undefined' && cloudUser && typeof saveCloudState==='function'){
+    saveCloudState().catch(err=>console.error('Contribution save cloud failed:',err));
+  }
   clearContributionForm();
   document.getElementById('cRecentComment').value='';
   renderContributions();
 }
-function editContribution(id){
-  const x=contributions.find(a=>a.id===id);
+function editContributionByIndex(playerIndex){
+  const index=Number(playerIndex);
+  const x=contributions[index];
   if(!x)return;
-  editingContributionId=id;
+  editingContributionId=x.id ?? null;
   editingRecentContributionId=null;
   document.getElementById('cPlayerName').value=x.name||'';
-  document.getElementById('cCarry').value=x.carry||0;
+  document.getElementById('cCarry').value=x.carry??0;
   document.getElementById('cRecent').value='';
   document.getElementById('cRecentDate').value='';
   document.getElementById('cRecentComment').value='';
   document.getElementById('cPlayerName').focus();
+}
+function editContribution(id){
+  const x=contributions.find(a=>String(a.id)===String(id));
+  if(!x)return;
+  editContributionByIndex(contributions.indexOf(x));
+}
+function deleteContributionByIndex(playerIndex){
+  const index=Number(playerIndex);
+  const player=contributions[index];
+  if(!player)return;
+  if(!confirm('Delete this contribution entry?'))return;
+  contributions.splice(index,1);
+  localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
+  if(typeof cloudUser!=='undefined' && cloudUser && typeof saveCloudState==='function'){
+    saveCloudState().catch(err=>console.error('Contribution delete cloud save failed:',err));
+  }
+  clearContributionForm();
+  renderContributions();
+  if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();
 }
 document.getElementById('contributionRows').addEventListener('click',function(e){
   const btn=e.target.closest('button[data-action]');
@@ -1292,10 +1315,9 @@ function deleteRecentContributionByIndex(playerIndex,entryIndex){
 }
 
 function deleteContribution(id){
-  if(!confirm('Delete this contribution entry?'))return;
-  contributions=contributions.filter(x=>x.id!==id);
-  localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
-  renderContributions();
+  const index=contributions.findIndex(x=>String(x.id)===String(id));
+  if(index<0)return;
+  deleteContributionByIndex(index);
 }
 
 function clearContributionForm(){
@@ -1398,8 +1420,8 @@ function renderContributions(){
       <td class="amount">${money(total)}</td>
       <td class="amount ${cls}">${money(balance)}</td>
       <td class="actions">
-        <button onclick="editContribution(${x.id})">Edit</button>
-        <button class="danger" onclick="deleteContribution(${x.id})">Delete</button>
+        <button type="button" onclick="editContributionByIndex(${playerIndex});return false;">Edit</button>
+        <button type="button" class="danger" onclick="deleteContributionByIndex(${playerIndex});return false;">Delete</button>
       </td>
     </tr>`;
   }).join('');
