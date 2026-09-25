@@ -2746,12 +2746,16 @@ ensureFinanceFields();wrapLegacyFunctions();
       if(current && months.includes(current))selector.value=current;
     }
 
+    const consolidatedTotalAmount=Object.values(people).reduce((sum,p)=>sum+p.net,0);
+    const consolidatedAmountPaid=totals.groundPaid+totals.manualPaid;
+    const consolidatedAvailableAmount=consolidatedTotalAmount-consolidatedAmountPaid;
+
     overall.innerHTML=
       '<div class="finance-summary-title">🏏 Consolidated Team Summary</div>'+
       '<div class="accounts-funds-grid">'+
-      '<div class="accounts-available-card accounts-total-card"><div><div class="accounts-available-label">Total Amount</div><div class="accounts-available-value">'+cash(Object.values(people).reduce((sum,p)=>sum+p.net,0))+'</div><div class="accounts-available-note">Sum of Net Balance held by all team members</div></div></div>'+
-      '<div class="accounts-available-card accounts-paid-card"><div style="width:100%"><div class="accounts-available-label">Amount Paid</div><div class="accounts-paid-total">'+cash(totals.groundPaid+totals.manualPaid)+'</div><div class="accounts-paid-breakdown"><div class="payment-mini payment-mini-ground"><span>Ground Payments</span><strong>'+cash(totals.groundPaid)+'</strong></div><div class="payment-mini payment-mini-manual"><span>Manual Payments</span><strong>'+cash(totals.manualPaid)+'</strong></div></div><div class="accounts-available-note">Payments tab · Ground + manual payments</div></div></div>'+
-      '<div class="accounts-available-card accounts-balance-card"><div><div class="accounts-available-label">Total Available Amount</div><div class="accounts-available-value">'+cash(Object.values(people).reduce((sum,p)=>sum+p.net,0))+'</div><div class="accounts-available-note">Sum of Net Balance held by all team members</div></div><span class="accounts-available-badge">Team Pool</span></div>'+
+      '<div class="accounts-available-card accounts-total-card"><div><div class="accounts-available-label">Total Amount</div><div class="accounts-available-value">'+cash(consolidatedTotalAmount)+'</div><div class="accounts-available-note">Sum of Net Balance held by all team members</div></div></div>'+
+      '<div class="accounts-available-card accounts-paid-card"><div style="width:100%"><div class="accounts-available-label">Amount Paid</div><div class="accounts-paid-total">'+cash(consolidatedAmountPaid)+'</div><div class="accounts-paid-breakdown"><div class="payment-mini payment-mini-ground"><span>Ground Payments</span><strong>'+cash(totals.groundPaid)+'</strong></div><div class="payment-mini payment-mini-manual"><span>Manual Payments</span><strong>'+cash(totals.manualPaid)+'</strong></div></div><div class="accounts-available-note">Payments tab · Ground + manual payments</div></div></div>'+
+      '<div class="accounts-available-card accounts-balance-card"><div><div class="accounts-available-label">Total Available Amount</div><div class="accounts-available-value">'+cash(consolidatedAvailableAmount)+'</div><div class="accounts-available-note">Total Amount − Amount Paid</div></div><span class="accounts-available-badge">Team Pool</span></div>'+
       '</div>'+
       '<div class="finance-summary-grid accounts-source-grid">'+
       [
