@@ -1082,6 +1082,7 @@ function playerMatchContributionTotal(playerName){
 
 function getPlayerBalance(contribution){
   const recentTotal=(Array.isArray(contribution.recentEntries)?contribution.recentEntries:[])
+    .filter(e=>!e?.manualPaymentId || !manualPayments.find(p=>p.id===e.manualPaymentId)?.linkedAdjustmentId)
     .reduce((sum,e)=>sum+Number(e.amount||0),0);
   const totalContribution=Number(contribution.carry||0)+recentTotal;
   return totalContribution-playerMatchContributionTotal(contribution.name);
@@ -1235,7 +1236,36 @@ function contributionOwnerChecks(playerIndex,entryIndex,owner){
   }).join('');
 }
 
+function reconcileSettledPaymentContributions(){
+  let changed=false;
+  const paymentById=new Map((Array.isArray(manualPayments)?manualPayments:[]).map(p=>[p.id,p]));
+  // Rebuild the payment-side link from any existing adjustment link.
+  (Array.isArray(adjustments)?adjustments:[]).forEach(a=>{
+    if(!a?.linkedPaymentId)return;
+    const p=paymentById.get(a.linkedPaymentId);
+    if(p && p.linkedAdjustmentId!==a.id){p.linkedAdjustmentId=a.id;changed=true;}
+    if(a.status!=='settled'){a.status='settled';changed=true;}
+  });
+  // Any contribution generated from a payment that is now settled must disappear.
+  (Array.isArray(contributions)?contributions:[]).forEach(player=>{
+    const entries=Array.isArray(player.recentEntries)?player.recentEntries:[];
+    const kept=entries.filter(e=>{
+      if(!e?.manualPaymentId)return true;
+      const p=paymentById.get(e.manualPaymentId);
+      return !(p?.linkedAdjustmentId);
+    });
+    if(kept.length!==entries.length){player.recentEntries=kept;changed=true;}
+  });
+  if(changed){
+    localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
+    localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
+    if(typeof FINANCE_KEY!=='undefined') localStorage.setItem(FINANCE_KEY,JSON.stringify({adjustments,settlements}));
+  }
+  return changed;
+}
+
 function renderContributions(){
+  reconcileSettledPaymentContributions();
   const body=document.getElementById('contributionRows');
   if(!body)return;
   if(!contributions.length){
