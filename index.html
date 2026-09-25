@@ -273,9 +273,9 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <button class="secondary nav-config" id="configNavButton" onclick="showConfiguration()">⚙️ Configuration</button>
 
   <button class="secondary" onclick="exportCSV()">Export CSV</button>
-  <button class="secondary" onclick="backupData()">Backup Data</button>
-  <span style="font-size:11px;color:#687386;align-self:center">Backup opens a downloadable JSON window.</span>
-  <button class="secondary" onclick="document.getElementById('restoreFile').click()">Restore Backup</button>
+  <button class="secondary" id="backupDataButton" onclick="backupData()">Backup Data</button>
+  <span id="backupDataNote" style="font-size:11px;color:#687386;align-self:center">Backup opens a downloadable JSON window.</span>
+  <button class="secondary" id="restoreBackupButton" onclick="document.getElementById('restoreFile').click()">Restore Backup</button>
   <span id="loggedInUser" class="user-badge"></span>
   <button class="danger" onclick="logoutUser()">Logout</button>
   <input id="restoreFile" type="file" accept=".json" class="hidden" onchange="restoreData(event)">
@@ -699,6 +699,7 @@ function showApp(){
   const username=cloudUser?.user_metadata?.username||'';
   if(badge)badge.textContent=username?'👤 '+username:'';
 
+  if(typeof applyConfigurationVisibility==='function')applyConfigurationVisibility();
   showTracker();
   render();
   window.scrollTo(0,0);
@@ -2195,6 +2196,10 @@ async function copyBackupJson(){
   }
 }
 function backupData(){
+  if(typeof arezoHasPermission==='function' && !arezoHasPermission('backup_restore','create')){
+    alert('Administrator access is required to create a backup.');
+    return;
+  }
   try{
     const json=JSON.stringify(buildBackupPayload(),null,2);
     const filename='arezoKings-backup.json';
@@ -2226,6 +2231,11 @@ function backupData(){
   }
 }
 async function restoreData(e){
+  if(typeof arezoHasPermission==='function' && !arezoHasPermission('backup_restore','edit')){
+    alert('Administrator access is required to restore a backup.');
+    if(e?.target)e.target.value='';
+    return;
+  }
   const input=e.target;
   const file=input?.files?.[0];
   if(!file)return;
@@ -3165,13 +3175,26 @@ async function loadConfigurationAccess(){
   }catch(err){
     console.error('Configuration access load failed:',err);
   }
+  if(typeof applyConfigurationVisibility==='function')applyConfigurationVisibility();
 }
 
+function applyConfigurationVisibility(){
+  const admin=configIsAdmin();
+  const ids=['configNavButton','backupDataButton','backupDataNote','restoreBackupButton'];
+  ids.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.style.display=admin?'':'none';
+  });
+  const restoreInput=document.getElementById('restoreFile');
+  if(restoreInput)restoreInput.disabled=!admin;
+}
 async function showConfiguration(){
   ['summarySection','playerContributionSummarySection','paymentsSection','manualPaymentsSection','contributionsSection','matchFormSection','weeks','accountsSection'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
   document.querySelector('.cards')?.classList.add('hidden');
   document.getElementById('configurationSection')?.classList.remove('hidden');
+  applyConfigurationVisibility();
   await loadConfiguration();
+  applyConfigurationVisibility();
   if(!configIsAdmin()){
     document.getElementById('configurationSection')?.classList.add('hidden');
     showTracker();
