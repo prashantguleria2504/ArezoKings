@@ -2287,10 +2287,11 @@ function saveAdjustment(id){
   const amount=Number(document.getElementById('fAdjAmount')?.value||0);
   const deductFrom=document.getElementById('fAdjPaidBy')?.value||'';
   const payee=document.getElementById('fAdjPayee')?.value.trim()||'';
-  const reason=document.getElementById('fAdjReason')?.value.trim()||'';
+  const reasonInput=document.getElementById('fAdjReason')?.value.trim()||'';
+  const reason=reasonInput||'Manual adjustment';
   const linkedPaymentId=document.getElementById('fAdjLinkedPayment')?.value||'';
-  if(!date||!applyMonth||amount<=0||!deductFrom||!reason){
-    alert('Please enter date, month, amount, person and reason.');
+  if(!date||!applyMonth||amount<=0||!deductFrom){
+    alert('Please enter adjustment date, month, amount and the person to deduct from.');
     return;
   }
   const item={id:id||('adj_'+Date.now()),date,applyMonth,amount,paidBy:deductFrom,deductFrom,payee,reason,linkedPaymentId};
