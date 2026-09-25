@@ -312,8 +312,9 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
     <div><label>Total ground booking amount</label><input id="mGroundAmount" type="number" min="0" step="1" placeholder="0"></div>
     <div><label>Opponent <span style="color:#c0392b">*</span></label><input id="mOpponent" placeholder="Opponent team"></div>
     <div><label>Amount received from opponent</label><input id="mAmount" type="number" min="0" step="1" placeholder="0"></div>
-    <div><label>Adjustment Amount</label><input id="mAdjustmentAmount" type="number" step="1" placeholder="0"></div>
+    <div><label>Adjustment Amount</label><input id="mAdjustmentAmount" type="number" min="0" step="1" placeholder="0"></div>
     <div><label>Adjustment Date</label><input id="mAdjustmentDate" type="date"></div>
+    <div><label>Adjusted Against Match</label><select id="mAdjustmentAgainst"><option value="">No linked match</option></select></div>
     <div><label>Amount with Neeraj</label><input id="mNeeraj" type="number" min="0" step="1" placeholder="0"></div>
     <div><label>Neeraj amount received?</label><input id="mNeerajReceived" type="checkbox"></div>
     <div><label>Neeraj comment / with whom</label><input id="mNeerajComment" placeholder="e.g. With Amit"></div>
@@ -1100,6 +1101,21 @@ function renderSummary(){
   }).join('');
 }
 
+function refreshAdjustmentMatchDropdown(selectedId='', currentId=''){
+  const el=document.getElementById('mAdjustmentAgainst');
+  if(!el)return;
+  const options=(data||[]).filter(m=>m.id!==currentId).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))).map(m=>{
+    const date=m.date?new Date(m.date+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'';
+    return '<option value="'+esc(m.id)+'">'+esc(date+' · '+(m.opponent||'No opponent')+' · '+(m.ground||'No ground'))+'</option>';
+  }).join('');
+  el.innerHTML='<option value="">No linked match</option>'+options;
+  el.value=selectedId||'';
+}
+function adjustmentMatchLabel(id){
+  const m=(data||[]).find(x=>x.id===id); if(!m)return '';
+  const date=m.date?new Date(m.date+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short'}):'';
+  return date+' · '+(m.opponent||'No opponent')+' · '+(m.ground||'No ground');
+}
 function openMatchForm(id=null){
   refreshGroundDropdown();
   editingId=id;
@@ -1115,6 +1131,7 @@ function openMatchForm(id=null){
   document.getElementById('mAmount').value=x?.opponentAmount||0;
   document.getElementById('mAdjustmentAmount').value=x?.adjustmentAmount??0;
   document.getElementById('mAdjustmentDate').value=x?.adjustmentDate||'';
+  refreshAdjustmentMatchDropdown(x?.adjustmentAgainstMatchId||'',id);
   document.getElementById('mNeeraj').value=x?.neerajAmount||0;
   document.getElementById('mNeerajReceived').checked=!!x?.neerajReceived;
   document.getElementById('mNeerajComment').value=x?.neerajComment||'';
@@ -1131,7 +1148,7 @@ function saveMatch(){
   const groundAmount=Number(mGroundAmount.value||0);
   const opponent=mOpponent.value.trim();
   const amount=Number(mAmount.value||0);
-  const adjustmentAmount=Number(mAdjustmentAmount.value||0), adjustmentDate=mAdjustmentDate.value||'';
+  const adjustmentAmount=Number(mAdjustmentAmount.value||0), adjustmentDate=mAdjustmentDate.value||'', adjustmentAgainstMatchId=document.getElementById('mAdjustmentAgainst')?.value||'';
   const neerajAmount=Number(mNeeraj.value||0), neerajReceived=mNeerajReceived.checked, neerajComment=mNeerajComment.value.trim();
   const suyogAmount=Number(mSuyog.value||0), suyogReceived=mSuyogReceived.checked, suyogComment=mSuyogComment.value.trim();
 
@@ -1161,7 +1178,7 @@ function saveMatch(){
 
   if(editingId){
     const x=data.find(a=>a.id===editingId);
-    Object.assign(x,{date,ground,groundAmount,opponent,opponentAmount:amount,adjustmentAmount,adjustmentDate,neerajAmount,neerajReceived,neerajComment,suyogAmount,suyogReceived,suyogComment});
+    Object.assign(x,{date,ground,groundAmount,opponent,opponentAmount:amount,adjustmentAmount,adjustmentDate,adjustmentAgainstMatchId,neerajAmount,neerajReceived,neerajComment,suyogAmount,suyogReceived,suyogComment});
   }else{
     data.push({id:crypto.randomUUID(),date,ground,groundAmount,opponent,opponentAmount:amount,adjustmentAmount,adjustmentDate,neerajAmount,neerajReceived,neerajComment,suyogAmount,suyogReceived,suyogComment,players:[]});
   }
@@ -1301,7 +1318,7 @@ function render(){
     const list=groups[w],ot=list.reduce((s,x)=>s+Number(x.opponentAmount||0),0),pt=list.reduce((s,x)=>s+Number(x.neerajAmount||0)+Number(x.suyogAmount||0)+x.players.reduce((a,p)=>a+Number(p.amount||0),0),0);
     return `<section class="section"><div class="section-head"><h2>Week ${w} <span class="badge">${list.length} match${list.length!==1?'es':''}</span></h2></div>
     <div class="table-wrap"><table><thead><tr><th title="Match date">Date</th><th title="Ground where the match is played">Ground</th><th class="amount" title="Total amount paid/booked for the ground">Ground Fee</th><th title="Opponent team">Opponent</th><th class="amount" title="Amount actually received from the opponent">Opp. Paid</th><th title="Any amount adjusted against this match">Adjustment</th><th class="amount" title="Amount currently held by Neeraj">Neeraj ₹</th><th title="Whether Neeraj has received it and any note about who has the money">Neeraj Status</th><th class="amount" title="Amount currently held by Suyog">Suyog ₹</th><th title="Whether Suyog has received it and any note about who has the money">Suyog Status</th><th class="amount" title="Total collected from players other than Neeraj and Suyog">Players ₹</th><th class="amount" title="Total amount collected for this match: opponent + players">Collected Total</th><th title="Edit or delete the match">Actions</th></tr></thead><tbody>
-    ${list.map(x=>{const other=x.players.reduce((a,p)=>a+Number(p.amount||0),0), n=Number(x.neerajAmount||0), s=Number(x.suyogAmount||0), total=getMatchTotal(x); return `<tr class="${(!x.opponent || !String(x.opponent).trim()) ? 'match-not-scheduled-row' : ''}"><td><div>${new Date(x.date+'T00:00:00').toLocaleDateString('en-IN')}</div><div class="date-day">${new Date(x.date+'T00:00:00').toLocaleDateString('en-IN',{weekday:'long'})}</div>${(!x.opponent || !String(x.opponent).trim()) ? '<div class="match-not-scheduled-note">⚠ Match not yet scheduled</div>' : ''}</td><td>${esc(x.ground)}</td><td class="amount">${money(x.groundAmount)}</td><td>${esc(x.opponent)}</td><td class="amount">${money(x.opponentAmount||0)}${(String(x.opponent||"").trim() && Number(x.opponentAmount||0)===0) ? "<span class=\"amount-not-received\">Amount not received</span>" : ""}</td><td><div><strong>₹</strong> ${money(x.adjustmentAmount||0)}</div>${x.adjustmentDate?`<div class="date-day">${new Date(x.adjustmentDate+"T00:00:00").toLocaleDateString("en-IN")}</div>`:'<div class="date-day">No date</div>'}</td><td class="amount">${money(n)}</td><td>${x.neerajReceived?'☑ Received':'☐ Pending'}${x.neerajComment?`<br><small>${esc(x.neerajComment)}</small>`:''}</td><td class="amount">${money(s)}</td><td>${x.suyogReceived?'☑ Received':'☐ Pending'}${x.suyogComment?`<br><small>${esc(x.suyogComment)}</small>`:''}</td><td class="amount">${money(other)}</td><td class="amount">${money(total)}</td><td class="actions"><button onclick="openMatchForm('${x.id}')">Edit</button><button class="danger" onclick="deleteMatch('${x.id}')">Delete</button></td></tr>
+    ${list.map(x=>{const other=x.players.reduce((a,p)=>a+Number(p.amount||0),0), n=Number(x.neerajAmount||0), s=Number(x.suyogAmount||0), total=getMatchTotal(x); return `<tr class="${(!x.opponent || !String(x.opponent).trim()) ? 'match-not-scheduled-row' : ''}"><td><div>${new Date(x.date+'T00:00:00').toLocaleDateString('en-IN')}</div><div class="date-day">${new Date(x.date+'T00:00:00').toLocaleDateString('en-IN',{weekday:'long'})}</div>${(!x.opponent || !String(x.opponent).trim()) ? '<div class="match-not-scheduled-note">⚠ Match not yet scheduled</div>' : ''}</td><td>${esc(x.ground)}</td><td class="amount">${money(x.groundAmount)}</td><td>${esc(x.opponent)}</td><td class="amount">${money(x.opponentAmount||0)}${(String(x.opponent||"").trim() && Number(x.opponentAmount||0)===0) ? "<span class=\"amount-not-received\">Amount not received</span>" : ""}</td><td><div><strong>${money(x.adjustmentAmount||0)}</strong></div>${x.adjustmentAgainstMatchId?`<div class="date-day">↔ ${esc(adjustmentMatchLabel(x.adjustmentAgainstMatchId))}</div>`:(x.adjustmentDate?`<div class="date-day">Date: ${new Date(x.adjustmentDate+"T00:00:00").toLocaleDateString("en-IN")}</div>`:'<div class="date-day">No linked match</div>')}</td><td class="amount">${money(n)}</td><td>${x.neerajReceived?'☑ Received':'☐ Pending'}${x.neerajComment?`<br><small>${esc(x.neerajComment)}</small>`:''}</td><td class="amount">${money(s)}</td><td>${x.suyogReceived?'☑ Received':'☐ Pending'}${x.suyogComment?`<br><small>${esc(x.suyogComment)}</small>`:''}</td><td class="amount">${money(other)}</td><td class="amount">${money(total)}</td><td class="actions"><button onclick="openMatchForm('${x.id}')">Edit</button><button class="danger" onclick="deleteMatch('${x.id}')">Delete</button></td></tr>
     <tr><td colspan="13"><details><summary>Player contributions (${x.players.length})</summary><div class="table-wrap"><table class="player-table"><thead><tr><th>Player</th><th class="amount">Amount</th><th>Actions</th></tr></thead><tbody>${x.players.length?x.players.map(p=>`<tr><td>${esc(p.name)}</td><td class="amount">${money(p.amount)}</td><td><button onclick="editPlayer('${x.id}','${p.id}')">Edit</button><button class="danger" onclick="deletePlayer('${x.id}','${p.id}')">Delete</button></td></tr>`).join(''):`<tr><td colspan="3" class="empty">No player contributions yet.</td></tr>`}</tbody>${x.players.length?`<tfoot><tr class="total-row"><td>Total</td><td class="amount">${money(other)}</td><td></td></tr></tfoot>`:''}</table></div><button class="primary" style="margin:10px 0 0 0" onclick="toggleAddPlayer('${x.id}')">＋ Add Player</button>
 <div id="addPlayerPanel-${x.id}" class="match-player-add-panel">
   <select id="matchPlayerSelect-${x.id}" onchange="handleMatchPlayerChoice('${x.id}')">
@@ -1599,6 +1616,16 @@ document.addEventListener('submit', function(e){
   }
 }, true);
 
+window.showAccounts=function(){
+  ['summarySection','playerContributionSummarySection','paymentsSection','contributionsSection','matchFormSection','weeks'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
+  document.querySelector('.cards')?.classList.add('hidden');
+  document.getElementById('accountsSection')?.classList.remove('hidden');
+  const sel=document.getElementById('accountsMonth');
+  const current=(typeof selectedMonth==='function'&&selectedMonth())||new Date().toISOString().slice(0,7);
+  if(sel){ if(typeof financeMonthOptions==='function')sel.innerHTML=financeMonthOptions(current); sel.value=current; }
+  if(typeof renderAccounts==='function')renderAccounts();
+  window.scrollTo({top:0,behavior:'smooth'});
+};
 </script>
 
 <script id="financeLayer">
