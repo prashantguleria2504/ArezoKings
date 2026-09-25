@@ -2427,21 +2427,25 @@ let carryForwardAmount=Number(financeState.carryForwardAmount||0);
 let carryForwardAdmin=false;
 
 async function refreshCarryForwardAdminStatus(){
+  // The Configuration layer is the source of truth for the signed-in role.
+  // Load the current user's profile first; do not depend on a stale local flag.
   carryForwardAdmin=false;
-  if(!cloudUser||!supabaseClient)return false;
   try{
-    const result=await supabaseClient
-      .from('app_users')
-      .select('role,active')
-      .eq('user_id',cloudUser.id)
-      .maybeSingle();
-    if(!result.error){
-      carryForwardAdmin=result.data?.role==='admin' && result.data?.active===true;
+    if(typeof configIsAdmin==='function' && configIsAdmin()){
+      carryForwardAdmin=true;
+      return true;
+    }
+    if(typeof loadConfigurationAccess==='function' && cloudUser){
+      await loadConfigurationAccess();
+      if(typeof configIsAdmin==='function' && configIsAdmin()){
+        carryForwardAdmin=true;
+        return true;
+      }
     }
   }catch(err){
     console.error('Carry-forward admin check failed:',err);
   }
-  return carryForwardAdmin;
+  return false;
 }
 
 function canEditCarryForward(){
@@ -2998,8 +3002,10 @@ ensureFinanceFields();wrapLegacyFunctions();
     document.querySelector('.cards')?.classList.add('hidden');
     document.getElementById('accountsSection')?.classList.remove('hidden');
 
-    if(cloudUser && typeof loadConfigurationAccess==='function'){
-      try{ await loadConfigurationAccess(); }catch(err){ console.error('Accounts role load failed:',err); }
+    // Load the same Configuration profile used by the Configuration page.
+    // This guarantees the Administrator sees the editable control.
+    if(cloudUser && typeof loadConfiguration==='function'){
+      try{ await loadConfiguration(); }catch(err){ console.error('Accounts configuration load failed:',err); }
     }
     await refreshCarryForwardAdminStatus();
     renderAccountsDashboard();
