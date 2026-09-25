@@ -119,7 +119,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .accounts-month-selector select{min-width:220px;font:inherit;border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff}
 .accounts-month-selector button{padding:9px 16px}
 .accounts-month-empty{padding-top:12px}
-.ground-payment-row{background:#fffaf0;border-left:4px solid #d19a32}.ground-payment-row td:first-child{font-weight:700;color:#8a5a00}.manual-payment-row{background:#faf5ff;border-left:4px solid #7c5aa6}.manual-payment-row td:first-child{font-weight:700;color:#68418d}.accounts-paid-total{font-size:28px;font-weight:800;color:#6b4b00;margin:2px 0 8px}.accounts-paid-breakdown{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 8px}.payment-mini{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;font-size:11px;font-weight:700}.payment-mini-ground{background:#fff2cf;border:1px solid #ecd9ae;color:#8a5a00}.payment-mini-manual{background:#f2e8fb;border:1px solid #dfd0ef;color:#68418d}@media(max-width:520px){.accounts-paid-breakdown{grid-template-columns:1fr}.accounts-paid-total{font-size:25px}}.finance-manual-payment-section{border-left:4px solid #7c5aa6}
+.ground-payment-row{background:#fffaf0;border-left:4px solid #d19a32}.ground-payment-row td:first-child{font-weight:700;color:#8a5a00}.manual-payment-contribution-option{grid-column:1/-1;padding:9px 11px;background:#f4f8f5;border:1px solid #cfe2d3;border-radius:7px}.manual-payment-contribution-option label{display:flex;align-items:center;gap:7px;font-weight:700;color:#31543b}.manual-payment-contribution-option input{width:15px;height:15px}.manual-payment-contribution-option small{display:block;margin:4px 0 0 22px;color:#687386}
+.manual-payment-row{background:#faf5ff;border-left:4px solid #7c5aa6}.manual-payment-row td:first-child{font-weight:700;color:#68418d}.accounts-paid-total{font-size:28px;font-weight:800;color:#6b4b00;margin:2px 0 8px}.accounts-paid-breakdown{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 8px}.payment-mini{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;font-size:11px;font-weight:700}.payment-mini-ground{background:#fff2cf;border:1px solid #ecd9ae;color:#8a5a00}.payment-mini-manual{background:#f2e8fb;border:1px solid #dfd0ef;color:#68418d}@media(max-width:520px){.accounts-paid-breakdown{grid-template-columns:1fr}.accounts-paid-total{font-size:25px}}.finance-manual-payment-section{border-left:4px solid #7c5aa6}
 .payment-note{font-size:12px;color:#7c5aa6;font-weight:700}
 .manual-payment-table{min-width:1150px}
 .manual-payment-row{background:#faf5ff}
@@ -327,8 +328,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 
 <section class="section hidden finance-manual-payment-section" id="manualPaymentsSection">
   <div class="section-head">
-    <h2>💸 Other / Manual Payments</h2>
-    <span class="payment-note">Use this for payments not related to ground bookings.</span>
+    <h2>💸 Manual Payments</h2>
+    <span class="payment-note">Use this for team expenses such as balls, equipment, snacks, transport and other team costs.</span>
   </div>
   <div class="contrib-form manual-payment-form">
     <div><label>Category</label><select id="mpCategory"><option value="">Select category</option><option>Equipment</option><option>Snacks / Food</option><option>Transport</option><option>Ground-related</option><option>Other</option></select></div>
@@ -338,6 +339,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
     <div><label>Payment Made By</label><select id="mpPaidBy"><option value="">Select person</option><option>Neeraj</option><option>Suyog</option><option>Prashant</option></select></div>
     <div><label>Payment Month</label><input id="mpMonth" type="month"></div>
     <div><label>Linked Adjustment</label><select id="mpLinkedAdjustment"><option value="">No adjustment linked</option></select></div>
+    <div class="manual-payment-contribution-option"><label><input id="mpAddToContribution" type="checkbox"> Add this payment to payer's Recent Contribution</label><small>If checked, the payment amount is added as a new Recent Contribution for the selected team member.</small></div>
     <div><label>Notes</label><input id="mpNotes" placeholder="Optional"></div>
     <div class="form-actions">
       <button class="primary" onclick="saveManualPayment()">Save Manual Payment</button>
@@ -896,6 +898,7 @@ function saveManualPayment(){
   const paidBy=document.getElementById('mpPaidBy')?.value||'';
   const month=document.getElementById('mpMonth')?.value||'';
   const linkedAdjustmentId=document.getElementById('mpLinkedAdjustment')?.value||'';
+  const addToContribution=!!document.getElementById('mpAddToContribution')?.checked;
   const notes=document.getElementById('mpNotes')?.value.trim()||'';
   if(!category){alert('Please select a payment category.');return;}
   if(!description){alert('Please enter a payment description.');return;}
@@ -903,15 +906,44 @@ function saveManualPayment(){
   if(!date){alert('Please enter Date.');return;}
   if(!paidBy){alert('Please select Payment Made By.');return;}
   if(!month){alert('Please enter Payment Month.');return;}
-  const item={id:editingManualPaymentId||('mp_'+Date.now()),category,description,amount,date,paidBy,month,linkedAdjustmentId,notes};
+
+  const item={id:editingManualPaymentId||('mp_'+Date.now()),category,description,amount,date,paidBy,month,linkedAdjustmentId,addToContribution,notes};
   const existing=editingManualPaymentId?manualPayments.find(x=>x.id===editingManualPaymentId):null;
+  const oldLinkedId=existing?.linkedAdjustmentId||'';
   if(existing)Object.assign(existing,item);else manualPayments.push(item);
+
+  // Keep adjustment linkage in sync in both directions.
+  if(oldLinkedId && oldLinkedId!==linkedAdjustmentId){
+    const oldAdj=adjustments.find(a=>a.id===oldLinkedId);
+    if(oldAdj?.linkedPaymentId===item.id)delete oldAdj.linkedPaymentId;
+  }
   if(linkedAdjustmentId){
     const adj=adjustments.find(a=>a.id===linkedAdjustmentId);
     if(adj)adj.linkedPaymentId=item.id;
-    saveFinanceLocal();
   }
+
+  // A checked payment creates/updates one Recent Contribution for the payer.
+  // The source id makes it safe to edit/uncheck/delete without duplicate entries.
+  contributions=Array.isArray(contributions)?contributions:[];
+  let player=contributions.find(p=>String(p.name||'').trim().toLowerCase()===paidBy.toLowerCase());
+  if(addToContribution){
+    if(!player){
+      player={id:'contrib_'+Date.now(),name:paidBy,carry:0,recentEntries:[]};
+      contributions.push(player);
+    }
+    player.recentEntries=Array.isArray(player.recentEntries)?player.recentEntries:[];
+    let entry=player.recentEntries.find(e=>e.manualPaymentId===item.id);
+    const contributionEntry={id:entry?.id||('mpe_'+Date.now()),manualPaymentId:item.id,amount,date,comment:'Manual payment · '+description,receivedBy:paidBy};
+    if(entry)Object.assign(entry,contributionEntry);else player.recentEntries.push(contributionEntry);
+  }else{
+    contributions.forEach(p=>{
+      p.recentEntries=(Array.isArray(p.recentEntries)?p.recentEntries:[]).filter(e=>e.manualPaymentId!==item.id);
+    });
+  }
+
+  saveFinanceLocal();
   localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
+  localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
   clearManualPaymentForm();
   populateManualPaymentAdjustments();
   renderManualPayments();
@@ -928,6 +960,7 @@ function editManualPayment(id){
   document.getElementById('mpPaidBy').value=x.paidBy||'';
   document.getElementById('mpMonth').value=x.month||'';
   document.getElementById('mpNotes').value=x.notes||'';
+  document.getElementById('mpAddToContribution').checked=!!x.addToContribution;
   populateManualPaymentAdjustments(x.linkedAdjustmentId||'');
 }
 function deleteManualPayment(id){
@@ -937,9 +970,13 @@ function deleteManualPayment(id){
   if(x?.linkedAdjustmentId){
     const adj=adjustments.find(a=>a.id===x.linkedAdjustmentId);
     if(adj&&adj.linkedPaymentId===id)delete adj.linkedPaymentId;
-    saveFinanceLocal();
   }
+  contributions.forEach(p=>{
+    p.recentEntries=(Array.isArray(p.recentEntries)?p.recentEntries:[]).filter(e=>e.manualPaymentId!==id);
+  });
+  saveFinanceLocal();
   localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
+  localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
   renderManualPayments();
   populateManualPaymentAdjustments();
   if(typeof syncFinanceCloud==='function')syncFinanceCloud();
@@ -950,6 +987,7 @@ function clearManualPaymentForm(){
   ['mpCategory','mpDescription','mpAmount','mpDate','mpPaidBy','mpMonth','mpLinkedAdjustment','mpNotes'].forEach(id=>{
     const e=document.getElementById(id);if(e)e.value='';
   });
+  const cb=document.getElementById('mpAddToContribution');if(cb)cb.checked=false;
   populateManualPaymentAdjustments();
 }
 function renderManualPayments(){
