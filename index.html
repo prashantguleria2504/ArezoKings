@@ -1079,6 +1079,11 @@ function setContributionOwner(playerIndex,entryIndex,person,checked){
   if(!entry)return;
   entry.receivedBy=checked?person:'';
   localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
+  // Persist ownership to the shared cloud state as well as browser storage.
+  // Without this, a page refresh/cloud refresh can restore the older entry.
+  if(typeof cloudUser!=='undefined' && cloudUser && typeof saveCloudState==='function'){
+    saveCloudState().catch(err=>console.error('Contribution owner cloud save failed:',err));
+  }
   renderContributions();
   if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();
 }
