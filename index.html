@@ -35,22 +35,31 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 @media(max-width:800px){.summary-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.summary-grid{grid-template-columns:1fr}}
 
-.contribution-table{min-width:760px}
+.contribution-table{min-width:1120px;table-layout:fixed}
+.contribution-table th,.contribution-table td{vertical-align:middle}
+.contribution-table th:nth-child(1),.contribution-table td:nth-child(1){width:18%}
+.contribution-table th:nth-child(2),.contribution-table td:nth-child(2){width:17%}
+.contribution-table th:nth-child(3),.contribution-table td:nth-child(3){width:28%;padding-left:12px}
+.contribution-table th:nth-child(4),.contribution-table td:nth-child(4){width:14%}
+.contribution-table th:nth-child(5),.contribution-table td:nth-child(5){width:13%}
+.contribution-table th:nth-child(6),.contribution-table td:nth-child(6){width:10%}
+.contribution-table th.amount,.contribution-table td.amount{text-align:right}
+.contribution-table th:nth-child(1),.contribution-table td:nth-child(1){text-align:left}
+.contribution-table th:nth-child(3),.contribution-table td:nth-child(3){text-align:left}
+.contribution-table th:nth-child(6),.contribution-table td:nth-child(6){text-align:left}
 .balance-positive{color:#16734e;font-weight:800}.balance-zero{color:#687386;font-weight:700}.balance-negative{color:#c0392b;font-weight:800}
-.contrib-form{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px;border-bottom:1px solid var(--line)}
+.contrib-form{display:grid;grid-template-columns:1.1fr 1.4fr 1.7fr 1fr;gap:14px;padding:16px;border-bottom:1px solid var(--line)}
 .contrib-form label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px}
 .contrib-form input{font:inherit;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fff}
-@media(max-width:800px){.contrib-form{grid-template-columns:1fr 1fr}}
-@media(max-width:520px){.contrib-form{grid-template-columns:1fr}}
+@media(max-width:800px){.contrib-form{grid-template-columns:1fr 1fr}.contribution-table{min-width:980px}}
+@media(max-width:520px){.contrib-form{grid-template-columns:1fr}.contribution-table{min-width:900px}}
 .contrib-meta{font-size:11px;color:#1769aa;margin-top:3px;font-weight:700}.contrib-comment{font-size:11px;color:#7b1fa2;margin-top:3px;font-weight:600;white-space:normal;text-align:left}
-.recent-entry{padding:3px 0;border-bottom:1px dashed #e3e8ef}.recent-entry:last-child{border-bottom:0}
-.recent-entry-main{display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-wrap:wrap}
-.recent-entry-main strong{margin-right:auto}.mini-action{font-size:11px!important;padding:2px 5px!important;border:1px solid #d8dee8!important;border-radius:5px!important;background:#fff!important;color:#1769aa!important;line-height:1.2}.mini-danger{color:#c0392b!important}
+.recent-entry{padding:5px 0;border-bottom:1px dashed #e3e8ef}.recent-entry:last-child{border-bottom:0}
+.recent-entry-main{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:6px;justify-content:stretch}
+.recent-entry-main strong{margin:0;text-align:right;white-space:nowrap}
+.recent-entry-actions{display:inline-flex;gap:3px;white-space:nowrap}
+.mini-action{font-size:11px!important;padding:2px 5px!important;border:1px solid #d8dee8!important;border-radius:5px!important;background:#fff!important;color:#1769aa!important;line-height:1.2}.mini-danger{color:#c0392b!important}
 .negative-amount{color:#c0392b!important;font-weight:800!important;}
-.contribution-table th:nth-child(2),.contribution-table td:nth-child(2){width:150px;max-width:150px;white-space:normal;}
-@media(max-width:800px){.contribution-table th:nth-child(2),.contribution-table td:nth-child(2){width:135px;max-width:135px;}}
-.contribution-table th:nth-child(3),.contribution-table td:nth-child(3){padding-left:28px;}
-@media(max-width:800px){.contribution-table th:nth-child(3),.contribution-table td:nth-child(3){padding-left:22px;}}
 .player-summary-table{min-width:420px}.player-summary-table th,.player-summary-table td{padding:10px 12px}
 .player-balance-negative{color:#c0392b!important;font-weight:800!important;background:#fff0ee!important}
 .player-summary-empty{padding:18px;color:var(--muted);text-align:center}
