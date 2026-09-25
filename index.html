@@ -51,6 +51,10 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .contribution-table .recent-entry-main strong{margin:0;text-align:center}
 .contribution-table .recent-entry-actions{justify-content:center}
 .contribution-table .contrib-comment{text-align:center}
+.contrib-owner-checks{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin-top:4px}
+.contrib-owner{display:inline-flex;align-items:center;gap:2px;font-size:10px;color:#687386;cursor:pointer;white-space:nowrap}
+.contrib-owner input{width:13px;height:13px;margin:0;cursor:pointer}
+.contrib-owner input:checked+span{font-weight:800;color:#176b3a}
 .balance-positive{color:#16734e;font-weight:800}.balance-zero{color:#687386;font-weight:700}.balance-negative{color:#c0392b;font-weight:800}
 .contrib-form{display:grid;grid-template-columns:1.1fr 1.4fr 1.7fr 1fr;gap:14px;padding:16px;border-bottom:1px solid var(--line)}
 .contrib-form label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px}
@@ -1069,6 +1073,23 @@ function clearContributionForm(){
   document.getElementById('cRecentComment').value='';
 }
 
+function setContributionOwner(playerIndex,entryIndex,person,checked){
+  const player=contributions[Number(playerIndex)];
+  const entry=player?.recentEntries?.[Number(entryIndex)];
+  if(!entry)return;
+  entry.receivedBy=checked?person:'';
+  localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
+  renderContributions();
+  if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();
+}
+
+function contributionOwnerChecks(playerIndex,entryIndex,owner){
+  return ['Neeraj','Suyog','Prashant'].map(n=>{
+    const checked=(owner||'')===n;
+    return '<label class="contrib-owner"><input type="checkbox" '+(checked?'checked':'')+' onchange="setContributionOwner('+playerIndex+','+entryIndex+',\''+n+'\',this.checked)"><span>'+n+'</span></label>';
+  }).join('');
+}
+
 function renderContributions(){
   const body=document.getElementById('contributionRows');
   if(!body)return;
@@ -1099,6 +1120,7 @@ function renderContributions(){
               </span>
             </div>
             ${comment ? `<div class="contrib-comment">${comment}</div>` : ''}
+            <div class="contrib-owner-checks">${contributionOwnerChecks(playerIndex,entryIndex,e.receivedBy||'')}</div>
           </div>`;
         }).join('')
       : '<span style="color:#687386">₹0</span>';
