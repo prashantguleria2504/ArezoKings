@@ -337,7 +337,6 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
     <div><label>Amount</label><input id="mpAmount" type="number" min="0" step="1" placeholder="0"></div>
     <div><label>Date</label><input id="mpDate" type="date"></div>
     <div><label>Payment Made By</label><select id="mpPaidBy"><option value="">Select person</option></select></div>
-    <div><label>Payment Month</label><input id="mpMonth" type="month"></div>
     <div><label>Linked Adjustment</label><select id="mpLinkedAdjustment"><option value="">No adjustment linked</option></select></div>
     <div class="manual-payment-contribution-option"><label><input id="mpAddToContribution" type="checkbox"> Add this payment to payer's Recent Contribution</label><small>If checked, the payment amount is added as a new Recent Contribution for the selected team member.</small></div>
     <div><label>Notes</label><input id="mpNotes" placeholder="Optional"></div>
@@ -812,7 +811,6 @@ function saveGroundPayment(){
   }
 
   if(!ground||ground==='__ADD_NEW__'){alert('Please select a ground.');return;}
-  if(!month){alert('Please enter Payment Month.');return;}
   if(amount<0){alert('Amount cannot be negative.');return;}
   if(!date){alert('Please enter Date.');return;}
   if(!payee){alert('Please enter Payee.');return;}
@@ -946,7 +944,7 @@ function saveManualPayment(){
   const paidByInput=document.getElementById('mpPaidBy')?.value||'';
   const matchedPlayer=resolveContributionPlayer(paidByInput);
   const paidBy=matchedPlayer?.name||paidByInput;
-  const month=document.getElementById('mpMonth')?.value||'';
+  const month=date?date.slice(0,7):'';
   const linkedAdjustmentId=document.getElementById('mpLinkedAdjustment')?.value||'';
   const addToContribution=!!document.getElementById('mpAddToContribution')?.checked;
   const notes=document.getElementById('mpNotes')?.value.trim()||'';
@@ -1008,7 +1006,6 @@ function editManualPayment(id){
   document.getElementById('mpAmount').value=x.amount||0;
   document.getElementById('mpDate').value=x.date||'';
   populateManualPaymentPeople(x.paidBy||'');
-  document.getElementById('mpMonth').value=x.month||'';
   document.getElementById('mpNotes').value=x.notes||'';
   document.getElementById('mpAddToContribution').checked=!!x.addToContribution;
   populateManualPaymentPeople(x.paidBy||'');
