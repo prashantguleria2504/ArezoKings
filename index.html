@@ -137,20 +137,20 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .ground-payment-row{background:#fffaf0;border-left:4px solid #d19a32}.ground-payment-row td:first-child{font-weight:700;color:#8a5a00}.manual-payment-contribution-option{grid-column:1/-1;padding:9px 11px;background:#f4f8f5;border:1px solid #cfe2d3;border-radius:7px}.manual-payment-contribution-option label{display:flex;align-items:center;gap:7px;font-weight:700;color:#31543b}.manual-payment-contribution-option input{width:15px;height:15px}.manual-payment-contribution-option small{display:block;margin:4px 0 0 22px;color:#687386}
 .manual-payment-row{background:#faf5ff;border-left:4px solid #7c5aa6}.payment-paid-status{display:inline-block;padding:3px 8px;border-radius:999px;background:#dff3e5;border:1px solid #9fd2ad;color:#18733a;font-weight:800;font-size:10px}.payment-pending-status{display:inline-block;padding:3px 8px;border-radius:999px;background:#fff3d8;border:1px solid #ead09a;color:#8a5a00;font-weight:800;font-size:10px}.payment-partial-status{display:inline-block;padding:3px 8px;border-radius:999px;background:#fff0cf;border:1px solid #e0a52d;color:#9a6200;font-weight:800;font-size:10px}.payment-linked-adjustment{margin-top:4px;font-size:10px;color:#5f6873}.payment-id{margin-top:3px;font-size:10px;color:#53606b}.manual-adjustments-table th,.manual-adjustments-table td{white-space:nowrap}.manual-adjustments-table{min-width:980px}.manual-payment-row td:nth-child(6){min-width:160px}.manual-payment-row td:first-child{font-weight:700;color:#68418d}.accounts-paid-total{font-size:28px;font-weight:800;color:#6b4b00;margin:2px 0 8px}.accounts-paid-breakdown{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 8px}.payment-mini{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;font-size:11px;font-weight:700}.payment-mini-ground{background:#fff2cf;border:1px solid #ecd9ae;color:#8a5a00}.payment-mini-manual{background:#f2e8fb;border:1px solid #dfd0ef;color:#68418d}@media(max-width:520px){.accounts-paid-breakdown{grid-template-columns:1fr}.accounts-paid-total{font-size:25px}}.finance-manual-payment-section{border-left:4px solid #7c5aa6}
 .payment-note{font-size:12px;color:#7c5aa6;font-weight:700}
-.manual-payment-table{width:100%;min-width:0;table-layout:fixed}
-.manual-payment-table th:nth-child(1),.manual-payment-table td:nth-child(1){width:9%}
-.manual-payment-table th:nth-child(2),.manual-payment-table td:nth-child(2){width:16%}
-.manual-payment-table th:nth-child(3),.manual-payment-table td:nth-child(3){width:11%}
-.manual-payment-table th:nth-child(4),.manual-payment-table td:nth-child(4){width:10%}
-.manual-payment-table th:nth-child(5),.manual-payment-table td:nth-child(5){width:13%}
+.manual-payment-table{width:100%;min-width:0!important;max-width:100%;table-layout:fixed}
+.manual-payment-table th,.manual-payment-table td{padding:8px 7px;font-size:12px;overflow:hidden}
+.manual-payment-table td{white-space:normal;overflow-wrap:anywhere;word-break:break-word}
+.manual-payment-table .actions{white-space:nowrap!important;overflow:visible!important}
+.manual-payment-table .actions button{padding:5px 7px;margin-right:2px;font-size:11px}
+.manual-payment-table th:nth-child(1),.manual-payment-table td:nth-child(1){width:8%}
+.manual-payment-table th:nth-child(2),.manual-payment-table td:nth-child(2){width:15%}
+.manual-payment-table th:nth-child(3),.manual-payment-table td:nth-child(3){width:10%}
+.manual-payment-table th:nth-child(4),.manual-payment-table td:nth-child(4){width:9%}
+.manual-payment-table th:nth-child(5),.manual-payment-table td:nth-child(5){width:12%}
 .manual-payment-table th:nth-child(6),.manual-payment-table td:nth-child(6){width:17%}
-.manual-payment-table th:nth-child(7),.manual-payment-table td:nth-child(7){width:9%}
+.manual-payment-table th:nth-child(7),.manual-payment-table td:nth-child(7){width:8%}
 .manual-payment-table th:nth-child(8),.manual-payment-table td:nth-child(8){width:9%}
-.manual-payment-table th:nth-child(9),.manual-payment-table td:nth-child(9){width:6%}
-.manual-payment-table td{vertical-align:top;overflow-wrap:anywhere;word-break:break-word}
-.manual-payment-table .actions{width:auto;min-width:0}
-.manual-payment-row{background:#faf5ff}
-.manual-payment-row td:first-child{font-weight:700;color:#68418d}
+.manual-payment-table th:nth-child(9),.manual-payment-table td:nth-child(9){width:12%}
 .accounts-funds-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:14px 16px}
 .accounts-available-card{margin:0;padding:16px 18px;border:1px solid #cfe2d3;border-left:5px solid var(--pitch);border-radius:10px;background:linear-gradient(90deg,#f0f8f2,#fff);display:flex;align-items:center;justify-content:space-between;gap:12px}
 .accounts-paid-card{border-left-color:#d19a32;background:linear-gradient(90deg,#fff8e9,#fff)}
