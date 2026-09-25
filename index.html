@@ -1347,38 +1347,38 @@ function render(){
   matchCount.textContent=rows.length;opponentTotal.textContent=money(opponent);playerTotal.textContent=money(players);document.getElementById("groundTotal").textContent=money(groundBookingTotal);grandTotal.textContent=money(rows.reduce((s,m)=>s+getMatchTotal(m),0));
   const groups={};rows.forEach(x=>(groups[weekOfMonth(x.date)]??=[]).push(x));
   weeks.innerHTML=Object.keys(groups).sort((a,b)=>a-b).map(w=>{
-    const list=groups[w],ot=list.reduce((s,x)=>s+Number(x.opponentAmount||0),0),pt=list.reduce((s,x)=>s+Number(x.neerajAmount||0)+Number(x.suyogAmount||0)+x.players.reduce((a,p)=>a+Number(p.amount||0),0),0);
+    const list=groups[w],ot=list.reduce((s,x)=>s+Number(x.opponentAmount||0),0),pt=list.reduce((s,x)=>s+(x.players||[]).reduce((a,p)=>a+Number(p.amount||0),0),0);
     return `<section class="section"><div class="section-head"><h2>Week ${w} <span class="badge">${list.length} match${list.length!==1?'es':''}</span></h2></div>
     <div class="table-wrap"><table class="match-table"><thead><tr>
 <th>Date</th><th>Ground</th><th class="amount">Ground Fee</th><th>Opponent</th><th class="amount">Opp. Paid</th><th>Adjustment</th><th class="amount">Players</th><th class="amount">Collected</th><th>Notes</th><th>Actions</th></tr></thead><tbody>
-    \${list.map(x=>{
+    ${list.map(x=>{
       const other=x.players.reduce((a,p)=>a+Number(p.amount||0),0), total=getMatchTotal(x);
       const owner=(kind,legacy='')=>x[kind]||legacy||'';
       const ownerChecks=(kind,legacy='')=>['Neeraj','Suyog','Prashant'].map(n=>'<label class="table-owner"><input type="checkbox" '+(owner(kind,legacy)===n?'checked':'')+' disabled><span>'+n+'</span></label>').join('');
       const notes=getMatchNotes(x);
-      return \`<tr class="\${(!x.opponent || !String(x.opponent).trim()) ? 'match-not-scheduled-row' : ''}">
-        <td><div>\${new Date(x.date+'T00:00:00').toLocaleDateString('en-IN')}</div><div class="date-day">\${new Date(x.date+'T00:00:00').toLocaleDateString('en-IN',{weekday:'long'})}</div></td>
-        <td>\${esc(x.ground)}</td>
-        <td class="amount">\${money(x.groundAmount)}</td>
-        <td>\${esc(x.opponent)}</td>
-        <td class="amount"><div>\${money(x.opponentAmount||0)}</div><div class="table-owners">\${ownerChecks('opponentOwner',x.opponentReceivedBy)}</div></td>
-        <td><div><strong>\${money(x.adjustmentAmount||0)}</strong></div>\${x.adjustmentAgainstMatchId?\`<div class="date-day">↔ \${esc(adjustmentMatchLabel(x.adjustmentAgainstMatchId))}</div>\`:''}<div class="table-owners">\${ownerChecks('adjustmentOwner')}</div></td>
-        <td class="amount"><div>\${money(other)}</div><div class="table-owners">\${ownerChecks('playersOwner')}</div></td>
-        <td class="amount">\${money(total)}</td>
-        <td class="notes-cell">\${notes?esc(notes).replace(/\\n/g,'<br>'):'<span class="muted">—</span>'}</td>
-        <td class="actions"><button onclick="openMatchForm('\${x.id}')">Edit</button><button class="danger" onclick="deleteMatch('\${x.id}')">Delete</button></td>
+      return \`<tr class="${(!x.opponent || !String(x.opponent).trim()) ? 'match-not-scheduled-row' : ''}">
+        <td><div>${new Date(x.date+'T00:00:00').toLocaleDateString('en-IN')}</div><div class="date-day">${new Date(x.date+'T00:00:00').toLocaleDateString('en-IN',{weekday:'long'})}</div></td>
+        <td>${esc(x.ground)}</td>
+        <td class="amount">${money(x.groundAmount)}</td>
+        <td>${esc(x.opponent)}</td>
+        <td class="amount"><div>${money(x.opponentAmount||0)}</div><div class="table-owners">${ownerChecks('opponentOwner',x.opponentReceivedBy)}</div></td>
+        <td><div><strong>${money(x.adjustmentAmount||0)}</strong></div>${x.adjustmentAgainstMatchId?\`<div class="date-day">↔ ${esc(adjustmentMatchLabel(x.adjustmentAgainstMatchId))}</div>\`:''}<div class="table-owners">${ownerChecks('adjustmentOwner')}</div></td>
+        <td class="amount"><div>${money(other)}</div><div class="table-owners">${ownerChecks('playersOwner')}</div></td>
+        <td class="amount">${money(total)}</td>
+        <td class="notes-cell">${notes?esc(notes).replace(/\\n/g,'<br>'):'<span class="muted">—</span>'}</td>
+        <td class="actions"><button onclick="openMatchForm('${x.id}')">Edit</button><button class="danger" onclick="deleteMatch('${x.id}')">Delete</button></td>
       </tr>
-      <tr><td colspan="10"><details><summary>Player contributions (\${x.players.length})</summary><div class="table-wrap"><table class="player-table"><thead><tr><th>Player</th><th class="amount">Amount</th><th>Actions</th></tr></thead><tbody>\${x.players.length?x.players.map(p=>\`<tr><td>\${esc(p.name)}</td><td class="amount">\${money(p.amount)}</td><td><button onclick="editPlayer('\${x.id}','\${p.id}')">Edit</button><button class="danger" onclick="deletePlayer('\${x.id}','\${p.id}')">Delete</button></td></tr>\`).join(''):\`<tr><td colspan="3" class="empty">No player contributions yet.</td></tr>\`}</tbody>\${x.players.length?\`<tfoot><tr class="total-row"><td>Total</td><td class="amount">\${money(other)}</td><td></td></tr></tfoot>\`:''}</table></div><button class="primary" style="margin:10px 0 0 0" onclick="toggleAddPlayer('\${x.id}')">＋ Add Player</button>
-<div id="addPlayerPanel-\${x.id}" class="match-player-add-panel">
-  <select id="matchPlayerSelect-\${x.id}" onchange="handleMatchPlayerChoice('\${x.id}')">
+      <tr><td colspan="10"><details><summary>Player contributions (${x.players.length})</summary><div class="table-wrap"><table class="player-table"><thead><tr><th>Player</th><th class="amount">Amount</th><th>Actions</th></tr></thead><tbody>${x.players.length?x.players.map(p=>\`<tr><td>${esc(p.name)}</td><td class="amount">${money(p.amount)}</td><td><button onclick="editPlayer('${x.id}','${p.id}')">Edit</button><button class="danger" onclick="deletePlayer('${x.id}','${p.id}')">Delete</button></td></tr>\`).join(''):\`<tr><td colspan="3" class="empty">No player contributions yet.</td></tr>\`}</tbody>${x.players.length?\`<tfoot><tr class="total-row"><td>Total</td><td class="amount">${money(other)}</td><td></td></tr></tfoot>\`:''}</table></div><button class="primary" style="margin:10px 0 0 0" onclick="toggleAddPlayer('${x.id}')">＋ Add Player</button>
+<div id="addPlayerPanel-${x.id}" class="match-player-add-panel">
+  <select id="matchPlayerSelect-${x.id}" onchange="handleMatchPlayerChoice('${x.id}')">
     <option value="">Select player</option>
-    \${contributions.map(c=>\`<option value="\${esc(c.name)}">\${esc(c.name)}</option>\`).join('')}
+    ${contributions.map(c=>\`<option value="${esc(c.name)}">${esc(c.name)}</option>\`).join('')}
     <option value="__NEW_PLAYER__">➕ New Player</option>
   </select>
-  <input id="matchPlayerNewName-\${x.id}" class="hidden" placeholder="New player name">
-  <input id="matchPlayerAmount-\${x.id}" type="number" min="0" step="1" placeholder="Amount">
-  <button class="primary" onclick="saveMatchPlayer('\${x.id}')">Save</button>
-  <button onclick="cancelAddPlayer('\${x.id}')">Cancel</button>
+  <input id="matchPlayerNewName-${x.id}" class="hidden" placeholder="New player name">
+  <input id="matchPlayerAmount-${x.id}" type="number" min="0" step="1" placeholder="Amount">
+  <button class="primary" onclick="saveMatchPlayer('${x.id}')">Save</button>
+  <button onclick="cancelAddPlayer('${x.id}')">Cancel</button>
 </div></details></td></tr>
 \`).join('')}    <tr class="total-row">
       <td colspan="2">Week ${w} Total</td>
