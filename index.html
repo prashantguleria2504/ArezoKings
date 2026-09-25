@@ -331,6 +331,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
     <h2>🧾 Accounts & Settlement</h2>
     <button class="primary" onclick="showTracker()">← Back to Matches</button>
   </div>
+  <div style="padding:12px 16px;background:#f7fafc;border-bottom:1px solid var(--line);font-size:13px;line-height:1.5"><strong>How adjustments work:</strong> link the two matches involved. The ledger will show the adjustment against the specific match instead of only showing a month or amount.</div>
   <div class="finance-toolbar">
     <label style="font-size:12px;color:var(--muted);font-weight:700">Month</label>
     <select id="accountsMonth"></select>
@@ -1180,7 +1181,7 @@ function saveMatch(){
     const x=data.find(a=>a.id===editingId);
     Object.assign(x,{date,ground,groundAmount,opponent,opponentAmount:amount,adjustmentAmount,adjustmentDate,adjustmentAgainstMatchId,neerajAmount,neerajReceived,neerajComment,suyogAmount,suyogReceived,suyogComment});
   }else{
-    data.push({id:crypto.randomUUID(),date,ground,groundAmount,opponent,opponentAmount:amount,adjustmentAmount,adjustmentDate,neerajAmount,neerajReceived,neerajComment,suyogAmount,suyogReceived,suyogComment,players:[]});
+    data.push({id:crypto.randomUUID(),date,ground,groundAmount,opponent,opponentAmount:amount,adjustmentAmount,adjustmentDate,adjustmentAgainstMatchId,neerajAmount,neerajReceived,neerajComment,suyogAmount,suyogReceived,suyogComment,players:[]});
   }
   closeMatchForm();
   save();
@@ -1761,6 +1762,18 @@ function wrapLegacyFunctions(){
 function buildFinanceLedger(){
   const ledger=[];
   (data||[]).forEach(m=>{
+    if(Number(m.adjustmentAmount||0)>0){
+      const linked=(data||[]).find(x=>x.id===m.adjustmentAgainstMatchId);
+      ledger.push({
+        date:m.adjustmentDate||m.date||'',
+        type:'Match adjustment',
+        description:'↔ '+(linked?adjustmentMatchLabel(linked.id):'Linked match not selected')+' · '+(m.opponent||''),
+        person:m.opponentReceivedBy||'',
+        in:0,
+        out:Number(m.adjustmentAmount||0),
+        month:monthKey(m.adjustmentDate||m.date||'')
+      });
+    }
     if(Number(m.opponentAmount||0)>0){
       ledger.push({date:m.date,type:'Opponent collection',description:'vs '+(m.opponent||'Opponent'),person:m.opponentReceivedBy||'',in:Number(m.opponentAmount||0),out:0,month:monthKey(m.date)});
     }
@@ -1815,7 +1828,7 @@ function renderAccounts(){
   document.getElementById('financeLedgerRows').innerHTML=rows.length?rows.map(x=>'<tr><td>'+fmtFinanceDate(x.date)+'</td><td>'+esc(x.type)+'</td><td>'+esc(x.description)+'</td><td>'+esc(x.person||'Unassigned')+'</td><td class="amount in">'+(x.in?money(x.in):'—')+'</td><td class="amount out">'+(x.out?money(x.out):'—')+'</td><td>'+monthName(x.month)+'</td></tr>').join(''):'<tr><td colspan="7" class="empty">No financial transactions for this month.</td></tr>';
 
   const ars=adjustments.filter(a=>(a.applyMonth||'')===month.month).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  document.getElementById('adjustmentRows').innerHTML=ars.length?ars.map(a=>'<tr><td>'+fmtFinanceDate(a.date)+'</td><td>'+monthName(a.applyMonth)+'</td><td>'+esc(a.reason||'')+'</td><td>'+esc(a.paidBy||'Unassigned')+'</td><td>'+esc(a.payee||'')+'</td><td class="amount out">'+money(a.amount)+'</td><td class="actions"><button onclick="openAdjustmentForm(\''+a.id+'\')">Edit</button><button class="danger" onclick="deleteAdjustment(\''+a.id+'\')">Delete</button></td></tr>').join(''):'<tr><td colspan="7" class="empty">No adjustments for this month.</td></tr>';
+  document.getElementById('adjustmentRows').innerHTML=ars.length?ars.map(a=>'<tr><td>'+fmtFinanceDate(a.date)+'</td><td>'+monthName(a.applyMonth)+'</td><td>'+esc(a.reason||'')+(a.againstMatchId?'<div class="date-day">↔ '+esc(adjustmentMatchLabel(a.againstMatchId))+'</div>':'')+'</td><td>'+esc(a.paidBy||'Unassigned')+'</td><td>'+esc(a.payee||'')+'</td><td class="amount out">'+money(a.amount)+'</td><td class="actions"><button onclick="openAdjustmentForm(\''+a.id+'\')">Edit</button><button class="danger" onclick="deleteAdjustment(\''+a.id+'\')">Delete</button></td></tr>').join(''):'<tr><td colspan="7" class="empty">No adjustments for this month.</td></tr>';
 }
 function fmtFinanceDate(d){return d?new Date(d+'T00:00:00').toLocaleDateString('en-IN'):'';}
 
