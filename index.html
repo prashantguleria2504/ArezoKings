@@ -1835,7 +1835,11 @@ function matchDateIso(d){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 function isMatchDateBooked(iso){
-  return (Array.isArray(data)?data:[]).some(m=>String(m.date||'')===iso);
+  // Keep calendar status consistent with the Summary page:
+  // a date is booked only when the match has an opponent.
+  return (Array.isArray(data)?data:[]).some(m=>
+    String(m.date||'')===iso && String(m.opponent||'').trim()!==''
+  );
 }
 function setMatchDatePickerMonth(iso){
   const d=matchDateToDate(iso);
