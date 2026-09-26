@@ -64,6 +64,28 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .match-not-scheduled{color:#b45309;font-weight:800;font-size:12px;display:block;margin-top:3px;}
 
 .match-not-scheduled-row{background:#fff4e5 !important;}
+.match-date-field{position:relative;min-width:0}
+.match-date-field #mDate{width:100%;cursor:pointer;background:#fff}
+.match-date-picker{position:absolute;z-index:1000;top:calc(100% + 6px);left:0;width:310px;background:#fff;border:1px solid #cfe0d2;border-radius:12px;box-shadow:0 12px 28px rgba(23,37,27,.18);padding:12px}
+.match-date-picker.hidden{display:none!important}
+.match-date-picker-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.match-date-picker-title{font-weight:800;color:#17251b;font-size:15px}
+.match-date-picker-nav{display:flex;gap:5px}
+.match-date-picker-nav button{width:30px;height:30px;padding:0;border:1px solid #dfe8df;border-radius:7px;background:#f7faf7;color:#176b3a;font-weight:800}
+.match-date-weekdays,.match-date-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.match-date-weekdays div{text-align:center;font-size:10px;font-weight:800;color:#68756b;padding:4px 0}
+.match-date-day{border:1px solid transparent;border-radius:7px;min-height:34px;padding:5px 2px;background:#fff;color:#17251b;font:inherit;cursor:pointer;font-size:12px}
+.match-date-day:hover{border-color:#176b3a}
+.match-date-day.other-month{color:#a2ada5;background:#fafcf9}
+.match-date-day.weekend-open{background:#dff3e5;color:#176b3a;border-color:#a8d8b7;font-weight:800}
+.match-date-day.booked-date{background:#f9d9d5;color:#b42318;border-color:#e8aaa3;font-weight:800}
+.match-date-day.selected-date{box-shadow:inset 0 0 0 2px #176b3a}
+.match-date-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;padding-top:9px;border-top:1px solid #edf1ed;font-size:10px;color:#68756b}
+.match-date-legend span{display:inline-flex;align-items:center;gap:5px}
+.match-date-legend i{width:11px;height:11px;border-radius:3px;display:inline-block;border:1px solid #ccc}
+.match-date-legend .green{background:#dff3e5;border-color:#a8d8b7}
+.match-date-legend .red{background:#f9d9d5;border-color:#e8aaa3}
+@media(max-width:520px){.match-date-picker{width:min(310px,calc(100vw - 48px))}}
 .match-not-scheduled-note{color:#b45309;font-weight:800;font-size:12px;margin-left:6px;}
 .amount-not-received{display:block;color:#c62828;font-weight:800;font-size:12px;margin-top:3px;}
 .summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:16px}
@@ -444,7 +466,11 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <section class="section hidden" id="matchFormSection">
   <div class="section-head"><h2 id="formTitle">Add Match</h2><button class="danger" onclick="closeMatchForm()">Close</button></div>
   <div class="form-grid">
-    <div><label>Date</label><input id="mDate" type="date"></div>
+    <div class="match-date-field">
+  <label>Date</label>
+  <input id="mDate" type="text" readonly autocomplete="off" placeholder="Select match date" onclick="openMatchDatePicker()" onkeydown="if(event.key==='Enter'||event.key===' ')openMatchDatePicker()">
+  <div id="matchDatePicker" class="match-date-picker hidden" role="dialog" aria-label="Select match date"></div>
+</div>
     <div><label>Ground</label><select id="mGround"><option value="">Select ground</option><option value="__ADD_NEW__">➕ Add New Ground</option></select><input id="mNewGroundName" class="hidden" placeholder="Enter new ground name" style="margin-top:6px;width:100%"></div>
     <div><label>Total ground booking amount</label><input id="mGroundAmount" type="number" min="0" step="1" placeholder="0"></div>
     <div><label>Opponent <span style="color:#c0392b">*</span></label><input id="mOpponent" placeholder="Opponent team"></div>
@@ -1749,6 +1775,7 @@ function moveMatchFormInline(matchId){
   editorRow.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function openMatchForm(id=null){
+  closeMatchDatePicker();
   hideAllPageSections();
   document.getElementById('weeks')?.classList.remove('hidden');
   document.querySelector('.cards')?.classList.remove('hidden');
@@ -1761,6 +1788,7 @@ function openMatchForm(id=null){
   document.getElementById('formTitle').textContent=id?'Edit Match':'Add Match';
   const x=id&&data.find(a=>a.id===id);
   document.getElementById('mDate').value=x?.date||new Date().toISOString().slice(0,10);
+  setMatchDatePickerMonth(document.getElementById('mDate').value);
   document.getElementById('mGround').value=x?.ground||'';
   document.getElementById('mNewGroundName').value='';
   document.getElementById('mNewGroundName').classList.add('hidden');
@@ -1783,6 +1811,7 @@ function openMatchForm(id=null){
   }
 }
 function closeMatchForm(){
+  closeMatchDatePicker();
   const form=document.getElementById('matchFormSection');
   const placeholder=window._matchFormPlaceholder;
   if(placeholder && placeholder.parentNode){
@@ -1795,6 +1824,78 @@ function closeMatchForm(){
   window._matchFormPlaceholder=null;
   editingId=null;
 }
+
+let matchDatePickerMonth=null;
+function matchDateToDate(iso){
+  const parts=String(iso||'').split('-').map(Number);
+  if(parts.length===3&&parts.every(Number.isFinite))return new Date(parts[0],parts[1]-1,parts[2]);
+  return new Date();
+}
+function matchDateIso(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function isMatchDateBooked(iso){
+  return (Array.isArray(data)?data:[]).some(m=>String(m.date||'')===iso);
+}
+function setMatchDatePickerMonth(iso){
+  const d=matchDateToDate(iso);
+  matchDatePickerMonth=new Date(d.getFullYear(),d.getMonth(),1);
+}
+function openMatchDatePicker(){
+  const picker=document.getElementById('matchDatePicker');
+  if(!picker)return;
+  if(!matchDatePickerMonth)setMatchDatePickerMonth(document.getElementById('mDate')?.value);
+  renderMatchDatePicker();
+  picker.classList.remove('hidden');
+}
+function closeMatchDatePicker(){
+  document.getElementById('matchDatePicker')?.classList.add('hidden');
+}
+function selectMatchDate(iso){
+  const input=document.getElementById('mDate');
+  if(!input)return;
+  input.value=iso;
+  setMatchDatePickerMonth(iso);
+  closeMatchDatePicker();
+}
+function changeMatchDatePickerMonth(delta){
+  if(!matchDatePickerMonth)setMatchDatePickerMonth(document.getElementById('mDate')?.value);
+  matchDatePickerMonth=new Date(matchDatePickerMonth.getFullYear(),matchDatePickerMonth.getMonth()+delta,1);
+  renderMatchDatePicker();
+}
+function renderMatchDatePicker(){
+  const picker=document.getElementById('matchDatePicker');
+  if(!picker||!matchDatePickerMonth)return;
+  const year=matchDatePickerMonth.getFullYear(), month=matchDatePickerMonth.getMonth();
+  const monthLabel=matchDatePickerMonth.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+  const firstDay=new Date(year,month,1), startOffset=firstDay.getDay();
+  const daysInMonth=new Date(year,month+1,0).getDate(), prevDays=new Date(year,month,0).getDate();
+  const selected=document.getElementById('mDate')?.value||'';
+  let cells='';
+  for(let i=0;i<42;i++){
+    const dayNumber=i-startOffset+1;
+    let d,other=false;
+    if(dayNumber<1){d=new Date(year,month-1,prevDays+dayNumber);other=true;}
+    else if(dayNumber>daysInMonth){d=new Date(year,month+1,dayNumber-daysInMonth);other=true;}
+    else d=new Date(year,month,dayNumber);
+    const iso=matchDateIso(d), booked=isMatchDateBooked(iso), weekend=d.getDay()===0||d.getDay()===6;
+    const cls=['match-date-day'];
+    if(other)cls.push('other-month');
+    if(booked)cls.push('booked-date'); else if(weekend)cls.push('weekend-open');
+    if(iso===selected)cls.push('selected-date');
+    cells+='<button type="button" class="'+cls.join(' ')+'" onclick="selectMatchDate(\''+iso+'\')" title="'+(booked?'Already booked':(weekend?'Weekend available':'Select date'))+'">'+d.getDate()+'</button>';
+  }
+  picker.innerHTML='<div class="match-date-picker-head"><div class="match-date-picker-title">'+esc(monthLabel)+'</div><div class="match-date-picker-nav"><button type="button" onclick="changeMatchDatePickerMonth(-1)" aria-label="Previous month">‹</button><button type="button" onclick="changeMatchDatePickerMonth(1)" aria-label="Next month">›</button></div></div>'+
+    '<div class="match-date-weekdays"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>'+
+    '<div class="match-date-grid">'+cells+'</div>'+
+    '<div class="match-date-legend"><span><i class="green"></i>Weekend available</span><span><i class="red"></i>Already booked</span></div>';
+}
+document.addEventListener('click',function(e){
+  const picker=document.getElementById('matchDatePicker'), input=document.getElementById('mDate');
+  if(picker&&!picker.contains(e.target)&&e.target!==input)closeMatchDatePicker();
+});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMatchDatePicker();});
+
 function saveMatch(){
   const date=mDate.value;
   let ground=mGround.value.trim();
