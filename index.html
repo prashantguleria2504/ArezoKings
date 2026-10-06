@@ -2000,6 +2000,8 @@ function moveMatchFormInline(matchId){
 function openMatchForm(id=null){
   closeMatchDatePicker();
   hideAllPageSections();
+  const monthFilterWrap=document.getElementById('matchesMonthFilterWrap');
+  if(monthFilterWrap)monthFilterWrap.style.display='flex';
   document.getElementById('weeks')?.classList.remove('hidden');
   document.querySelector('.cards')?.classList.remove('hidden');
   if(editingId && editingId!==id)closeMatchForm();
@@ -2046,6 +2048,8 @@ function closeMatchForm(){
   form.classList.remove('inline-match-editor');
   window._matchFormPlaceholder=null;
   editingId=null;
+  const monthFilterWrap=document.getElementById('matchesMonthFilterWrap');
+  if(monthFilterWrap)monthFilterWrap.style.display='flex';
 }
 
 let matchDatePickerMonth=null;
