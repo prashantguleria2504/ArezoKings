@@ -3026,7 +3026,7 @@ ensureFinanceFields();wrapLegacyFunctions();
 
     const months=allMonths();
     const totals={groundBooking:0,groundPaid:0,manualPaid:0,opponent:0,players:0,regular:0,adjustments:0};
-    const people={Neeraj:{received:0,gp:0,adj:0,settlements:0,net:0},Suyog:{received:0,gp:0,adj:0,settlements:0,net:0},Prashant:{received:0,gp:0,adj:0,settlements:0,net:0}};
+    const people={Neeraj:{received:0,transferReceived:0,gp:0,adj:0,settlements:0,net:0},Suyog:{received:0,transferReceived:0,gp:0,adj:0,settlements:0,net:0},Prashant:{received:0,transferReceived:0,gp:0,adj:0,settlements:0,net:0}};
     const results=months.map(m=>calculate(m));
 
     results.forEach(r=>{
@@ -3039,6 +3039,7 @@ ensureFinanceFields();wrapLegacyFunctions();
       totals.adjustments+=r.adjustments;
       r.people.forEach(p=>{
         people[p.person].received+=p.received;
+        people[p.person].transferReceived+=p.transferReceived||0;
         people[p.person].gp+=p.gp;
         people[p.person].adj+=p.adj;
         people[p.person].settlements+=p.settlements;
