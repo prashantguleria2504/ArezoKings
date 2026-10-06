@@ -587,10 +587,6 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
   <div class="accounts-intro">
     <strong>Complete team financial view</strong> — the consolidated balance is calculated automatically from Matches, Payments and Contributions across all recorded months.
   </div>
-  <div class="finance-toolbar">
-    <button class="secondary" onclick="openAdjustmentForm()">＋ Add Manual Adjustment</button>
-  </div>
-
   <div id="accountsOverall"></div>
 
   <div class="finance-section-title">📅 View a Specific Month</div>
@@ -3274,7 +3270,10 @@ ensureFinanceFields();wrapLegacyFunctions();
       (Array.isArray(adjustments)&&adjustments.length
         ? adjustments.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(a=>'<tr><td>'+safe(a.date||'')+'</td><td><strong>'+safe(a.id||'')+'</strong></td><td><strong>'+safe(a.deductFrom||a.paidBy||'')+'</strong></td><td class="amount"><strong>'+cash(a.amount)+'</strong></td><td>'+((getAdjustmentPaymentId(a)&&manualPayments.find(p=>p.id===getAdjustmentPaymentId(a))&&paymentIsFullySettled(manualPayments.find(p=>p.id===getAdjustmentPaymentId(a))))?'<span class="payment-paid-status">SETTLED</span>':(getAdjustmentPaymentId(a)?'<span class="payment-pending-status">PARTIAL SETTLED</span>':'<span class="payment-pending-status">OPEN</span>'))+'</td><td>'+safe(getAdjustmentPaymentId(a)||'—')+'</td><td>'+safe(a.payee||'')+'</td><td>'+safe(a.reason||'')+'</td><td class="actions"><button onclick="editAdjustment(\''+safe(a.id||'')+'\')">Edit</button><button class="danger" onclick="deleteAdjustment(\''+safe(a.id||'')+'\')">Delete</button></td></tr>').join('')
         : '<tr><td colspan="9" class="empty">No manual adjustments recorded.</td></tr>')+
-      '</tbody></table></div></div>';
+      '</tbody></table></div>'+
+      '<div class="finance-toolbar manual-adjustment-action">'+
+      '<button class="secondary" onclick="openAdjustmentForm()">＋ Add Manual Adjustment</button>'+
+      '</div></div>';
 
     if(!showMonth){
       byMonth.innerHTML='<div class="accounts-help accounts-month-empty">Select a month above and click <strong>Show</strong> to view that month\'s financial details.</div>';
