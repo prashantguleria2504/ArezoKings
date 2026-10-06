@@ -1692,6 +1692,7 @@ function showPayments(){
   document.getElementById('paymentsSection')?.classList.remove('hidden');
   document.getElementById('manualPaymentsSection')?.classList.remove('hidden');
   refreshPaymentGroundDropdown();
+  refreshManualPaymentCategories();
   populateManualPaymentPeople();
   syncAllManualPaymentContributions();
   renderGroundPayments();
