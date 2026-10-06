@@ -589,7 +589,6 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
   </div>
   <div class="finance-toolbar">
     <button class="secondary" onclick="openAdjustmentForm()">＋ Add Manual Adjustment</button>
-    <button class="secondary" onclick="openSettlementForm()">↔ Record Settlement</button>
   </div>
 
   <div id="accountsOverall"></div>
@@ -1734,7 +1733,7 @@ function reconcileSettledPaymentContributions(){
   if(changed){
     localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
     localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
-    if(typeof FINANCE_KEY!=='undefined') localStorage.setItem(FINANCE_KEY,JSON.stringify({adjustments,settlements}));
+    if(typeof FINANCE_KEY!=='undefined') localStorage.setItem(FINANCE_KEY,JSON.stringify({version:2,adjustments,carryForwardAmount:Number(carryForwardAmount||0)}));
   }
   return changed;
 }
@@ -2508,7 +2507,7 @@ function buildBackupPayload(){
     contributions:Array.isArray(contributions)?contributions:[],
     groundPayments:Array.isArray(groundPayments)?groundPayments:[],
     groundNames:getGrounds(),
-    finance:{version:2,adjustments:Array.isArray(adjustments)?adjustments:[],settlements:Array.isArray(settlements)?settlements:[],carryForwardAmount:Number(carryForwardAmount||0)}
+    finance:{version:2,adjustments:Array.isArray(adjustments)?adjustments:[],carryForwardAmount:Number(carryForwardAmount||0)}
   };
 }
 function closeBackupModal(){
@@ -2611,7 +2610,6 @@ async function restoreData(e){
     groundPayments=restoredGroundPayments;
     if(restoredFinance){
       adjustments=Array.isArray(restoredFinance.adjustments)?restoredFinance.adjustments:[];
-      settlements=Array.isArray(restoredFinance.settlements)?restoredFinance.settlements:[];
       carryForwardAmount=Number(restoredFinance.carryForwardAmount||0);
       saveFinanceLocal();
     }
@@ -2761,11 +2759,10 @@ window.showAccounts=function(){
 const FINANCE_KEY='arezoKingsFinanceV1';
 let financeState=JSON.parse(localStorage.getItem(FINANCE_KEY)||'{}');
 let adjustments=Array.isArray(financeState.adjustments)?financeState.adjustments:[];
-let settlements=Array.isArray(financeState.settlements)?financeState.settlements:[];
 const ACCOUNT_PEOPLE=['Neeraj','Suyog','Prashant'];
 
 function saveFinanceLocal(){
-  financeState={version:2,adjustments,settlements,carryForwardAmount:Number(carryForwardAmount||0)};
+  financeState={version:2,adjustments,carryForwardAmount:Number(carryForwardAmount||0)};
   localStorage.setItem(FINANCE_KEY,JSON.stringify(financeState));
 }
 let carryForwardAmount=Number(financeState.carryForwardAmount||0);
@@ -2832,7 +2829,7 @@ function financePersonOptions(selected=''){
 function financeMonthOptions(selected=''){
   const keys=new Set(data.map(x=>monthKey(x.date)));
   const now=new Date().toISOString().slice(0,7); keys.add(now);
-  [...adjustments,...settlements].forEach(x=>{if(x.applyMonth)keys.add(x.applyMonth);if(x.month)keys.add(x.month);});
+  adjustments.forEach(x=>{if(x.applyMonth)keys.add(x.applyMonth);});
   return [...keys].sort().reverse().map(k=>'<option value="'+k+'" '+(k===selected?'selected':'')+'>'+monthName(k)+'</option>').join('');
 }
 function ensureFinanceFields(){
@@ -2980,10 +2977,6 @@ function buildFinanceLedger(){
     const amt=Number(a.amount||0); if(!amt)return;
     ledger.push({date:a.date||'',type:'Adjustment',description:a.reason||'Adjustment',person:a.paidBy||'',in:0,out:amt,month:monthOf(a.date||'')});
   });
-  settlements.forEach(s=>{
-    const amt=Number(s.amount||0); if(!amt)return;
-    ledger.push({date:s.date||'',type:'Settlement',description:'Settlement with '+s.person,person:s.person||'',in:0,out:amt,month:s.month||(s.date||'').slice(0,7)});
-  });
   return ledger.filter(x=>x.date||x.month);
 }
 function financeForMonth(){
@@ -3084,15 +3077,6 @@ function deleteAdjustment(id){
   if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();else if(typeof renderAccounts==='function')renderAccounts();
   syncFinanceCloud();
 }
-function openSettlementForm(){
-  const host=document.getElementById('financeModalHost');
-  host.innerHTML='<div class="backup-modal-backdrop"><div class="backup-modal"><h2>↔ Settle Account</h2><p>Record money returned to a person. This reduces the amount the team owes them without changing historical transactions.</p><div class="finance-form"><div><label>Person</label><select id="fSetPerson">'+financePersonOptions()+'</select></div><div><label>Settlement Date</label><input id="fSetDate" type="date" value="'+new Date().toISOString().slice(0,10)+'"></div><div><label>Amount</label><input id="fSetAmount" type="number" min="0" step="1"></div><div><label>Month</label><input id="fSetMonth" type="month" value="'+(document.getElementById('accountsMonth')?.value||new Date().toISOString().slice(0,7))+'"></div><div style="grid-column:1/-1"><label>Note</label><input id="fSetNote" placeholder="e.g. September closing settlement"></div><div class="form-actions"><button class="primary" onclick="saveSettlement()">Save Settlement</button><button class="secondary" onclick="closeFinanceModal()">Cancel</button></div></div></div></div>';
-}
-function saveSettlement(){
-  const item={id:crypto.randomUUID(),person:document.getElementById('fSetPerson').value,date:document.getElementById('fSetDate').value,amount:Number(document.getElementById('fSetAmount').value||0),month:document.getElementById('fSetMonth').value,note:document.getElementById('fSetNote').value.trim()};
-  if(!item.person||!item.date||item.amount<=0){alert('Please select person and enter date and amount.');return;}
-  settlements.push(item);saveFinanceLocal();closeFinanceModal();if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();else if(typeof renderAccounts==='function')renderAccounts();syncFinanceCloud();
-}
 function closeFinanceModal(){document.getElementById('financeModalHost').innerHTML='';}
 
 function syncFinanceCloud(){
@@ -3111,7 +3095,6 @@ async function showAccounts(){
     const keys=new Set((Array.isArray(data)?data:[]).map(x=>monthKey(x.date||'')).filter(Boolean));
     keys.add(current);
     (Array.isArray(adjustments)?adjustments:[]).forEach(x=>{const k=monthOf(x.date||'');if(k)keys.add(k);});
-    (Array.isArray(settlements)?settlements:[]).forEach(x=>{if(x.month)keys.add(x.month);});
     sel.innerHTML=[...keys].sort().reverse().map(k=>'<option value="'+esc(k)+'">'+esc(monthName(k))+'</option>').join('');
     sel.value=keys.has(current)?current:[...keys][0];
   }
@@ -3211,12 +3194,11 @@ ensureFinanceFields();wrapLegacyFunctions();
         .reduce((s,p)=>s+getPaymentRemaining(p),0);
       const adj=matches.filter(m=>(m.adjustmentOwner||'')===person).reduce((s,m)=>s+num(m.adjustmentAmount),0)
         +manual.filter(a=>(a.deductFrom||a.paidBy||'')===person).reduce((s,a)=>s+num(a.amount),0);
-      const settlementRows=Array.isArray(settlements)?settlements.filter(x=>(x.month||monthOf(x.date))===month&&(x.person||'')===person).reduce((s,x)=>s+num(x.amount),0):0;
       // Keep Transfer payments separate from the existing Money Received figure.
       // Net Balance = Money Received + Transferred Received - (Ground Paid + Adjustments).
       const received=opp+play+cont;
       const net=received+transferReceived-gp-adj;
-      return {person,opp,play,cont,transferReceived,gp,adj,settlements:settlementRows,received,net};
+      return {person,opp,play,cont,transferReceived,gp,adj,received,net};
     });
 
     return {month,groundBooking,groundPaid,otherPaid,totalPaid,opponent,players,regular,adjustments:totalAdjustmentAmount,monthAdjustments:manual,people,matches,payments,otherPayments};
@@ -3229,7 +3211,6 @@ ensureFinanceFields();wrapLegacyFunctions();
     (Array.isArray(manualPayments)?manualPayments:[]).forEach(p=>{const m=p.month||monthOf(p.date);if(m)set.add(m);});
     (Array.isArray(contributions)?contributions:[]).forEach(p=>(p.recentEntries||[]).forEach(e=>{if(monthOf(e.date))set.add(monthOf(e.date));}));
     (Array.isArray(adjustments)?adjustments:[]).forEach(a=>{if(a.applyMonth)set.add(a.applyMonth);});
-    (Array.isArray(settlements)?settlements:[]).forEach(a=>{const m=a.month||monthOf(a.date);if(m)set.add(m);});
     return [...set].sort();
   }
 
@@ -3242,7 +3223,7 @@ ensureFinanceFields();wrapLegacyFunctions();
 
     const months=allMonths();
     const totals={groundBooking:0,groundPaid:0,manualPaid:0,opponent:0,players:0,regular:0,adjustments:0};
-    const people={Neeraj:{received:0,transferReceived:0,gp:0,adj:0,settlements:0,net:0},Suyog:{received:0,transferReceived:0,gp:0,adj:0,settlements:0,net:0},Prashant:{received:0,transferReceived:0,gp:0,adj:0,settlements:0,net:0}};
+    const people={Neeraj:{received:0,transferReceived:0,gp:0,adj:0,net:0},Suyog:{received:0,transferReceived:0,gp:0,adj:0,net:0},Prashant:{received:0,transferReceived:0,gp:0,adj:0,net:0}};
     const results=months.map(m=>calculate(m));
 
     results.forEach(r=>{
@@ -3257,9 +3238,7 @@ ensureFinanceFields();wrapLegacyFunctions();
         people[p.person].received+=p.received;
         people[p.person].transferReceived+=p.transferReceived||0;
         people[p.person].gp+=p.gp;
-        people[p.person].adj+=p.adj;
-        people[p.person].settlements+=p.settlements;
-        people[p.person].net+=p.net;
+        people[p.person].adj+=p.adj;        people[p.person].net+=p.net;
       });
     });
 
@@ -3314,8 +3293,8 @@ ensureFinanceFields();wrapLegacyFunctions();
       '<div class="finance-summary-grid">'+
       [['Ground booking',r.groundBooking,'Matches'],['Ground paid',r.totalPaid,'Payments'],['Opponent',r.opponent,'Opponent fees'],['Players',r.players,'Playing players'],['Contributions',r.regular,'Regular contributions'],['Adjustments',r.adjustments,'Match + manual']].map(x=>'<div class="finance-summary-item"><div class="label">'+safe(x[0])+'</div><div class="value">'+cash(x[1])+'</div><div class="hint">'+safe(x[2])+'</div></div>').join('')+
       '</div>'+
-      '<div class="table-wrap"><table class="finance-table"><thead><tr><th>Person</th><th class="amount">Opponent</th><th class="amount">Players</th><th class="amount">Contributions</th><th class="amount">Ground Paid</th><th class="amount">Adjustments</th><th class="amount">Settled</th><th class="amount">Net Balance</th></tr></thead><tbody>'+
-      r.people.map(p=>'<tr><td><strong>'+p.person+'</strong></td><td class="amount">'+cash(p.opp)+'</td><td class="amount">'+cash(p.play)+'</td><td class="amount">'+cash(p.cont)+'</td><td class="amount">'+cash(p.gp)+'</td><td class="amount">'+cash(p.adj)+'</td><td class="amount">'+cash(p.settlements)+'</td><td class="amount"><strong>'+cash(p.net)+'</strong></td></tr>').join('')+
+      '<div class="table-wrap"><table class="finance-table"><thead><tr><th>Person</th><th class="amount">Opponent</th><th class="amount">Players</th><th class="amount">Contributions</th><th class="amount">Ground Paid</th><th class="amount">Adjustments</th><th class="amount">Net Balance</th></tr></thead><tbody>'+
+      r.people.map(p=>'<tr><td><strong>'+p.person+'</strong></td><td class="amount">'+cash(p.opp)+'</td><td class="amount">'+cash(p.play)+'</td><td class="amount">'+cash(p.cont)+'</td><td class="amount">'+cash(p.gp)+'</td><td class="amount">'+cash(p.adj)+'</td><td class="amount"><strong>'+cash(p.net)+'</strong></td></tr>').join('')+
       '</tbody></table></div>'+
       '<div class="accounts-month-foot">Money collected: <strong>'+cash(r.opponent+r.players+r.regular)+'</strong> · Team payments: <strong>'+cash(r.totalPaid)+'</strong> · Adjustments: <strong>'+cash(r.adjustments)+'</strong></div>'+
       (r.monthAdjustments?.length ? '<div class="finance-section-title">↔ Adjustments</div><div class="table-wrap"><table class="finance-table"><thead><tr><th>Date</th><th>Deduct From</th><th class="amount">Amount</th><th>Payee / From</th><th>Reason</th><th>Actions</th></tr></thead><tbody>'+r.monthAdjustments.map(a=>'<tr><td>'+safe(a.date)+'</td><td><strong>'+safe(a.deductFrom||a.paidBy||'')+'</strong></td><td class="amount">'+cash(a.amount)+'</td><td>'+safe(a.payee||'')+'</td><td>'+safe(a.reason||'')+'</td><td><button onclick="openAdjustmentForm(\''+a.id+'\')">Edit</button> <button class="danger" onclick="deleteAdjustment(\''+a.id+'\')">Delete</button></td></tr>').join('')+'</tbody></table></div>' : '')+
