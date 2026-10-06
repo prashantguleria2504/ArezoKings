@@ -57,6 +57,33 @@ button{cursor:pointer}.primary{background:var(--pitch)!important;color:#fff;bord
 .form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px;border-bottom:1px solid var(--line)}.form-grid label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px}.form-actions{grid-column:1/-1;display:flex;gap:8px}.hidden{display:none!important}.empty{padding:28px;text-align:center;color:var(--muted)}
 .table-owners{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}.match-owner-check{cursor:default;accent-color:#1677ff}.match-owner-check:disabled{opacity:1}.match-owner-check:checked + span{font-weight:700;color:#1677ff}.table-owner{font-size:10px;display:inline-flex;align-items:center;gap:2px;white-space:nowrap;color:var(--muted)}.table-owner input{margin:0}.notes-cell{min-width:220px;max-width:280px;font-size:12px;line-height:1.35}.owner-picker{display:flex;gap:8px;flex-wrap:wrap;padding:7px 0}.owner-option{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:#fff;font-size:12px}.owner-option input{margin:0}.owner-field{min-width:0}.match-table{min-width:1450px;width:100%;table-layout:fixed}.match-table th{vertical-align:middle;line-height:1.15;text-align:left}.match-table th.amount,.match-table td.amount{text-align:right}.match-table th:nth-child(1){width:8%}.match-table th:nth-child(2){width:9%}.match-table th:nth-child(3){width:8%}.match-table th:nth-child(4){width:11%}.match-table th:nth-child(5){width:11%}.match-table th:nth-child(6){width:11%}.match-table th:nth-child(7){width:11%}.match-table th:nth-child(8){width:9%}.match-table th:nth-child(9){width:11%}.match-table th:nth-child(10){width:12%}.match-table th:nth-child(5),.match-table td:nth-child(5),.match-table th:nth-child(6),.match-table td:nth-child(6),.match-table th:nth-child(7),.match-table td:nth-child(7){text-align:left!important}.match-table td{vertical-align:top}.match-table .table-owners{justify-content:flex-start}.match-table td.amount .table-owners{justify-content:flex-start;text-align:left}.match-table .actions{white-space:nowrap;min-width:190px;width:190px}.match-table .notes-cell{overflow-wrap:anywhere;max-width:170px}.inline-match-editor{margin:10px 0 0!important;border:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.06)}.adjustment-link-back{font-size:11px;color:#1769aa;font-weight:700;margin-top:4px;line-height:1.25}.inline-match-editor .section-head{position:sticky;top:0;z-index:2;background:#fff}.inline-match-editor .form-grid{padding:16px}.player-table{min-width:520px}
 .badge{padding:4px 8px;border-radius:20px;background:#e6f3ea;color:#176b3a;font-size:12px}.week-header{border-left:4px solid var(--pitch)}
+.week-section{overflow:hidden}
+.week-section .section-head{border-bottom-width:1px}
+.week-section.week-color-1{border-top:4px solid #3b82c4;background:linear-gradient(180deg,#f2f8fd 0%,#ffffff 115px)}
+.week-section.week-color-1>.section-head{background:linear-gradient(90deg,#e7f2fb,#f5faff);border-bottom-color:#c9deef}.week-section.week-color-1>.section-head h2{color:#245f8f}
+.week-section.week-color-2{border-top:4px solid #2d9b63;background:linear-gradient(180deg,#f1faf5 0%,#ffffff 115px)}
+.week-section.week-color-2>.section-head{background:linear-gradient(90deg,#e5f5eb,#f5fbf7);border-bottom-color:#c8e3d2}.week-section.week-color-2>.section-head h2{color:#24734d}
+.week-section.week-color-3{border-top:4px solid #7c5aa6;background:linear-gradient(180deg,#faf5ff 0%,#ffffff 115px)}
+.week-section.week-color-3>.section-head{background:linear-gradient(90deg,#f0e8f8,#faf6ff);border-bottom-color:#dfd0ef}.week-section.week-color-3>.section-head h2{color:#68418d}
+.week-section.week-color-4{border-top:4px solid #c49a3a;background:linear-gradient(180deg,#fffaf0 0%,#ffffff 115px)}
+.week-section.week-color-4>.section-head{background:linear-gradient(90deg,#fff3d6,#fffaf0);border-bottom-color:#ead9b2}.week-section.week-color-4>.section-head h2{color:#79570c}
+.week-section.week-color-5{border-top:4px solid #c45b4b;background:linear-gradient(180deg,#fff5f3 0%,#ffffff 115px)}
+.week-section.week-color-5>.section-head{background:linear-gradient(90deg,#fde9e5,#fff7f5);border-bottom-color:#efcbc5}.week-section.week-color-5>.section-head h2{color:#8f3e31}
+
+.accounts-overall-section{margin:0 16px 16px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+.accounts-overall-section .finance-section-title,.accounts-overall-section .finance-summary-title{border-bottom:1px solid var(--line)}
+.accounts-summary-section{border-top:4px solid #176b3a;background:linear-gradient(180deg,#f0f8f2 0%,#ffffff 120px)}
+.accounts-summary-section .finance-summary-title{background:linear-gradient(90deg,#e4f2e8,#f4faf6);color:#124b2d}
+.accounts-held-section{border-top:4px solid #3b82c4;background:linear-gradient(180deg,#f2f8fd 0%,#ffffff 120px)}
+.accounts-held-section .finance-section-title{background:linear-gradient(90deg,#e7f2fb,#f5faff);color:#245f8f;border-left:0}
+.accounts-adjustments-section{border-top:4px solid #c95b4a;background:linear-gradient(180deg,#fff5f3 0%,#ffffff 120px)}
+.accounts-adjustments-section .finance-section-title{background:linear-gradient(90deg,#fde9e5,#fff7f5);color:#8f3e31}
+.accounts-overall-section .accounts-help{padding-left:16px;padding-right:16px}
+.accounts-overall-section .table-wrap{margin:0}
+.accounts-summary-section .accounts-funds-grid{margin:14px 16px 16px}
+.accounts-adjustments-section .manual-adjustments-wrap{margin:0 16px 18px}
+.accounts-held-section .table-wrap{margin:0 16px 18px}
+
 footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 @media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}.form-grid{grid-template-columns:1fr 1fr}.hero h1{font-size:23px}}
 @media(max-width:520px){.container{padding:12px}.cards{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}.hero{padding:18px}.toolbar{display:grid;grid-template-columns:1fr 1fr}.toolbar button,.toolbar select{width:100%}}
@@ -2402,7 +2429,7 @@ function render(){
     const weeklyGround=list.reduce((sum,x)=>sum+Number(x.groundAmount||0),0);
     const weeklyCollected=list.reduce((s,x)=>s+getMatchTotal(x),0);
 
-    return '<section class="section"><div class="section-head"><h2>Week '+w+
+    return '<section class="section week-section week-color-'+((((Number(w)-1)%5)+1))+'"><div class="section-head"><h2>Week '+w+
       ' <span class="badge">'+list.length+' match'+(list.length!==1?'es':'')+
       '</span></h2></div><div class="table-wrap"><table class="match-table"><thead><tr>'+
       '<th>Date</th><th>Ground</th><th class="amount">Ground Fee</th><th>Opponent</th>'+
@@ -3251,25 +3278,26 @@ ensureFinanceFields();wrapLegacyFunctions();
     const consolidatedAvailableAmount=consolidatedTotalAmount-consolidatedAmountPaid;
 
     overall.innerHTML=
-      '<div class="finance-summary-title">🏏 Consolidated Team Summary</div>'+
+      '<div class="accounts-overall-section accounts-summary-section"><div class="finance-summary-title">🏏 Consolidated Team Summary</div>'+
       '<div class="accounts-funds-grid">'+
       '<div class="accounts-available-card accounts-total-card"><div style="width:100%"><div class="accounts-available-label">Total Amount</div><div class="accounts-available-value">'+cash(consolidatedTotalAmount)+'</div><div class="accounts-available-note">Net Balance held by all team members + carry forwarded amount</div><div class="accounts-carry-forward-mini"><span><strong>Carry Forwarded Amount</strong></span><span>'+cash(carryForwardAmount)+'</span></div></div></div>'+
       '<div class="accounts-available-card accounts-paid-card"><div style="width:100%"><div class="accounts-available-label">Amount Paid</div><div class="accounts-paid-total">'+cash(consolidatedAmountPaid)+'</div><div class="accounts-paid-breakdown"><div class="payment-mini payment-mini-ground"><span>Ground Payments</span><strong>'+cash(totals.groundPaid)+'</strong></div><div class="payment-mini payment-mini-manual"><span>Manual Payments</span><strong>'+cash(totals.manualPaid)+'</strong></div></div><div class="accounts-available-note">Payments tab · Ground + manual payments</div></div></div>'+
       '<div class="accounts-available-card accounts-balance-card"><div><div class="accounts-available-label">Total Available Amount</div><div class="accounts-available-value">'+cash(consolidatedAvailableAmount)+'</div><div class="accounts-available-note">Total Amount − Amount Paid</div></div><span class="accounts-available-badge">Team Pool</span></div>'+
-      '</div>'+
-
+      '</div></div>'+
+      '<div class="accounts-overall-section accounts-held-section">'+
       '<div class="finance-section-title">💰 Amount Currently Held by Each Person</div>'+
       '<div class="accounts-help">Cumulative across all recorded months. <strong>Money Received</strong> is the existing amount collected by that person; <strong>Transferred Received</strong> shows Transfer payments separately. <strong>Net Balance</strong> = Money Received + Transferred Received − (Ground Paid + Adjustments).</div>'+
       '<div class="table-wrap"><table class="finance-table owner-balance-table"><thead><tr><th>Person</th><th class="amount">Money Received</th><th class="amount">Transferred Received</th><th class="amount">Ground Paid</th><th class="amount">Adjustments</th><th class="amount">Net Balance</th></tr></thead><tbody>'+
       ['Neeraj','Suyog','Prashant'].map(n=>'<tr><td><strong>'+n+'</strong></td><td class="amount">'+cash(people[n].received)+'</td><td class="amount">'+cash(people[n].transferReceived)+'</td><td class="amount">'+cash(people[n].gp)+'</td><td class="amount">'+cash(people[n].adj)+'</td><td class="amount"><strong>'+cash(people[n].net)+'</strong></td></tr>').join('')+
-      '</tbody></table></div>'+
+      '</tbody></table></div></div>'+
+      '<div class="accounts-overall-section accounts-adjustments-section">'+
       '<div class="finance-section-title manual-adjustments-title">↔ Manual Adjustments</div>'+
       '<div class="accounts-help">All manual adjustments created in Accounts & Settlement. The selected person is deducted from the adjustment amount.</div>'+
       '<div class="table-wrap manual-adjustments-wrap"><table class="finance-table manual-adjustments-table"><thead><tr><th>Date</th><th>Adjustment ID</th><th>Deduct From</th><th class="amount">Amount</th><th>Status</th><th>Linked Payment ID</th><th>Payee / From</th><th>Reason</th><th>Actions</th></tr></thead><tbody>'+
       (Array.isArray(adjustments)&&adjustments.length
         ? adjustments.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(a=>'<tr><td>'+safe(a.date||'')+'</td><td><strong>'+safe(a.id||'')+'</strong></td><td><strong>'+safe(a.deductFrom||a.paidBy||'')+'</strong></td><td class="amount"><strong>'+cash(a.amount)+'</strong></td><td>'+((getAdjustmentPaymentId(a)&&manualPayments.find(p=>p.id===getAdjustmentPaymentId(a))&&paymentIsFullySettled(manualPayments.find(p=>p.id===getAdjustmentPaymentId(a))))?'<span class="payment-paid-status">SETTLED</span>':(getAdjustmentPaymentId(a)?'<span class="payment-pending-status">PARTIAL SETTLED</span>':'<span class="payment-pending-status">OPEN</span>'))+'</td><td>'+safe(getAdjustmentPaymentId(a)||'—')+'</td><td>'+safe(a.payee||'')+'</td><td>'+safe(a.reason||'')+'</td><td class="actions"><button onclick="editAdjustment(\''+safe(a.id||'')+'\')">Edit</button><button class="danger" onclick="deleteAdjustment(\''+safe(a.id||'')+'\')">Delete</button></td></tr>').join('')
         : '<tr><td colspan="9" class="empty">No manual adjustments recorded.</td></tr>')+
-      '</tbody></table></div>';
+      '</tbody></table></div></div>';
 
     if(!showMonth){
       byMonth.innerHTML='<div class="accounts-help accounts-month-empty">Select a month above and click <strong>Show</strong> to view that month\'s financial details.</div>';
