@@ -51,7 +51,7 @@ button{cursor:pointer}.primary{background:var(--pitch)!important;color:#fff;bord
 .config-permission-legend{padding:10px 16px;border-top:1px solid var(--line);font-size:11px;color:#687386;background:#fafbfd}.config-cleanup-card{margin:14px 16px 16px;padding:16px;border:1px solid #f0c8c2;border-left:5px solid #c0392b;border-radius:9px;background:#fff5f3}.config-cleanup-card h3{margin:0 0 6px;color:#a52d22;font-size:15px}.config-cleanup-card p{margin:0 0 10px;color:#6f3b35;font-size:12px;line-height:1.5}.config-cleanup-button{background:#fff0ee!important;color:#b42318!important;border-color:#e7aaa2!important;font-weight:800}.cleanup-warning{display:none;margin-top:12px;padding:14px;border:1px solid #e2a59c;border-radius:8px;background:#fff}.cleanup-warning.visible{display:block}.cleanup-warning-title{font-weight:800;color:#a52d22;margin-bottom:7px}.cleanup-warning-text{font-size:12px;color:#5f4540;line-height:1.5;margin-bottom:10px}.cleanup-accept{display:flex;align-items:flex-start;gap:8px;font-size:12px;font-weight:700;color:#4d4542;margin-bottom:12px}.cleanup-accept input{width:17px;height:17px;margin:0;accent-color:#c0392b;flex:0 0 auto}.cleanup-actions{display:flex;gap:8px;flex-wrap:wrap}.cleanup-actions button{padding:8px 12px}.cleanup-actions .danger:disabled{opacity:.45;cursor:not-allowed}.cleanup-progress{margin-top:9px;font-size:12px;font-weight:700;min-height:16px;color:#a52d22}.cleanup-progress.success{color:#16734e}
 .config-permission-legend strong{color:#176b3a}
 @media(max-width:900px){.config-users-table{font-size:12px}.config-users-table th,.config-users-table td{padding:7px 4px}}
-.danger{background:#fff0ee!important;color:var(--danger);border-color:#f1cbc6!important}
+.danger{background:#fff0ee!important;color:var(--danger);border-color:#f1cbc6!important}.opponent-schedule-note{margin-top:5px;font-size:12px;font-weight:800;color:#c0392b}.opponent-schedule-note.hidden{display:none!important}
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:16px;box-shadow:var(--shadow);border-top:3px solid #d6b25e}.card .label{color:var(--muted);font-size:13px}.card .value{font-size:25px;font-weight:700;margin-top:7px}
 .section{background:var(--card);border:1px solid var(--line);border-radius:11px;margin:14px 0;box-shadow:var(--shadow);overflow:hidden}.section-head{padding:13px 16px;border-bottom:1px solid var(--line);background:#fbfdfb;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.section-head h2{margin:0;font-size:18px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:900px}th,td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}th{background:#f1f6f1;color:#536257;font-size:12px;text-transform:uppercase}td.amount{text-align:right;font-weight:600}th.amount{text-align:right}.total-row td{font-weight:700;background:#fafbfd}.date-day{font-size:11px;color:#1769aa;font-weight:700;margin-top:3px}.actions{white-space:nowrap;min-width:175px;width:175px}.actions button{padding:7px 9px;margin-right:4px;margin-bottom:3px;border-radius:7px;border:1px solid var(--line);background:#fff;display:inline-block;white-space:nowrap}.match-table td.actions{overflow:visible}
 .form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px;border-bottom:1px solid var(--line)}.form-grid label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px}.form-actions{grid-column:1/-1;display:flex;gap:8px}.hidden{display:none!important}.empty{padding:28px;text-align:center;color:var(--muted)}
@@ -572,7 +572,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 </div>
     <div><label>Ground</label><select id="mGround"><option value="">Select ground</option><option value="__ADD_NEW__">➕ Add New Ground</option></select><input id="mNewGroundName" class="hidden" placeholder="Enter new ground name" style="margin-top:6px;width:100%"></div>
     <div><label>Total ground booking amount</label><input id="mGroundAmount" type="number" min="0" step="1" placeholder="0"></div>
-    <div><label>Opponent <span style="color:#c0392b">*</span></label><input id="mOpponent" placeholder="Opponent team"></div>
+    <div><label>Opponent</label><input id="mOpponent" placeholder="Opponent team" oninput="updateOpponentScheduleNote()"><div id="opponentScheduleNote" class="opponent-schedule-note hidden">Match not scheduled yet !!</div></div>
     <div><label>Amount received from opponent</label><input id="mAmount" type="number" min="0" step="1" placeholder="0"></div>
     <div><label>Adjustment Amount</label><input id="mAdjustmentAmount" type="number" min="0" step="1" placeholder="0"></div>
     <div><label>Adjustment Date</label><input id="mAdjustmentDate" type="date"></div>
@@ -583,7 +583,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
     <div style="grid-column:1/-1"><label>Match Notes / Payment Notes</label><textarea id="mNotes" rows="3" placeholder="e.g. Neeraj to get amount from opponent. Transferred on 21st Sep."></textarea></div>
     <div class="form-actions"><button class="primary" onclick="saveMatch()">Save Match</button><button class="secondary" onclick="closeMatchForm()">Cancel</button></div>
   </div>
-  <div style="padding:10px 16px;font-size:12px;color:#687386">* Date, Ground and Opponent are the only required fields. All amount/payment fields are optional.</div>
+  <div style="padding:10px 16px;font-size:12px;color:#687386">* Date and Ground are the only required fields. All other fields are optional.</div>
 </section>
 
 <div id="weeks"></div><section class="section hidden" id="accountsSection">
@@ -2043,6 +2043,7 @@ function openMatchForm(id=null){
   document.getElementById('mNewGroundName').classList.add('hidden');
   document.getElementById('mGroundAmount').value=x?.groundAmount||0;
   document.getElementById('mOpponent').value=x?.opponent||'';
+  updateOpponentScheduleNote();
   document.getElementById('mAmount').value=x?.opponentAmount||0;
   document.getElementById('mAdjustmentAmount').value=x?.adjustmentAmount??0;
   document.getElementById('mAdjustmentDate').value=x?.adjustmentDate||'';
@@ -2153,6 +2154,12 @@ document.addEventListener('click',function(e){
 });
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMatchDatePicker();});
 
+function updateOpponentScheduleNote(){
+  const input=document.getElementById('mOpponent');
+  const note=document.getElementById('opponentScheduleNote');
+  if(!input||!note)return;
+  note.classList.toggle('hidden',String(input.value||'').trim()!=='');
+}
 function saveMatch(){
   const date=mDate.value;
   let ground=mGround.value.trim();
@@ -2183,8 +2190,8 @@ function saveMatch(){
     if(ng){ng.classList.add('hidden');ng.value='';}
   }
 
-  if(!date||!ground||ground==='__ADD_NEW__'||!opponent){
-    alert('Please enter Date, Ground and Opponent.');
+  if(!date||!ground||ground==='__ADD_NEW__'){
+    alert('Please enter Date and Ground.');
     return;
   }
 
