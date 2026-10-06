@@ -1227,7 +1227,7 @@ function saveManualPayment(){
   if(isTransfer&&!transferredTo){alert('Please select Transferred To.');return;}
   if(isTransfer&&transferredTo===paidBy){alert('Transferred To must differ from Payment Made By.');return;}
 
-  const item={id:editingManualPaymentId||('PAY-'+Date.now().toString(36).toUpperCase()),category,description,amount,date,paidBy,transferredTo:isTransfer?transferredTo:'',month,linkedAdjustmentIds:[],linkedAdjustmentId:'',addToContribution,settledAgainstContribution:addToContribution,notes:addToContribution ? ((notes?notes+' · ':'')+'Adjusted against recent contribution') : notes};
+  const item={id:editingManualPaymentId||('PAY-'+Date.now().toString(36).toUpperCase()),category,description,amount,date,paidBy,transferredTo:transferredTo||'',month,linkedAdjustmentIds:[],linkedAdjustmentId:'',addToContribution,settledAgainstContribution:addToContribution,notes:addToContribution ? ((notes?notes+' · ':'')+'Adjusted against recent contribution') : notes};
   const existing=editingManualPaymentId?manualPayments.find(x=>x.id===editingManualPaymentId):null;
   const oldIds=existing?getPaymentAdjustmentIds(existing):[];
   if(existing){
