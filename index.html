@@ -1843,7 +1843,9 @@ function showSummary(){
 function showTracker(){
   hideAllPageSections();
   const monthFilter=document.getElementById('monthFilter');
-  if(monthFilter)monthFilter.style.display='';
+  if(monthFilter)monthFilter.style.setProperty('display','block','important');
+  const monthFilterWrap=document.getElementById('matchesMonthFilterWrap');
+  if(monthFilterWrap)monthFilterWrap.style.setProperty('display','flex','important');
   document.getElementById('weeks')?.classList.remove('hidden');
   document.querySelector('.cards')?.classList.remove('hidden');
   window.scrollTo({top:0,behavior:'smooth'});
@@ -2031,8 +2033,10 @@ function closeMatchForm(){
   form.classList.remove('inline-match-editor');
   window._matchFormPlaceholder=null;
   editingId=null;
+  const monthFilter=document.getElementById('monthFilter');
+  if(monthFilter)monthFilter.style.setProperty('display','block','important');
   const monthFilterWrap=document.getElementById('matchesMonthFilterWrap');
-  if(monthFilterWrap)monthFilterWrap.style.display='flex';
+  if(monthFilterWrap)monthFilterWrap.style.setProperty('display','flex','important');
 }
 
 let matchDatePickerMonth=null;
@@ -2156,6 +2160,10 @@ function saveMatch(){
   }
   closeMatchForm();
   save();
+  const monthFilter=document.getElementById('monthFilter');
+  if(monthFilter)monthFilter.style.setProperty('display','block','important');
+  const monthFilterWrap=document.getElementById('matchesMonthFilterWrap');
+  if(monthFilterWrap)monthFilterWrap.style.setProperty('display','flex','important');
 }
 function deleteMatch(id){if(confirm('Delete this match and its player contributions?')){data=data.filter(x=>x.id!==id);save();}}
 function toggleAddPlayer(id){
