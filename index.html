@@ -1228,7 +1228,11 @@ function saveManualPayment(){
   if(isTransfer&&transferredTo===paidBy){alert('Transferred To must differ from Payment Made By.');return;}
 
   const item={id:editingManualPaymentId||('PAY-'+Date.now().toString(36).toUpperCase()),category,description,amount,date,paidBy,transferredTo:transferredTo||'',month,linkedAdjustmentIds:[],linkedAdjustmentId:'',addToContribution,settledAgainstContribution:addToContribution,notes:(()=>{
-      const cleanNotes=String(notes||'').replace(/(\s*·\s*Adjusted against recent contribution)+\s*$/i,'').trim();
+      const cleanNotes=String(notes||'')
+        .replace(/(?:\s*·\s*)?Adjusted against recent contribution(?:\s*·\s*)?/gi,'')
+        .replace(/\s*·\s*/g,' · ')
+        .replace(/^\s*·\s*|\s*·\s*$/g,'')
+        .trim();
       return addToContribution
         ? (cleanNotes ? cleanNotes+' · ' : '')+'Adjusted against recent contribution'
         : cleanNotes;
