@@ -1235,6 +1235,10 @@ function saveManualPayment(){
     item.linkedAdjustmentIds=oldIds;
   }else manualPayments.push(item);
 
+  // Persist the Manual Payment immediately. This keeps the payment itself
+  // available even when it is also linked to the payer's Recent Contribution.
+  localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
+
   if(addToContribution){
     item.linkedAdjustmentIds=[];
     item.linkedAdjustmentId='';
@@ -1348,6 +1352,12 @@ function clearManualPaymentFilters(){
   renderManualPayments();
 }
 function renderManualPayments(){
+  try{
+    const stored=JSON.parse(localStorage.getItem(MANUAL_PAYMENT_KEY)||'[]');
+    if(Array.isArray(stored))manualPayments=stored;
+  }catch(err){
+    console.error('Manual payments local data load failed:',err);
+  }
   syncAllManualPaymentContributions();
   populateManualPaymentCategoryFilter();
   const body=document.getElementById('manualPaymentRows');if(!body)return;
