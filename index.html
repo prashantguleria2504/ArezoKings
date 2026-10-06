@@ -1785,21 +1785,21 @@ function hideAllPageSections(){
 function toggleGroundPaymentForm(force){
   const form=document.getElementById('groundPaymentForm');
   if(!form)return;
-  const shouldShow=force===true?!form.classList.contains('hidden'):force===false?false:form.classList.contains('hidden');
+  const shouldShow=typeof force==='boolean'?force:form.classList.contains('hidden');
   form.classList.toggle('hidden',!shouldShow);
   if(shouldShow)document.getElementById('pGround')?.focus();
 }
 function toggleManualPaymentForm(force){
   const form=document.getElementById('manualPaymentForm');
   if(!form)return;
-  const shouldShow=force===true?!form.classList.contains('hidden'):force===false?false:form.classList.contains('hidden');
+  const shouldShow=typeof force==='boolean'?force:form.classList.contains('hidden');
   form.classList.toggle('hidden',!shouldShow);
   if(shouldShow)document.getElementById('mpCategory')?.focus();
 }
 function toggleContributionForm(force){
   const form=document.getElementById('contributionForm');
   if(!form)return;
-  const shouldShow=force===true?!form.classList.contains('hidden'):force===false?false:form.classList.contains('hidden');
+  const shouldShow=typeof force==='boolean'?force:form.classList.contains('hidden');
   form.classList.toggle('hidden',!shouldShow);
   if(shouldShow)document.getElementById('cPlayerName')?.focus();
 }
