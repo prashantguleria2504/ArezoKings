@@ -2998,8 +2998,10 @@ ensureFinanceFields();wrapLegacyFunctions();
       const adj=matches.filter(m=>(m.adjustmentOwner||'')===person).reduce((s,m)=>s+num(m.adjustmentAmount),0)
         +manual.filter(a=>(a.deductFrom||a.paidBy||'')===person).reduce((s,a)=>s+num(a.amount),0);
       const settlementRows=Array.isArray(settlements)?settlements.filter(x=>(x.month||monthOf(x.date))===month&&(x.person||'')===person).reduce((s,x)=>s+num(x.amount),0):0;
-      const received=opp+play+cont+transferReceived;
-      const net=received-gp-otherPaidByPerson-adj-settlementRows;
+      // Keep Transfer payments separate from the existing Money Received figure.
+      // Net Balance = Money Received + Transferred Received - (Ground Paid + Adjustments).
+      const received=opp+play+cont;
+      const net=received+transferReceived-gp-adj;
       return {person,opp,play,cont,transferReceived,gp,adj,settlements:settlementRows,received,net};
     });
 
@@ -3076,7 +3078,7 @@ ensureFinanceFields();wrapLegacyFunctions();
       ].map(x=>'<div class="finance-summary-item '+x[3]+'"><div class="label">'+safe(x[0])+'</div><div class="value">'+cash(x[1])+'</div><div class="hint">'+safe(x[2])+'</div></div>').join('')+
       '</div>'+
       '<div class="finance-section-title">💰 Amount Currently Held by Each Person</div>'+
-      '<div class="accounts-help">Cumulative across all recorded months. <strong>Money Received</strong> is the amount collected by that person; <strong>Transferred Received</strong> shows Transfer payments received by that person. Net Balance subtracts ground payments and adjustments.</div>'+
+      '<div class="accounts-help">Cumulative across all recorded months. <strong>Money Received</strong> is the existing amount collected by that person; <strong>Transferred Received</strong> shows Transfer payments separately. <strong>Net Balance</strong> = Money Received + Transferred Received − (Ground Paid + Adjustments).</div>'+
       '<div class="table-wrap"><table class="finance-table owner-balance-table"><thead><tr><th>Person</th><th class="amount">Money Received</th><th class="amount">Transferred Received</th><th class="amount">Ground Paid</th><th class="amount">Adjustments</th><th class="amount">Net Balance</th></tr></thead><tbody>'+
       ['Neeraj','Suyog','Prashant'].map(n=>'<tr><td><strong>'+n+'</strong></td><td class="amount">'+cash(people[n].received)+'</td><td class="amount">'+cash(people[n].transferReceived)+'</td><td class="amount">'+cash(people[n].gp)+'</td><td class="amount">'+cash(people[n].adj)+'</td><td class="amount"><strong>'+cash(people[n].net)+'</strong></td></tr>').join('')+
       '</tbody></table></div>'+
