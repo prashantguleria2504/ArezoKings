@@ -392,9 +392,10 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 
   <div class="section-head">
     <h2>Ground Payments</h2>
+    <button class="secondary" type="button" onclick="toggleGroundPaymentForm()">＋ Add Ground Payment</button>
   </div>
 
-  <div class="contrib-form">
+  <div class="contrib-form hidden" id="groundPaymentForm">
     <div>
       <label>Ground Name</label>
       <select id="pGround">
@@ -444,9 +445,12 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <section class="section hidden finance-manual-payment-section manual-payments-section" id="manualPaymentsSection">
   <div class="section-head">
     <h2>💸 Manual Payments</h2>
-    <span class="payment-note">Use this for team expenses such as balls, equipment, snacks, transport and other team costs.</span>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span class="payment-note">Use this for team expenses such as balls, equipment, snacks, transport and other team costs.</span>
+      <button class="secondary" type="button" onclick="toggleManualPaymentForm()">＋ Add Manual Payment</button>
+    </div>
   </div>
-  <div class="contrib-form manual-payment-form">
+  <div class="contrib-form manual-payment-form hidden" id="manualPaymentForm">
     <div class="manual-payment-category-field"><label>Category</label><select id="mpCategory" onchange="handleManualPaymentCategoryChange()"><option value="">Select category</option><option>Equipment</option><option>Snacks / Food</option><option>Transport</option><option>Ground-related</option><option>Contribution</option><option>Transfer</option><option>Other</option><option value="__custom__">＋ Add new category...</option></select><input id="mpCustomCategory" type="text" placeholder="Enter new category" style="display:none;margin-top:6px;width:100%"></div>
     <div><label>Payment Description</label><input id="mpDescription" placeholder="e.g. Equipment, snacks, transport"></div>
     <div><label>Amount</label><input id="mpAmount" type="number" min="0" step="1" placeholder="0"></div>
@@ -490,9 +494,12 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <section class="section hidden" id="contributionsSection">
   <div class="section-head">
     <h2>💰 Contributions</h2>
-    <button class="primary" onclick="showTracker()">← Back to Matches</button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button class="secondary" type="button" onclick="toggleContributionForm()">＋ Add Contribution</button>
+      <button class="primary" onclick="showTracker()">← Back to Matches</button>
+    </div>
   </div>
-  <div class="contrib-form">
+  <div class="contrib-form hidden" id="contributionForm">
     <div><label>Player Name</label><input id="cPlayerName" placeholder="Player name"></div>
     <div><label>Amount Carry Forwarded from Last Month</label><input id="cCarry" type="number" min="0" step="1" placeholder="0"></div>
     <div>
@@ -1022,6 +1029,7 @@ function editGroundPayment(id){
   const x=groundPayments.find(a=>a.id===id);
   if(!x)return;
   editingPaymentId=id;
+  toggleGroundPaymentForm(true);
   refreshPaymentGroundDropdown(x.ground);
   document.getElementById('pMonth').value=x.month||'';
   document.getElementById('pAmount').value=x.amount||0;
@@ -1339,6 +1347,7 @@ function saveManualPayment(){
 function editManualPayment(id){
   const x=manualPayments.find(a=>a.id===id);if(!x)return;
   editingManualPaymentId=id;
+  toggleManualPaymentForm(true);
   refreshManualPaymentCategories(x.category||'Other');
   document.getElementById('mpDescription').value=x.description||'';
   document.getElementById('mpAmount').value=x.amount||0;
@@ -1561,6 +1570,7 @@ function editContributionByIndex(playerIndex){
   if(!x)return;
   editingContributionId=x.id ?? null;
   editingRecentContributionId=null;
+  toggleContributionForm(true);
   document.getElementById('cPlayerName').value=x.name||'';
   document.getElementById('cCarry').value=x.carry??0;
   document.getElementById('cRecent').value='';
@@ -1609,6 +1619,7 @@ function editRecentContributionByIndex(playerIndex,entryIndex){
 
   editingContributionId=player.id;
   editingRecentContributionId=index;
+  toggleContributionForm(true);
   document.getElementById('cPlayerName').value=player.name||'';
   document.getElementById('cCarry').value=player.carry||0;
   document.getElementById('cRecent').value=entry.amount||0;
@@ -1769,6 +1780,28 @@ function hideAllPageSections(){
   // The top month selector belongs exclusively to the Matches page.
   const monthFilter=document.getElementById('monthFilter');
   if(monthFilter)monthFilter.style.display='none';
+}
+
+function toggleGroundPaymentForm(force){
+  const form=document.getElementById('groundPaymentForm');
+  if(!form)return;
+  const shouldShow=force===true?!form.classList.contains('hidden'):force===false?false:form.classList.contains('hidden');
+  form.classList.toggle('hidden',!shouldShow);
+  if(shouldShow)document.getElementById('pGround')?.focus();
+}
+function toggleManualPaymentForm(force){
+  const form=document.getElementById('manualPaymentForm');
+  if(!form)return;
+  const shouldShow=force===true?!form.classList.contains('hidden'):force===false?false:form.classList.contains('hidden');
+  form.classList.toggle('hidden',!shouldShow);
+  if(shouldShow)document.getElementById('mpCategory')?.focus();
+}
+function toggleContributionForm(force){
+  const form=document.getElementById('contributionForm');
+  if(!form)return;
+  const shouldShow=force===true?!form.classList.contains('hidden'):force===false?false:form.classList.contains('hidden');
+  form.classList.toggle('hidden',!shouldShow);
+  if(shouldShow)document.getElementById('cPlayerName')?.focus();
 }
 
 function showPayments(){
