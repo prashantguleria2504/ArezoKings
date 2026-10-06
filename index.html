@@ -422,6 +422,24 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
       <button class="secondary" onclick="clearManualPaymentForm()">Clear</button>
     </div>
   </div>
+  <div class="manual-payment-filters" style="display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:12px 0">
+    <div>
+      <label for="manualPaymentCategoryFilter">Search by Category</label>
+      <select id="manualPaymentCategoryFilter" onchange="renderManualPayments()">
+        <option value="">All Categories</option>
+      </select>
+    </div>
+    <div>
+      <label for="manualPaymentTransferredToFilter">Search by Transferred To</label>
+      <select id="manualPaymentTransferredToFilter" onchange="renderManualPayments()">
+        <option value="">All Recipients</option>
+        <option value="Neeraj">Neeraj</option>
+        <option value="Suyog">Suyog</option>
+        <option value="Prashant">Prashant</option>
+      </select>
+    </div>
+    <button class="secondary" type="button" onclick="clearManualPaymentFilters()">Clear</button>
+  </div>
   <div class="table-wrap">
     <table class="contribution-table manual-payment-table">
       <thead><tr><th>Category</th><th>Description</th><th class="amount">Amount</th><th>Date</th><th>Payment Made By</th><th>Transferred To</th><th>Linked Adjustment</th><th>Month</th><th>Notes</th><th>Actions</th></tr></thead>
@@ -1309,14 +1327,40 @@ function clearManualPaymentForm(){
   const cb=document.getElementById('mpAddToContribution');if(cb)cb.checked=false;
   populateManualPaymentAdjustments();
 }
+function populateManualPaymentCategoryFilter(selected=''){
+  const el=document.getElementById('manualPaymentCategoryFilter');
+  if(!el)return;
+  const builtIn=['Equipment','Snacks / Food','Transport','Ground-related','Contribution','Transfer','Other'];
+  const custom=getManualPaymentCustomCategories().filter(x=>!builtIn.includes(x));
+  const categories=[...builtIn,...custom];
+  const current=selected||el.value||'';
+  el.innerHTML='<option value="">All Categories</option>'+
+    categories.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
+  el.value=current;
+}
+function clearManualPaymentFilters(){
+  const category=document.getElementById('manualPaymentCategoryFilter');
+  const transferredTo=document.getElementById('manualPaymentTransferredToFilter');
+  if(category)category.value='';
+  if(transferredTo)transferredTo.value='';
+  renderManualPayments();
+}
 function renderManualPayments(){
   syncAllManualPaymentContributions();
+  populateManualPaymentCategoryFilter();
   const body=document.getElementById('manualPaymentRows');if(!body)return;
-  if(!manualPayments.length){
+  const categoryFilter=String(document.getElementById('manualPaymentCategoryFilter')?.value||'').trim();
+  const transferredToFilter=String(document.getElementById('manualPaymentTransferredToFilter')?.value||'').trim();
+  const filteredPayments=manualPayments.filter(x=>{
+    const categoryMatch=!categoryFilter||String(x.category||'Other').trim()===categoryFilter;
+    const transferredToMatch=!transferredToFilter||String(x.transferredTo||'').trim()===transferredToFilter;
+    return categoryMatch&&transferredToMatch;
+  });
+  if(!filteredPayments.length){
     body.innerHTML='<tr><td colspan="10" class="empty">No manual payments yet.</td></tr>';
     return;
   }
-  body.innerHTML=[...manualPayments].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>{
+  body.innerHTML=[...filteredPayments].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>{
     const ids=getPaymentAdjustmentIds(x);
     const adjusted=getPaymentAdjustmentTotal(x);
     const remaining=getPaymentRemaining(x);
