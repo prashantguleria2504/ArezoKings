@@ -413,6 +413,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
     <div><label>Amount</label><input id="mpAmount" type="number" min="0" step="1" placeholder="0"></div>
     <div><label>Date</label><input id="mpDate" type="date"></div>
     <div><label>Payment Made By</label><select id="mpPaidBy"><option value="">Select person</option></select></div>
+    <div id="mpTransferredToField" style="display:none"><label>Transferred To</label><select id="mpTransferredTo"><option value="">Select person</option></select></div>
     <div><label>Linked Adjustment</label><select id="mpLinkedAdjustment"><option value="">No adjustment linked</option></select></div>
     <div class="manual-payment-contribution-option"><label><input id="mpAddToContribution" type="checkbox"> Add this payment to payer's Recent Contribution</label><small>If checked, the payment amount is added as a new Recent Contribution for the selected team member.</small></div>
     <div><label>Notes</label><input id="mpNotes" placeholder="Optional"></div>
@@ -423,7 +424,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
   </div>
   <div class="table-wrap">
     <table class="contribution-table manual-payment-table">
-      <thead><tr><th>Category</th><th>Description</th><th class="amount">Amount</th><th>Date</th><th>Payment Made By</th><th>Linked Adjustment</th><th>Month</th><th>Notes</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Category</th><th>Description</th><th class="amount">Amount</th><th>Date</th><th>Payment Made By</th><th>Transferred To</th><th>Linked Adjustment</th><th>Month</th><th>Notes</th><th>Actions</th></tr></thead>
       <tbody id="manualPaymentRows"></tbody>
     </table>
   </div>
@@ -1142,7 +1143,7 @@ function saveManualPaymentCustomCategories(list){
 function refreshManualPaymentCategories(selected=''){
   const el=document.getElementById('mpCategory');
   if(!el)return;
-  const builtIn=['Equipment','Snacks / Food','Transport','Ground-related','Contribution','Other'];
+  const builtIn=['Equipment','Snacks / Food','Transport','Ground-related','Contribution','Transfer','Other'];
   const custom=getManualPaymentCustomCategories().filter(x=>!builtIn.includes(x));
   const value=selected||el.value||'';
   el.innerHTML='<option value="">Select category</option>'
@@ -1163,6 +1164,9 @@ function handleManualPaymentCategoryChange(){
   const isNew=el.value==='__custom__';
   custom.style.display=isNew?'block':'none';
   if(!isNew)custom.value='';
+  const isTransfer=String(el.value||'').trim().toLowerCase()==='transfer';
+  const tf=document.getElementById('mpTransferredToField'); if(tf)tf.style.display=isTransfer?'block':'none';
+  if(isTransfer)populateManualPaymentTransferredTo();
 }
 function getSelectedManualPaymentCategory(){
   const el=document.getElementById('mpCategory');
@@ -1170,6 +1174,9 @@ function getSelectedManualPaymentCategory(){
   if(el.value==='__custom__')return String(document.getElementById('mpCustomCategory')?.value||'').trim();
   return el.value||'';
 }
+function populateManualPaymentTransferredTo(selected=''){const el=document.getElementById('mpTransferredTo');if(!el)return;el.innerHTML='<option value="">Select person</option>'+['Neeraj','Suyog','Prashant'].map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('');el.value=selected||'';}
+function isTransferManualPayment(p){return String(p?.category||'').trim().toLowerCase()==='transfer';}
+function isManualPaymentSettled(p){return !!p&&(isTransferManualPayment(p)||((p.settledAgainstContribution&&!getPaymentAdjustmentIds(p).length)||paymentIsFullySettled(p)));}
 function addManualPaymentCategoryIfNew(category){
   const builtIn=['Equipment','Snacks / Food','Transport','Ground-related','Contribution','Other'];
   if(category && !builtIn.includes(category)){
@@ -1188,6 +1195,8 @@ function saveManualPayment(){
   const month=date?date.slice(0,7):'';
   const linkedAdjustmentId=document.getElementById('mpLinkedAdjustment')?.value||'';
   const addToContribution=!!document.getElementById('mpAddToContribution')?.checked;
+  const transferredTo=document.getElementById('mpTransferredTo')?.value||'';
+  const isTransfer=isTransferManualPayment({category});
   const notes=document.getElementById('mpNotes')?.value.trim()||'';
   if(!category){alert('Please select a payment category.');return;}
   addManualPaymentCategoryIfNew(category);
@@ -1195,8 +1204,10 @@ function saveManualPayment(){
   if(amount<=0){alert('Please enter a valid payment amount.');return;}
   if(!date){alert('Please enter Date.');return;}
   if(!paidBy){alert('Please select Payment Made By.');return;}
+  if(isTransfer&&!transferredTo){alert('Please select Transferred To.');return;}
+  if(isTransfer&&transferredTo===paidBy){alert('Transferred To must differ from Payment Made By.');return;}
 
-  const item={id:editingManualPaymentId||('PAY-'+Date.now().toString(36).toUpperCase()),category,description,amount,date,paidBy,month,linkedAdjustmentIds:[],linkedAdjustmentId:'',addToContribution,settledAgainstContribution:addToContribution,notes:addToContribution ? ((notes?notes+' · ':'')+'Adjusted against recent contribution') : notes};
+  const item={id:editingManualPaymentId||('PAY-'+Date.now().toString(36).toUpperCase()),category,description,amount,date,paidBy,transferredTo:isTransfer?transferredTo:'',month,linkedAdjustmentIds:[],linkedAdjustmentId:'',addToContribution,settledAgainstContribution:addToContribution,notes:addToContribution ? ((notes?notes+' · ':'')+'Adjusted against recent contribution') : notes};
   const existing=editingManualPaymentId?manualPayments.find(x=>x.id===editingManualPaymentId):null;
   const oldIds=existing?getPaymentAdjustmentIds(existing):[];
   if(existing){
@@ -1237,8 +1248,10 @@ function saveManualPayment(){
     contributions.forEach(p=>{p.recentEntries=(Array.isArray(p.recentEntries)?p.recentEntries:[]).filter(e=>e.manualPaymentId!==item.id);});
   }
 
-  if(item.settledAgainstContribution){
+  if(item.settledAgainstContribution||isTransferManualPayment(item)){
     item.linkedAdjustmentIds=[];
+    if(isTransferManualPayment(item)){item.linkedAdjustmentId='';item.addToContribution=false;item.settledAgainstContribution=false;}
+    
     item.linkedAdjustmentId='';
     syncManualPaymentContribution(item);
   }else{
@@ -1264,6 +1277,7 @@ function editManualPayment(id){
   document.getElementById('mpNotes').value=x.notes||'';
   document.getElementById('mpAddToContribution').checked=!!x.addToContribution;
   populateManualPaymentPeople(x.paidBy||'');
+  populateManualPaymentTransferredTo(x.transferredTo||'');
   populateManualPaymentAdjustments(x.linkedAdjustmentId||'');
 }
 function deleteManualPayment(id){
@@ -1289,7 +1303,7 @@ function clearManualPaymentForm(){
   editingManualPaymentId=null;
   populateManualPaymentPeople();
   refreshManualPaymentCategories();
-  ['mpDescription','mpAmount','mpDate','mpPaidBy','mpLinkedAdjustment','mpNotes'].forEach(id=>{
+  ['mpDescription','mpAmount','mpDate','mpPaidBy','mpTransferredTo','mpLinkedAdjustment','mpNotes'].forEach(id=>{
     const e=document.getElementById(id);if(e)e.value='';
   });
   const cb=document.getElementById('mpAddToContribution');if(cb)cb.checked=false;
@@ -1299,7 +1313,7 @@ function renderManualPayments(){
   syncAllManualPaymentContributions();
   const body=document.getElementById('manualPaymentRows');if(!body)return;
   if(!manualPayments.length){
-    body.innerHTML='<tr><td colspan="9" class="empty">No manual payments yet.</td></tr>';
+    body.innerHTML='<tr><td colspan="10" class="empty">No manual payments yet.</td></tr>';
     return;
   }
   body.innerHTML=[...manualPayments].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>{
@@ -1308,7 +1322,7 @@ function renderManualPayments(){
     const remaining=getPaymentRemaining(x);
     const hasLinkedAdjustments=getPaymentAdjustmentIds(x).length>0;
     const fullyPaid=paymentIsFullySettled(x);
-    const status=(x.settledAgainstContribution&&!hasLinkedAdjustments)||fullyPaid
+    const status=isManualPaymentSettled(x)?
       ?'<span class="payment-paid-status">PAID</span>'
       :(hasLinkedAdjustments&&getPaymentAdjustmentTotal(x)>0
         ?'<span class="payment-partial-status">PARTIALLY PAID</span>'
@@ -2944,13 +2958,14 @@ ensureFinanceFields();wrapLegacyFunctions();
   function isAccountExpenseManualPayment(payment){
     if(!payment)return false;
     const category=String(payment.category||'').trim().toLowerCase();
-    return category!=='contribution' && !payment.addToContribution;
+    return category!=='contribution' && category!=='transfer' && !payment.addToContribution;
   }
 
   function calculate(month){
     const matches=Array.isArray(data)?data.filter(m=>monthOf(m.date)===month):[];
     const payments=Array.isArray(groundPayments)?groundPayments.filter(p=>(p.month||monthOf(p.date))===month):[];
     const otherPayments=Array.isArray(manualPayments)?manualPayments.filter(p=>(p.month||monthOf(p.date))===month):[];
+    const transferPayments=otherPayments.filter(isTransferManualPayment);
     const contrib=Array.isArray(contributions)?contributions:[];
     const manual=Array.isArray(adjustments)?adjustments.filter(a=>monthOf(a.date||'')===month):[];
 
@@ -2967,6 +2982,7 @@ ensureFinanceFields();wrapLegacyFunctions();
     const totalAdjustmentAmount=matchAdj+manualAdj;
 
     const people=['Neeraj','Suyog','Prashant'].map(person=>{
+      const transferReceived=transferPayments.filter(p=>(p.transferredTo||'')===person).reduce((s,p)=>s+num(p.amount),0);
       const opp=matches.filter(m=>(m.opponentOwner||m.opponentReceivedBy||'')===person)
         .reduce((s,m)=>s+num(m.opponentAmount),0);
       const play=matches.reduce((s,m)=>s+(Array.isArray(m.players)?m.players:[])
@@ -2982,9 +2998,9 @@ ensureFinanceFields();wrapLegacyFunctions();
       const adj=matches.filter(m=>(m.adjustmentOwner||'')===person).reduce((s,m)=>s+num(m.adjustmentAmount),0)
         +manual.filter(a=>(a.deductFrom||a.paidBy||'')===person).reduce((s,a)=>s+num(a.amount),0);
       const settlementRows=Array.isArray(settlements)?settlements.filter(x=>(x.month||monthOf(x.date))===month&&(x.person||'')===person).reduce((s,x)=>s+num(x.amount),0):0;
-      const received=opp+play+cont;
+      const received=opp+play+cont+transferReceived;
       const net=received-gp-otherPaidByPerson-adj-settlementRows;
-      return {person,opp,play,cont,gp,adj,settlements:settlementRows,received,net};
+      return {person,opp,play,cont,transferReceived,gp,adj,settlements:settlementRows,received,net};
     });
 
     return {month,groundBooking,groundPaid,otherPaid,totalPaid,opponent,players,regular,adjustments:totalAdjustmentAmount,monthAdjustments:manual,people,matches,payments,otherPayments};
@@ -3060,8 +3076,8 @@ ensureFinanceFields();wrapLegacyFunctions();
       '</div>'+
       '<div class="finance-section-title">💰 Amount Currently Held by Each Person</div>'+
       '<div class="accounts-help">Cumulative across all recorded months. <strong>Money Received</strong> is the amount collected by that person; <strong>Net Balance</strong> subtracts ground payments, adjustments and settlements.</div>'+
-      '<div class="table-wrap"><table class="finance-table owner-balance-table"><thead><tr><th>Person</th><th class="amount">Money Received</th><th class="amount">Ground Paid</th><th class="amount">Adjustments</th><th class="amount">Settled</th><th class="amount">Net Balance</th></tr></thead><tbody>'+
-      ['Neeraj','Suyog','Prashant'].map(n=>'<tr><td><strong>'+n+'</strong></td><td class="amount">'+cash(people[n].received)+'</td><td class="amount">'+cash(people[n].gp)+'</td><td class="amount">'+cash(people[n].adj)+'</td><td class="amount">'+cash(people[n].settlements)+'</td><td class="amount"><strong>'+cash(people[n].net)+'</strong></td></tr>').join('')+
+      '<div class="table-wrap"><table class="finance-table owner-balance-table"><thead><tr><th>Person</th><th class="amount">Money Received</th><th class="amount">Transferred Received</th><th class="amount">Ground Paid</th><th class="amount">Adjustments</th><th class="amount">Settled</th><th class="amount">Net Balance</th></tr></thead><tbody>'+
+      ['Neeraj','Suyog','Prashant'].map(n=>'<tr><td><strong>'+n+'</strong></td><td class="amount">'+cash(people[n].received)+'</td><td class="amount">'+cash(people[n].transferReceived)+'</td><td class="amount">'+cash(people[n].gp)+'</td><td class="amount">'+cash(people[n].adj)+'</td><td class="amount">'+cash(people[n].settlements)+'</td><td class="amount"><strong>'+cash(people[n].net)+'</strong></td></tr>').join('')+
       '</tbody></table></div>'+
       '<div class="finance-section-title manual-adjustments-title">↔ Manual Adjustments</div>'+
       '<div class="accounts-help">All manual adjustments created in Accounts & Settlement. The selected person is deducted from the adjustment amount.</div>'+
