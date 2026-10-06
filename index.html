@@ -101,6 +101,20 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .summary-monthly-table th:nth-child(n+4),.summary-monthly-table td:nth-child(n+4){width:12.8%}
 .summary-profit{color:#16734e!important}
 .summary-loss{color:#c0392b!important}
+.summary-available-dates{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.summary-available-date{display:inline-block;padding:4px 7px;border-radius:7px;background:#edf7f0;border:1px solid #c7e3ce;color:#246b43;font-size:12px;font-weight:700;white-space:nowrap}
+.summary-no-available{color:#8a9390;font-size:12px;font-style:italic}
+.summary-cumulative-row td{border-top:2px solid #aebbb2!important;border-bottom:0;background:linear-gradient(90deg,#eef5f0,#f8fbf9)!important;font-size:14px}
+.summary-cumulative-row td:first-child{color:#294c3a}
+.summary-cumulative-row .summary-profit{color:#16734e!important}
+.summary-cumulative-row .summary-loss{color:#c0392b!important}
+
+.ground-payments-section{border-top:4px solid #c49a3a;background:linear-gradient(180deg,#fffaf0 0%,#ffffff 120px)}
+.ground-payments-section>.section-head{background:linear-gradient(90deg,#fff3d6,#fffaf0);border-bottom-color:#ead9b2}
+.ground-payments-section>.section-head h2{color:#79570c}
+.manual-payments-section{border-top:4px solid #7c5aa6;background:linear-gradient(180deg,#faf5ff 0%,#ffffff 120px)}
+.manual-payments-section>.section-head{background:linear-gradient(90deg,#f1e8fb,#faf5ff);border-bottom-color:#dfd0ef}
+.manual-payments-section>.section-head h2{color:#68418d}
 .summary-controls select{font:inherit;border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff}
 @media(max-width:800px){.summary-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.summary-grid{grid-template-columns:1fr}}
@@ -370,7 +384,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
   </div>
 </section>
 
-<section class="section hidden" id="paymentsSection">
+<section class="section hidden ground-payments-section" id="paymentsSection">
   <div class="section-head">
     <h2>💳 Payments</h2>
     <button class="primary" onclick="showTracker()">← Back to Matches</button>
@@ -427,7 +441,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
   </div>
 </section>
 
-<section class="section hidden finance-manual-payment-section" id="manualPaymentsSection">
+<section class="section hidden finance-manual-payment-section manual-payments-section" id="manualPaymentsSection">
   <div class="section-head">
     <h2>💸 Manual Payments</h2>
     <span class="payment-note">Use this for team expenses such as balls, equipment, snacks, transport and other team costs.</span>
@@ -1785,7 +1799,6 @@ function showSummary(){
   hideAllPageSections();
   // Summary page contains only the cricket/monthly summary.
   document.getElementById('summarySection')?.classList.remove('hidden');
-  document.querySelector('.cards')?.classList.remove('hidden');
   renderSummary();
 }
 
@@ -1807,6 +1820,12 @@ function renderSummary(){
     return;
   }
 
+  let cumulativeGroundFee=0;
+  let cumulativeOpponentFee=0;
+  let cumulativePlayersFee=0;
+  let cumulativeTotal=0;
+  let cumulativeProfitLoss=0;
+
   monthlyBody.innerHTML=months.map(k=>{
     const monthRows=data.filter(x=>monthKey(x.date)===k);
     const scheduled=monthRows.filter(x=>String(x.opponent||'').trim());
@@ -1818,10 +1837,23 @@ function renderSummary(){
     const profitLoss=total-groundFee;
     const profitLossClass=profitLoss<0?'summary-loss':'summary-profit';
 
+    cumulativeGroundFee+=groundFee;
+    cumulativeOpponentFee+=opponentFee;
+    cumulativePlayersFee+=playersFee;
+    cumulativeTotal+=total;
+    cumulativeProfitLoss+=profitLoss;
+
+    const fmtDate=d=>new Date(d+'T00:00:00').toLocaleDateString('en-IN',{
+      day:'2-digit',month:'short',year:'numeric'
+    });
+    const availableDates=available.length
+      ? available.map(x=>`<span class="summary-available-date">${fmtDate(x.date)}</span>`).join('')
+      : '<span class="summary-no-available">None</span>';
+
     return `<tr>
       <td><strong>${monthName(k)}</strong></td>
       <td class="amount">${scheduled.length}</td>
-      <td class="amount">${available.length}</td>
+      <td class="summary-available-dates">${availableDates}</td>
       <td class="amount">${money(groundFee)}</td>
       <td class="amount">${money(opponentFee)}</td>
       <td class="amount">${money(playersFee)}</td>
@@ -1829,6 +1861,20 @@ function renderSummary(){
       <td class="amount ${profitLossClass}"><strong>${money(profitLoss)}</strong></td>
     </tr>`;
   }).join('');
+
+  monthlyBody.parentElement.querySelector('tfoot')?.remove();
+  const footer=document.createElement('tfoot');
+  footer.innerHTML=`<tr class="summary-cumulative-row">
+    <td><strong>Cumulative Total</strong></td>
+    <td class="amount">—</td>
+    <td class="amount">—</td>
+    <td class="amount"><strong>${money(cumulativeGroundFee)}</strong></td>
+    <td class="amount"><strong>${money(cumulativeOpponentFee)}</strong></td>
+    <td class="amount"><strong>${money(cumulativePlayersFee)}</strong></td>
+    <td class="amount"><strong>${money(cumulativeTotal)}</strong></td>
+    <td class="amount ${cumulativeProfitLoss<0?'summary-loss':'summary-profit'}"><strong>${money(cumulativeProfitLoss)}</strong></td>
+  </tr>`;
+  monthlyBody.parentElement.appendChild(footer);
 }
 
 function refreshAdjustmentMatchDropdown(selectedId='', currentId=''){
