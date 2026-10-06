@@ -415,7 +415,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
     <div><label>Amount</label><input id="mpAmount" type="number" min="0" step="1" placeholder="0"></div>
     <div><label>Date</label><input id="mpDate" type="date"></div>
     <div><label>Payment Made By</label><select id="mpPaidBy"><option value="">Select person</option></select></div>
-    <div id="mpTransferredToField" style="display:none"><label>Transferred To</label><select id="mpTransferredTo"><option value="">Select person</option></select></div>
+    <div id="mpTransferredToField"><label>Transferred To</label><select id="mpTransferredTo"><option value="">Select person</option><option value="Neeraj">Neeraj</option><option value="Suyog">Suyog</option><option value="Prashant">Prashant</option></select></div>
     <div><label>Linked Adjustment</label><select id="mpLinkedAdjustment"><option value="">No adjustment linked</option></select></div>
     <div class="manual-payment-contribution-option"><label><input id="mpAddToContribution" type="checkbox"> Add this payment to payer's Recent Contribution</label><small>If checked, the payment amount is added as a new Recent Contribution for the selected team member.</small></div>
     <div><label>Notes</label><input id="mpNotes" placeholder="Optional"></div>
@@ -1184,9 +1184,9 @@ function handleManualPaymentCategoryChange(){
   const isNew=el.value==='__custom__';
   custom.style.display=isNew?'block':'none';
   if(!isNew)custom.value='';
-  const isTransfer=String(el.value||'').trim().toLowerCase()==='transfer';
-  const tf=document.getElementById('mpTransferredToField'); if(tf)tf.style.display=isTransfer?'block':'none';
-  if(isTransfer)populateManualPaymentTransferredTo();
+  // Transferred To is a normal Manual Payment field and remains visible for
+  // all categories. It is required only when Category is Transfer.
+  populateManualPaymentTransferredTo(document.getElementById('mpTransferredTo')?.value||'');
 }
 function getSelectedManualPaymentCategory(){
   const el=document.getElementById('mpCategory');
