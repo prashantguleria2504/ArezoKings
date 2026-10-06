@@ -1178,7 +1178,7 @@ function populateManualPaymentTransferredTo(selected=''){const el=document.getEl
 function isTransferManualPayment(p){return String(p?.category||'').trim().toLowerCase()==='transfer';}
 function isManualPaymentSettled(p){return !!p&&(isTransferManualPayment(p)||((p.settledAgainstContribution&&!getPaymentAdjustmentIds(p).length)||paymentIsFullySettled(p)));}
 function addManualPaymentCategoryIfNew(category){
-  const builtIn=['Equipment','Snacks / Food','Transport','Ground-related','Contribution','Other'];
+  const builtIn=['Equipment','Snacks / Food','Transport','Ground-related','Contribution','Transfer','Other'];
   if(category && !builtIn.includes(category)){
     const list=getManualPaymentCustomCategories();
     if(!list.includes(category)){list.push(category);saveManualPaymentCustomCategories(list);}
@@ -1322,7 +1322,7 @@ function renderManualPayments(){
     const remaining=getPaymentRemaining(x);
     const hasLinkedAdjustments=getPaymentAdjustmentIds(x).length>0;
     const fullyPaid=paymentIsFullySettled(x);
-    const status=isManualPaymentSettled(x)?
+    const status=isManualPaymentSettled(x)
       ?'<span class="payment-paid-status">PAID</span>'
       :(hasLinkedAdjustments&&getPaymentAdjustmentTotal(x)>0
         ?'<span class="payment-partial-status">PARTIALLY PAID</span>'
@@ -1331,7 +1331,7 @@ function renderManualPayments(){
       const a=adjustments.find(z=>z.id===id);
       return a?money(a.amount)+' · '+esc(a.id)+' · '+esc(a.deductFrom||a.paidBy||''):'';
     }).filter(Boolean).join('<br>'):'—';
-    return `<tr class="manual-payment-row"><td>${esc(x.category||'Other')}</td><td>${esc(x.description||'')}</td><td class="amount">${money(remaining)}<div class="payment-linked-adjustment">Original: ${money(x.amount)} · Adjusted: ${money(adjusted)}</div></td><td>${esc(x.date||'')}</td><td>${esc(x.paidBy||'')}</td><td>${status}<div class="payment-id">Payment ID: <strong>${esc(x.id||'')}</strong></div><div class="payment-linked-adjustment">${x.settledAgainstContribution ? 'Adjusted against recent contribution' : 'Adjustment ID(s): '+linked}</div></td><td>${esc(x.month||'')}</td><td>${esc(x.notes||'')}</td><td class="actions"><button onclick="editManualPayment('${x.id}')">Edit</button><button class="danger" onclick="deleteManualPayment('${x.id}')">Delete</button></td></tr>`;
+    return `<tr class="manual-payment-row"><td>${esc(x.category||'Other')}</td><td>${esc(x.description||'')}</td><td class="amount">${money(remaining)}<div class="payment-linked-adjustment">Original: ${money(x.amount)} · Adjusted: ${money(adjusted)}</div></td><td>${esc(x.date||'')}</td><td>${esc(x.paidBy||'')}</td><td>${esc(x.transferredTo||'—')}</td><td>${status}<div class="payment-id">Payment ID: <strong>${esc(x.id||'')}</strong></div><div class="payment-linked-adjustment">${x.settledAgainstContribution ? 'Adjusted against recent contribution' : 'Adjustment ID(s): '+linked}</div></td><td>${esc(x.month||'')}</td><td>${esc(x.notes||'')}</td><td class="actions"><button onclick="editManualPayment('${x.id}')">Edit</button><button class="danger" onclick="deleteManualPayment('${x.id}')">Delete</button></td></tr>`;
   }).join('');
 }
 const CONTRIBUTION_KEY='cricketMatchContributionsV1';
