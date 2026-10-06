@@ -93,6 +93,14 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .summary-item h3{margin:0 0 8px;font-size:16px}.summary-item p{margin:5px 0;color:var(--muted);font-size:13px}
 .unbooked{color:#c0392b;font-weight:700}.booked{color:#16734e;font-weight:700}
 .summary-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--line)}
+.summary-monthly-table{min-width:1050px;table-layout:fixed}
+.summary-monthly-table th,.summary-monthly-table td{vertical-align:middle}
+.summary-monthly-table th:first-child,.summary-monthly-table td:first-child{width:14%;text-align:left}
+.summary-monthly-table th:nth-child(2),.summary-monthly-table td:nth-child(2){width:11%}
+.summary-monthly-table th:nth-child(3),.summary-monthly-table td:nth-child(3){width:11%}
+.summary-monthly-table th:nth-child(n+4),.summary-monthly-table td:nth-child(n+4){width:12.8%}
+.summary-profit{color:#16734e!important}
+.summary-loss{color:#c0392b!important}
 .summary-controls select{font:inherit;border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff}
 @media(max-width:800px){.summary-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.summary-grid{grid-template-columns:1fr}}
@@ -324,8 +332,23 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
     <h2>📊 Cricket Summary</h2>
     <button class="primary" onclick="showTracker()">← Back to Matches</button>
   </div>
-  <div class="summary-controls"><strong>Monthly slot availability</strong><span style="color:#687386;font-size:13px">Dates shown below are based on the actual match entries and their scheduled status.</span></div>
-  <div id="monthlyAvailability"></div>
+  <div class="table-wrap">
+    <table class="summary-monthly-table">
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th class="amount">Dates Scheduled</th>
+          <th class="amount">Dates Available</th>
+          <th class="amount">Ground Fee</th>
+          <th class="amount">Opponent Fee</th>
+          <th class="amount">Players Fee</th>
+          <th class="amount">Total</th>
+          <th class="amount">Profit/Loss</th>
+        </tr>
+      </thead>
+      <tbody id="monthlyAvailability"></tbody>
+    </table>
+  </div>
 </section>
 
 <section class="section hidden" id="playerContributionSummarySection">
@@ -1775,55 +1798,36 @@ function showTracker(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function renderSummary(){
-  const summaryPlayerBody=document.getElementById('summaryPlayerDetails');
-  if(summaryPlayerBody){
-    if(!contributions.length){
-      summaryPlayerBody.innerHTML='<tr><td colspan="2" class="player-summary-empty">No contribution entries yet.</td></tr>';
-      document.getElementById('summaryPlayerTotalBalance').textContent=money(0);
-    }else{
-      let totalBalance=0;
-      summaryPlayerBody.innerHTML=contributions.map(x=>{
-        const balance=getPlayerBalance(x);
-        totalBalance+=balance;
-        const cls=balance<0?'player-balance-negative':'';
-        return `<tr>
-          <td><strong>${String(x.name).replace(/</g,'&lt;')}</strong></td>
-          <td class="amount ${cls}">${money(balance)}</td>
-        </tr>`;
-      }).join('');
-      document.getElementById('summaryPlayerTotalBalance').textContent=money(totalBalance);
-    }
-  }
+  const monthlyBody=document.getElementById('monthlyAvailability');
+  if(!monthlyBody)return;
 
   const months=[...new Set(data.map(x=>monthKey(x.date)))].sort();
   if(!months.length){
-    document.getElementById('monthlyAvailability').innerHTML='<div class="empty">No match dates available yet.</div>';
+    monthlyBody.innerHTML='<tr><td colspan="8" class="empty">No match dates available yet.</td></tr>';
     return;
   }
 
-  document.getElementById('monthlyAvailability').innerHTML=months.map(k=>{
+  monthlyBody.innerHTML=months.map(k=>{
     const monthRows=data.filter(x=>monthKey(x.date)===k);
-    const unbooked=monthRows.filter(x=>!String(x.opponent||'').trim()).sort((a,b)=>a.date.localeCompare(b.date));
-    const booked=monthRows.filter(x=>String(x.opponent||'').trim()).sort((a,b)=>a.date.localeCompare(b.date));
+    const scheduled=monthRows.filter(x=>String(x.opponent||'').trim());
+    const available=monthRows.filter(x=>!String(x.opponent||'').trim());
+    const groundFee=scheduled.reduce((sum,x)=>sum+Number(x.groundAmount||0),0);
+    const opponentFee=scheduled.reduce((sum,x)=>sum+Number(x.opponentAmount||0),0);
+    const playersFee=scheduled.reduce((sum,x)=>sum+(x.players||[]).reduce((total,p)=>total+Number(p.amount||0),0),0);
+    const total=opponentFee+playersFee;
+    const profitLoss=total-groundFee;
+    const profitLossClass=profitLoss<0?'summary-loss':'summary-profit';
 
-    const fmt=d=>new Date(d+'T00:00:00').toLocaleDateString('en-IN',{
-      day:'numeric',month:'short',year:'numeric',weekday:'short'
-    });
-
-    return `<section class="section">
-      <div class="section-head">
-        <h2>${monthName(k)}</h2>
-        <span class="badge">${booked.length} booked · ${unbooked.length} not scheduled</span>
-      </div>
-      <div style="padding:16px">
-        <div><strong>Booked dates:</strong>
-          <span class="booked">${booked.length ? booked.map(x=>fmt(x.date)).join(', ') : 'None'}</span>
-        </div>
-        <div style="margin-top:10px"><strong>Not booked / Match not scheduled:</strong>
-          <span class="unbooked">${unbooked.length ? unbooked.map(x=>fmt(x.date)).join(', ') : 'None'}</span>
-        </div>
-      </div>
-    </section>`;
+    return `<tr>
+      <td><strong>${monthName(k)}</strong></td>
+      <td class="amount">${scheduled.length}</td>
+      <td class="amount">${available.length}</td>
+      <td class="amount">${money(groundFee)}</td>
+      <td class="amount">${money(opponentFee)}</td>
+      <td class="amount">${money(playersFee)}</td>
+      <td class="amount"><strong>${money(total)}</strong></td>
+      <td class="amount ${profitLossClass}"><strong>${money(profitLoss)}</strong></td>
+    </tr>`;
   }).join('');
 }
 
