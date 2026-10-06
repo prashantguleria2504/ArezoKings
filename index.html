@@ -59,15 +59,15 @@ button{cursor:pointer}.primary{background:var(--pitch)!important;color:#fff;bord
 .badge{padding:4px 8px;border-radius:20px;background:#e6f3ea;color:#176b3a;font-size:12px}.week-header{border-left:4px solid var(--pitch)}
 .week-section{overflow:hidden}
 .week-section .section-head{border-bottom-width:1px}
-.week-section.week-color-1{border-top:4px solid #3b82c4;background:linear-gradient(180deg,#f2f8fd 0%,#ffffff 115px)}
+.week-section.week-color-1{border-top:4px solid #3b82c4;background:#eef7ff}
 .week-section.week-color-1>.section-head{background:linear-gradient(90deg,#e7f2fb,#f5faff);border-bottom-color:#c9deef}.week-section.week-color-1>.section-head h2{color:#245f8f}
-.week-section.week-color-2{border-top:4px solid #2d9b63;background:linear-gradient(180deg,#f1faf5 0%,#ffffff 115px)}
+.week-section.week-color-2{border-top:4px solid #2d9b63;background:#edf9f1}
 .week-section.week-color-2>.section-head{background:linear-gradient(90deg,#e5f5eb,#f5fbf7);border-bottom-color:#c8e3d2}.week-section.week-color-2>.section-head h2{color:#24734d}
-.week-section.week-color-3{border-top:4px solid #7c5aa6;background:linear-gradient(180deg,#faf5ff 0%,#ffffff 115px)}
+.week-section.week-color-3{border-top:4px solid #7c5aa6;background:#f8f0ff}
 .week-section.week-color-3>.section-head{background:linear-gradient(90deg,#f0e8f8,#faf6ff);border-bottom-color:#dfd0ef}.week-section.week-color-3>.section-head h2{color:#68418d}
-.week-section.week-color-4{border-top:4px solid #c49a3a;background:linear-gradient(180deg,#fffaf0 0%,#ffffff 115px)}
+.week-section.week-color-4{border-top:4px solid #c49a3a;background:#fff8e8}
 .week-section.week-color-4>.section-head{background:linear-gradient(90deg,#fff3d6,#fffaf0);border-bottom-color:#ead9b2}.week-section.week-color-4>.section-head h2{color:#79570c}
-.week-section.week-color-5{border-top:4px solid #c45b4b;background:linear-gradient(180deg,#fff5f3 0%,#ffffff 115px)}
+.week-section.week-color-5{border-top:4px solid #c45b4b;background:#fff0ed}
 .week-section.week-color-5>.section-head{background:linear-gradient(90deg,#fde9e5,#fff7f5);border-bottom-color:#efcbc5;border-left:4px solid #c45b4b}.week-section.week-color-5>.section-head h2{color:#8f3e31}
 .week-section.week-color-1>.section-head{border-left:4px solid #3b82c4}
 .week-section.week-color-2>.section-head{border-left:4px solid #2d9b63}
@@ -79,13 +79,18 @@ button{cursor:pointer}.primary{background:var(--pitch)!important;color:#fff;bord
 .week-section.week-color-3{box-shadow:0 6px 18px rgba(124,90,166,.10)}
 .week-section.week-color-4{box-shadow:0 6px 18px rgba(196,154,58,.10)}
 
+.week-section .table-wrap{background:transparent}
+.week-section .match-table td{background:transparent}
+.week-section .match-table th{background:rgba(255,255,255,.48)}
+.week-section .match-table .total-row td{background:rgba(255,255,255,.55)}
+.week-section .match-table .player-details-row td{background:transparent}
 .accounts-overall-section{margin:0 16px 16px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
 .accounts-overall-section .finance-section-title,.accounts-overall-section .finance-summary-title{border-bottom:1px solid var(--line)}
-.accounts-summary-section{border-top:4px solid #176b3a;background:linear-gradient(180deg,#f0f8f2 0%,#ffffff 120px)}
+.accounts-summary-section{border-top:4px solid #176b3a;background:#edf8f0}
 .accounts-summary-section .finance-summary-title{background:linear-gradient(90deg,#e4f2e8,#f4faf6);color:#124b2d}
-.accounts-held-section{border-top:4px solid #3b82c4;background:linear-gradient(180deg,#f2f8fd 0%,#ffffff 120px)}
+.accounts-held-section{border-top:4px solid #3b82c4;background:#eef7ff}
 .accounts-held-section .finance-section-title{background:linear-gradient(90deg,#e7f2fb,#f5faff);color:#245f8f;border-left:0}
-.accounts-adjustments-section{border-top:4px solid #c95b4a;background:linear-gradient(180deg,#fff5f3 0%,#ffffff 120px)}
+.accounts-adjustments-section{border-top:4px solid #c95b4a;background:#fff0ed}
 .accounts-adjustments-section .finance-section-title{background:linear-gradient(90deg,#fde9e5,#fff7f5);color:#8f3e31;border-left:4px solid #c95b4a}
 .accounts-summary-section .finance-summary-title{border-left:4px solid #176b3a}
 .accounts-held-section .finance-section-title{border-left:4px solid #3b82c4}
@@ -98,6 +103,11 @@ button{cursor:pointer}.primary{background:var(--pitch)!important;color:#fff;bord
 .accounts-adjustments-section .manual-adjustments-wrap{margin:0 16px 18px}
 .accounts-held-section .table-wrap{margin:0 16px 18px}
 
+.accounts-held-section .finance-table td,
+.accounts-adjustments-section .finance-table td{background:transparent}
+.accounts-held-section .finance-table th,
+.accounts-adjustments-section .finance-table th{background:rgba(255,255,255,.5)}
+.accounts-adjustments-section .finance-table .empty{background:transparent}
 footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 @media(max-width:800px){.cards{grid-template-columns:repeat(2,1fr)}.form-grid{grid-template-columns:1fr 1fr}.hero h1{font-size:23px}}
 @media(max-width:520px){.container{padding:12px}.cards{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}.hero{padding:18px}.toolbar{display:grid;grid-template-columns:1fr 1fr}.toolbar button,.toolbar select{width:100%}}
