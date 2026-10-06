@@ -1728,6 +1728,10 @@ function hideAllPageSections(){
     'weeks'
   ].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
   document.querySelector('.cards')?.classList.add('hidden');
+
+  // The top month selector belongs exclusively to the Matches page.
+  const monthFilter=document.getElementById('monthFilter');
+  if(monthFilter)monthFilter.style.display='none';
 }
 
 function showPayments(){
@@ -1764,6 +1768,8 @@ function showSummary(){
 
 function showTracker(){
   hideAllPageSections();
+  const monthFilter=document.getElementById('monthFilter');
+  if(monthFilter)monthFilter.style.display='';
   document.getElementById('weeks')?.classList.remove('hidden');
   document.querySelector('.cards')?.classList.remove('hidden');
   window.scrollTo({top:0,behavior:'smooth'});
