@@ -123,9 +123,10 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .summary-monthly-table{min-width:1050px;table-layout:fixed}
 .summary-monthly-table th,.summary-monthly-table td{vertical-align:middle}
 .summary-monthly-table th:first-child,.summary-monthly-table td:first-child{width:14%;text-align:left}
-.summary-monthly-table th:nth-child(2),.summary-monthly-table td:nth-child(2){width:11%}
-.summary-monthly-table th:nth-child(3),.summary-monthly-table td:nth-child(3){width:11%}
-.summary-monthly-table th:nth-child(n+4),.summary-monthly-table td:nth-child(n+4){width:12.8%}
+.summary-monthly-table th:nth-child(2),.summary-monthly-table td:nth-child(2){width:15%;text-align:center}
+.summary-monthly-table th:nth-child(n+3),.summary-monthly-table td:nth-child(n+3){width:14.2%}
+.summary-monthly-table .summary-available-dates{vertical-align:middle;text-align:center}
+.summary-monthly-table .summary-available-date{margin:2px 0}
 .summary-profit{color:#16734e!important}
 .summary-loss{color:#c0392b!important}
 .summary-available-dates{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
@@ -378,8 +379,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
       <thead>
         <tr>
           <th>Month</th>
-          <th class="amount">Dates Scheduled</th>
-          <th class="amount">Dates Available</th>
+          <th class="summary-available-header">Dates Available</th>
           <th class="amount">Ground Fee</th>
           <th class="amount">Opponent Fee</th>
           <th class="amount">Players Fee</th>
@@ -1876,7 +1876,7 @@ function renderSummary(){
 
   const months=[...new Set(data.map(x=>monthKey(x.date)))].sort();
   if(!months.length){
-    monthlyBody.innerHTML='<tr><td colspan="8" class="empty">No match dates available yet.</td></tr>';
+    monthlyBody.innerHTML='<tr><td colspan="7" class="empty">No match dates available yet.</td></tr>';
     return;
   }
 
@@ -1912,7 +1912,6 @@ function renderSummary(){
 
     return `<tr>
       <td><strong>${monthName(k)}</strong></td>
-      <td class="amount">${scheduled.length}</td>
       <td class="summary-available-dates">${availableDates}</td>
       <td class="amount">${money(groundFee)}</td>
       <td class="amount">${money(opponentFee)}</td>
@@ -1926,8 +1925,7 @@ function renderSummary(){
   const footer=document.createElement('tfoot');
   footer.innerHTML=`<tr class="summary-cumulative-row">
     <td><strong>Cumulative Total</strong></td>
-    <td class="amount">—</td>
-    <td class="amount">—</td>
+    <td class="summary-available-dates">—</td>
     <td class="amount"><strong>${money(cumulativeGroundFee)}</strong></td>
     <td class="amount"><strong>${money(cumulativeOpponentFee)}</strong></td>
     <td class="amount"><strong>${money(cumulativePlayersFee)}</strong></td>
