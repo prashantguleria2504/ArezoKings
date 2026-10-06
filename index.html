@@ -48,7 +48,7 @@ button{cursor:pointer}.primary{background:var(--pitch)!important;color:#fff;bord
 .config-status.inactive{color:#c0392b}
 .config-action-row{display:flex;gap:5px;flex-wrap:wrap;justify-content:center}
 .config-action-row button{font-size:11px;padding:6px 7px}
-.config-permission-legend{padding:10px 16px;border-top:1px solid var(--line);font-size:11px;color:#687386;background:#fafbfd}
+.config-permission-legend{padding:10px 16px;border-top:1px solid var(--line);font-size:11px;color:#687386;background:#fafbfd}.config-cleanup-card{margin:14px 16px 16px;padding:16px;border:1px solid #f0c8c2;border-left:5px solid #c0392b;border-radius:9px;background:#fff5f3}.config-cleanup-card h3{margin:0 0 6px;color:#a52d22;font-size:15px}.config-cleanup-card p{margin:0 0 10px;color:#6f3b35;font-size:12px;line-height:1.5}.config-cleanup-button{background:#fff0ee!important;color:#b42318!important;border-color:#e7aaa2!important;font-weight:800}.cleanup-warning{display:none;margin-top:12px;padding:14px;border:1px solid #e2a59c;border-radius:8px;background:#fff}.cleanup-warning.visible{display:block}.cleanup-warning-title{font-weight:800;color:#a52d22;margin-bottom:7px}.cleanup-warning-text{font-size:12px;color:#5f4540;line-height:1.5;margin-bottom:10px}.cleanup-accept{display:flex;align-items:flex-start;gap:8px;font-size:12px;font-weight:700;color:#4d4542;margin-bottom:12px}.cleanup-accept input{width:17px;height:17px;margin:0;accent-color:#c0392b;flex:0 0 auto}.cleanup-actions{display:flex;gap:8px;flex-wrap:wrap}.cleanup-actions button{padding:8px 12px}.cleanup-actions .danger:disabled{opacity:.45;cursor:not-allowed}.cleanup-progress{margin-top:9px;font-size:12px;font-weight:700;min-height:16px;color:#a52d22}.cleanup-progress.success{color:#16734e}
 .config-permission-legend strong{color:#176b3a}
 @media(max-width:900px){.config-users-table{font-size:12px}.config-users-table th,.config-users-table td{padding:7px 4px}}
 .danger{background:#fff0ee!important;color:var(--danger);border-color:#f1cbc6!important}
@@ -629,7 +629,22 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
     <button class="secondary" type="button" onclick="loadConfiguration()">↻ Refresh</button>
     <span class="config-note">Only an Administrator can change roles or permissions. The login must already exist in Supabase Authentication.</span>
   </div>
-  <div id="configurationMessage" class="config-message"></div>
+  <div id="configurationMessage" class="config-message"></div><div class="config-cleanup-card">
+    <h3>⚠️ Cleanup All Application Data</h3>
+    <p>This permanently removes ArezoKings match, contribution, payment, ground, manual payment, adjustment and carry-forward data from the website and clears the corresponding transactional data stored in Supabase. User accounts, roles and permissions are retained so administrators can continue to access Configuration.</p>
+    <button class="config-cleanup-button" type="button" onclick="openCleanupWarning()">🗑 Cleanup</button>
+    <div id="cleanupWarning" class="cleanup-warning">
+      <div class="cleanup-warning-title">This action cannot be undone.</div>
+      <div class="cleanup-warning-text">All recorded cricket and financial data will be cleared. Make sure you have a backup before continuing.</div>
+      <label class="cleanup-accept"><input id="cleanupAccept" type="checkbox" onchange="toggleCleanupDeleteButton(this.checked)"> <span>I accept</span></label>
+      <div class="cleanup-actions">
+        <button id="cleanupDeleteButton" class="danger" type="button" disabled onclick="cleanupAllApplicationData()">Delete Data</button>
+        <button class="secondary" type="button" onclick="closeCleanupWarning()">Cancel</button>
+      </div>
+      <div id="cleanupProgress" class="cleanup-progress"></div>
+    </div>
+  </div>
+
   <div class="table-wrap config-table-wrap">
     <table class="config-users-table">
       <thead>
@@ -3573,6 +3588,106 @@ async function configDeleteUser(userId){
     await loadConfiguration();
   }catch(err){
     configSetMessage('User could not be removed: '+(err.message||String(err)));
+  }
+}
+
+function openCleanupWarning(){
+  if(!configIsAdmin()){
+    alert('Administrator access is required.');
+    return;
+  }
+  const panel=document.getElementById('cleanupWarning');
+  const checkbox=document.getElementById('cleanupAccept');
+  const button=document.getElementById('cleanupDeleteButton');
+  const progress=document.getElementById('cleanupProgress');
+  if(panel)panel.classList.add('visible');
+  if(checkbox)checkbox.checked=false;
+  if(button)button.disabled=true;
+  if(progress){progress.className='cleanup-progress';progress.textContent='';}
+}
+
+function closeCleanupWarning(){
+  const panel=document.getElementById('cleanupWarning');
+  if(panel)panel.classList.remove('visible');
+  const checkbox=document.getElementById('cleanupAccept');
+  const button=document.getElementById('cleanupDeleteButton');
+  const progress=document.getElementById('cleanupProgress');
+  if(checkbox)checkbox.checked=false;
+  if(button)button.disabled=true;
+  if(progress){progress.className='cleanup-progress';progress.textContent='';}
+}
+
+function toggleCleanupDeleteButton(accepted){
+  const button=document.getElementById('cleanupDeleteButton');
+  if(button)button.disabled=!accepted;
+}
+
+async function cleanupAllApplicationData(){
+  if(!configIsAdmin())return;
+
+  const checkbox=document.getElementById('cleanupAccept');
+  const button=document.getElementById('cleanupDeleteButton');
+  const progress=document.getElementById('cleanupProgress');
+  if(!checkbox?.checked||!button||button.disabled)return;
+
+  button.disabled=true;
+  if(progress){progress.className='cleanup-progress';progress.textContent='Deleting application data…';}
+
+  try{
+    if(!supabaseClient||!cloudUser)throw new Error('Supabase session is not available.');
+
+    // Clear the shared transactional record while retaining app_users/app_permissions
+    // so the administrator can continue to access Configuration after cleanup.
+    const result=await supabaseClient.from('team_state').update({
+      matches:[],
+      contributions:[],
+      ground_payments:[],
+      ground_names:[],
+      updated_at:new Date().toISOString()
+    }).eq('id',true);
+    if(result.error)throw result.error;
+
+    // Clear every browser-side copy of application data as well.
+    localStorage.removeItem(KEY);
+    localStorage.removeItem(CONTRIBUTION_KEY);
+    localStorage.removeItem(PAYMENT_KEY);
+    localStorage.removeItem(MANUAL_PAYMENT_KEY);
+    localStorage.removeItem(FINANCE_KEY);
+    localStorage.removeItem('arezoKingsGroundsV1');
+
+    data=[];
+    contributions=[];
+    groundPayments=[];
+    manualPayments=[];
+    adjustments=[];
+    financeState={version:2,adjustments:[],carryForwardAmount:0};
+    carryForwardAmount=0;
+
+    // Refresh all in-memory/UI state without logging the administrator out.
+    render();
+    renderContributions();
+    renderGroundPayments();
+    refreshGroundDropdown();
+    refreshPaymentGroundDropdown();
+    if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();
+    if(typeof loadConfiguration==='function')await loadConfiguration();
+
+    if(progress){
+      progress.className='cleanup-progress success';
+      progress.textContent='All application data has been deleted successfully.';
+    }
+    configSetMessage('All match and financial application data has been cleared. User access and permissions were retained.','success');
+    const accept=document.getElementById('cleanupAccept');
+    if(accept)accept.checked=false;
+    setTimeout(()=>closeCleanupWarning(),1800);
+  }catch(err){
+    console.error('Application cleanup failed:',err);
+    if(progress){
+      progress.className='cleanup-progress';
+      progress.textContent='Cleanup failed: '+(err.message||String(err));
+    }
+    button.disabled=!document.getElementById('cleanupAccept')?.checked;
+    configSetMessage('Application data could not be fully cleared: '+(err.message||String(err)));
   }
 }
 
