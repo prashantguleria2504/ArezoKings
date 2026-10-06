@@ -2986,8 +2986,18 @@ function fmtFinanceDate(d){return d?new Date(d+'T00:00:00').toLocaleDateString('
 
 function openAdjustmentForm(id=null){
   const a=id?adjustments.find(x=>x.id===id):null;
+  const currentLinkedId=a?.linkedPaymentId||'';
+
+  // Settled manual payments cannot be selected for a new adjustment.
+  // When editing an existing adjustment, retain its current linked payment
+  // so the existing record remains editable.
+  const availableManualPayments=(Array.isArray(manualPayments)?manualPayments:[]).filter(p=>{
+    if(p.id===currentLinkedId)return true;
+    return !isManualPaymentSettled(p);
+  });
+
   const host=document.getElementById('financeModalHost');
-  host.innerHTML='<div class="backup-modal-backdrop"><div class="backup-modal"><h2>'+ (a?'Edit':'Add') +' Adjustment</h2><p>Use this for reciprocal ground-slot arrangements or any amount that must be applied to a different month.</p><div class="finance-form"><div><label>Adjustment Date</label><input id="fAdjDate" type="date" value="'+(a?.date||new Date().toISOString().slice(0,10))+'"></div><div><label>Amount</label><input id="fAdjAmount" type="number" min="0" step="1" value="'+(a?.amount||'')+'"></div><div><label>Deduct From Net Balance</label><select id="fAdjPaidBy">'+financePersonOptions(a?.deductFrom||a?.paidBy||'')+'</select></div><div><label>Linked Manual Payment</label><select id="fAdjLinkedPayment"><option value="">No payment linked</option>'+((Array.isArray(manualPayments)?manualPayments:[]).map(p=>'<option value="'+esc(p.id)+'" '+(a?.linkedPaymentId===p.id?'selected':'')+'>'+esc((p.id||'')+' · '+(p.date||'')+' · '+money(p.amount)+' · '+(p.description||'Payment')+' · '+(p.paidBy||''))+'</option>').join(''))+'</select></div><div><label>Payee / From</label><input id="fAdjPayee" value="'+esc(a?.payee||'')+'" placeholder="e.g. Team B"></div><div style="grid-column:span 2"><label>Reason</label><input id="fAdjReason" value="'+esc(a?.reason||'')+'" placeholder="e.g. Reciprocal ground slot adjustment"></div><div class="form-actions"><button class="primary" onclick="saveAdjustment(\''+(id||'')+'\')">Save Adjustment</button><button class="secondary" onclick="closeFinanceModal()">Cancel</button></div></div></div></div>';
+  host.innerHTML='<div class="backup-modal-backdrop"><div class="backup-modal"><h2>'+ (a?'Edit':'Add') +' Adjustment</h2><p>Use this for reciprocal ground-slot arrangements or any amount that must be applied to a different month.</p><div class="finance-form"><div><label>Adjustment Date</label><input id="fAdjDate" type="date" value="'+(a?.date||new Date().toISOString().slice(0,10))+'"></div><div><label>Amount</label><input id="fAdjAmount" type="number" min="0" step="1" value="'+(a?.amount||'')+'"></div><div><label>Deduct From Net Balance</label><select id="fAdjPaidBy">'+financePersonOptions(a?.deductFrom||a?.paidBy||'')+'</select></div><div><label>Linked Manual Payment</label><select id="fAdjLinkedPayment"><option value="">No payment linked</option>'+availableManualPayments.map(p=>'<option value="'+esc(p.id)+'" '+(currentLinkedId===p.id?'selected':'')+'>'+esc((p.id||'')+' · '+(p.date||'')+' · '+money(p.amount)+' · '+(p.description||'Payment')+' · '+(p.paidBy||''))+'</option>').join('')+'</select></div><div><label>Payee / From</label><input id="fAdjPayee" value="'+esc(a?.payee||'')+'" placeholder="e.g. Team B"></div><div style="grid-column:span 2"><label>Reason</label><input id="fAdjReason" value="'+esc(a?.reason||'')+'" placeholder="e.g. Reciprocal ground slot adjustment"></div><div class="form-actions"><button class="primary" onclick="saveAdjustment(\''+(id||'')+'\')">Save Adjustment</button><button class="secondary" onclick="closeFinanceModal()">Cancel</button></div></div></div></div>';
 }
 function removeManualPaymentContribution(paymentId){
   if(!paymentId)return;
@@ -3029,6 +3039,10 @@ function saveAdjustment(id){
   if(linkedPaymentId){
     const payment=manualPayments.find(x=>x.id===linkedPaymentId);
     if(!payment){alert('The selected payment could not be found.');return;}
+    if(!id && isManualPaymentSettled(payment)){
+      alert('This manual payment is already Settled and cannot be linked to a new adjustment.');
+      return;
+    }
     const currentIds=getPaymentAdjustmentIds(payment).filter(x=>x!==item.id);
     const allocated=currentIds.reduce((sum,aid)=>sum+Number(adjustments.find(a=>a.id===aid)?.amount||0),0);
     const available=Math.max(0,Number(payment.amount||0)-allocated);
