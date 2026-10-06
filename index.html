@@ -1330,13 +1330,47 @@ function deleteManualPayment(id){
 }
 function clearManualPaymentForm(){
   editingManualPaymentId=null;
+
+  // Reset every Manual Payment field to its initial/default state.
+  const category=document.getElementById('mpCategory');
+  if(category){
+    category.value='';
+    handleManualPaymentCategoryChange();
+  }
+
+  const customCategory=document.getElementById('mpCustomCategory');
+  if(customCategory){
+    customCategory.value='';
+    customCategory.style.display='none';
+  }
+
+  const description=document.getElementById('mpDescription');
+  if(description)description.value='';
+
+  const amount=document.getElementById('mpAmount');
+  if(amount)amount.value='';
+
+  const date=document.getElementById('mpDate');
+  if(date)date.value='';
+
+  const paidBy=document.getElementById('mpPaidBy');
+  if(paidBy)paidBy.value='';
+
+  const transferredTo=document.getElementById('mpTransferredTo');
+  if(transferredTo)transferredTo.value='';
+
+  const linkedAdjustment=document.getElementById('mpLinkedAdjustment');
+  if(linkedAdjustment)linkedAdjustment.value='';
+
+  const notes=document.getElementById('mpNotes');
+  if(notes)notes.value='';
+
+  const addToContribution=document.getElementById('mpAddToContribution');
+  if(addToContribution)addToContribution.checked=false;
+
   populateManualPaymentPeople();
-  refreshManualPaymentCategories();
-  ['mpDescription','mpAmount','mpDate','mpPaidBy','mpTransferredTo','mpLinkedAdjustment','mpNotes'].forEach(id=>{
-    const e=document.getElementById(id);if(e)e.value='';
-  });
-  const cb=document.getElementById('mpAddToContribution');if(cb)cb.checked=false;
-  populateManualPaymentAdjustments();
+  populateManualPaymentTransferredTo('');
+  populateManualPaymentAdjustments('');
 }
 function populateManualPaymentCategoryFilter(selected=''){
   const el=document.getElementById('manualPaymentCategoryFilter');
