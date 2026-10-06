@@ -1081,7 +1081,7 @@ function syncManualPaymentContribution(payment){
       : 'Manual payment · '+(payment.description||'Payment'),
     // Preserve the manually selected owner. The payment payer is not automatically
     // the owner of the contribution amount, so the owner checkboxes remain editable.
-    receivedBy:existingEntry?.receivedBy||''
+    receivedBy:payment.transferredTo||existingEntry?.receivedBy||''
   };
   if(idx>=0)Object.assign(player.recentEntries[idx],contributionEntry);
   else player.recentEntries.push(contributionEntry);
@@ -1227,7 +1227,12 @@ function saveManualPayment(){
   if(isTransfer&&!transferredTo){alert('Please select Transferred To.');return;}
   if(isTransfer&&transferredTo===paidBy){alert('Transferred To must differ from Payment Made By.');return;}
 
-  const item={id:editingManualPaymentId||('PAY-'+Date.now().toString(36).toUpperCase()),category,description,amount,date,paidBy,transferredTo:transferredTo||'',month,linkedAdjustmentIds:[],linkedAdjustmentId:'',addToContribution,settledAgainstContribution:addToContribution,notes:addToContribution ? ((notes?notes+' · ':'')+'Adjusted against recent contribution') : notes};
+  const item={id:editingManualPaymentId||('PAY-'+Date.now().toString(36).toUpperCase()),category,description,amount,date,paidBy,transferredTo:transferredTo||'',month,linkedAdjustmentIds:[],linkedAdjustmentId:'',addToContribution,settledAgainstContribution:addToContribution,notes:(()=>{
+      const cleanNotes=String(notes||'').replace(/(\s*·\s*Adjusted against recent contribution)+\s*$/i,'').trim();
+      return addToContribution
+        ? (cleanNotes ? cleanNotes+' · ' : '')+'Adjusted against recent contribution'
+        : cleanNotes;
+    })()};
   const existing=editingManualPaymentId?manualPayments.find(x=>x.id===editingManualPaymentId):null;
   const oldIds=existing?getPaymentAdjustmentIds(existing):[];
   if(existing){
