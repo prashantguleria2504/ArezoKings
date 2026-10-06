@@ -1909,7 +1909,7 @@ function renderSummary(){
     const monthRows=data.filter(x=>monthKey(x.date)===k);
     const scheduled=monthRows.filter(x=>String(x.opponent||'').trim());
     const available=monthRows.filter(x=>!String(x.opponent||'').trim());
-    const groundFee=scheduled.reduce((sum,x)=>sum+Number(x.groundAmount||0),0);
+    const groundFee=monthRows.reduce((sum,x)=>sum+Number(x.groundAmount||0),0);
     const opponentFee=scheduled.reduce((sum,x)=>sum+Number(x.opponentAmount||0),0);
     const playersFee=scheduled.reduce((sum,x)=>sum+(x.players||[]).reduce((total,p)=>total+Number(p.amount||0),0),0);
     const total=opponentFee+playersFee;
