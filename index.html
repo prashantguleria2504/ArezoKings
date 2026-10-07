@@ -710,7 +710,7 @@ async function loadCloudState(){
   if(row){
     data=Array.isArray(row.matches)?row.matches:[];
     contributions=Array.isArray(row.contributions)?row.contributions:[];
-    groundPayments=Array.isArray(row.ground_payments)?row.ground_payments:[];
+    groundPayments=Array.isArray(row.ground_payments)?row.ground_payments.map(p=>({...p,paidBy:String(p?.paidBy||p?.payee||'').trim()})):[];
     manualPayments=Array.isArray(row.manual_payments)?row.manual_payments:[];
     const cloudFinance=row.finance_state&&typeof row.finance_state==='object'?row.finance_state:{};
     adjustments=Array.isArray(cloudFinance.adjustments)?cloudFinance.adjustments:[];
@@ -730,7 +730,7 @@ async function loadCloudState(){
     id:true,
     matches:Array.isArray(data)?data:[],
     contributions:Array.isArray(contributions)?contributions:[],
-    ground_payments:Array.isArray(groundPayments)?groundPayments:[],
+    ground_payments:Array.isArray(groundPayments)?groundPayments.map(p=>({...p,paidBy:String(p?.paidBy||p?.payee||'').trim()})):[],
     manual_payments:Array.isArray(manualPayments)?manualPayments:[],
     finance_state:{version:2,adjustments:Array.isArray(adjustments)?adjustments:[],carryForwardAmount:Number(carryForwardAmount||0)},
     ground_names:getGrounds(),
@@ -1071,7 +1071,7 @@ function saveGroundPayment(){
 
   const item={
     id:editingPaymentId||crypto.randomUUID(),
-    ground,month,amount,date,payee
+    ground,month,amount,date,payee,paidBy:payee
   };
   const existing=editingPaymentId?groundPayments.find(x=>x.id===editingPaymentId):null;
   if(existing)Object.assign(existing,item);
@@ -1091,7 +1091,7 @@ function editGroundPayment(id){
   document.getElementById('pMonth').value=x.month||'';
   document.getElementById('pAmount').value=x.amount||0;
   document.getElementById('pDate').value=x.date||'';
-  document.getElementById('pPayee').value=x.payee||'';
+  document.getElementById('pPayee').value=x.payee||x.paidBy||'';
   document.getElementById('pGround').value=x.ground||'';
   document.getElementById('pGround').focus();
 }
@@ -3054,7 +3054,7 @@ function wrapLegacyFunctions(){
     document.getElementById('mOpponentReceivedBy').value=x?.opponentReceivedBy||x?.opponentOwner||'';
   };
   const oldEditPayment=window.editGroundPayment;
-  window.editGroundPayment=function(id){oldEditPayment(id);ensureFinanceFields();const x=groundPayments.find(a=>a.id===id);document.getElementById('pPaidBy').value=x?.paidBy||'';};
+  window.editGroundPayment=function(id){oldEditPayment(id);ensureFinanceFields();const x=groundPayments.find(a=>a.id===id);document.getElementById('pPaidBy').value=x?.paidBy||x?.payee||'';};
   const oldEditRecent=window.editRecentContributionByIndex;
   window.editRecentContributionByIndex=function(pi,ei){oldEditRecent(pi,ei);ensureFinanceFields();const p=contributions[Number(pi)],e=p?.recentEntries?.[Number(ei)];document.getElementById('cReceivedBy').value=e?.receivedBy||'';};
   const oldEditContribution=window.editContribution;
@@ -3323,7 +3323,7 @@ ensureFinanceFields();wrapLegacyFunctions();
       const cont=contrib.reduce((s,p)=>s+(Array.isArray(p.recentEntries)?p.recentEntries:[])
         .filter(e=>monthOf(e.date)===month&&(e.receivedBy||'')===person)
         .reduce((a,e)=>a+num(e.amount),0),0);
-      const gp=payments.filter(p=>(p.paidBy||'')===person).reduce((s,p)=>s+num(p.amount),0);
+      const gp=payments.filter(p=>String(p.paidBy||p.payee||'').trim()===person).reduce((s,p)=>s+num(p.amount),0);
       const otherPaidByPerson=otherPayments
         .filter(p=>isAccountExpenseManualPayment(p)&&(p.paidBy||'')===person)
         .reduce((s,p)=>s+getPaymentRemaining(p),0);
