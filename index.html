@@ -2710,7 +2710,9 @@ refreshGroundDropdown();
 
 async function initializeCloudApp(){
   try{
-    // Preserve this browser's old local data before replacing it with cloud state.
+    // Snapshot browser data BEFORE cloud loading. loadCloudState() updates the
+    // browser cache from Supabase, so this snapshot is required to safely
+    // migrate records created before cloud persistence was introduced.
     const localMatches=JSON.parse(localStorage.getItem(KEY)||'[]');
     const localContrib=JSON.parse(localStorage.getItem(CONTRIBUTION_KEY)||'[]');
     const localPayments=JSON.parse(localStorage.getItem(PAYMENT_KEY)||'[]');
@@ -2718,6 +2720,61 @@ async function initializeCloudApp(){
     const localFinance=JSON.parse(localStorage.getItem(FINANCE_KEY)||'{}');
     const localAdjustments=Array.isArray(localFinance?.adjustments)?localFinance.adjustments:[];
     const localCarryForward=Number(localFinance?.carryForwardAmount||0);
+
+    await loadCloudState();
+    if(typeof loadConfigurationAccess==='function')await loadConfigurationAccess();
+
+    const localManualMissing=localManualPayments.filter(lp=>
+      !manualPayments.some(cp=>String(cp?.id||'')===String(lp?.id||''))
+    );
+    const localAdjustmentsMissing=localAdjustments.filter(la=>
+      !adjustments.some(ca=>String(ca?.id||'')===String(la?.id||''))
+    );
+    const localCarryForwardMissing=
+      localCarryForward!==0 && Number(carryForwardAmount||0)===0;
+
+    // The cloud is authoritative once populated, but records that exist only
+    // in this browser are offered for one-time migration instead of being
+    // silently discarded.
+    const missingFinanceData=
+      localManualMissing.length>0 ||
+      localAdjustmentsMissing.length>0 ||
+      localCarryForwardMissing;
+
+    if(missingFinanceData){
+      const parts=[];
+      if(localManualMissing.length)parts.push(localManualMissing.length+' Manual Payment(s)');
+      if(localAdjustmentsMissing.length)parts.push(localAdjustmentsMissing.length+' Adjustment(s)');
+      if(localCarryForwardMissing)parts.push('Carry Forward Amount');
+
+      if(confirm('Additional finance data was found in this browser that is not in the shared cloud database:\n\n'+parts.join(', ')+'.\n\nUpload the missing records now?')){
+        if(localManualMissing.length){
+          manualPayments=[...(Array.isArray(manualPayments)?manualPayments:[]),...localManualMissing];
+        }
+        if(localAdjustmentsMissing.length){
+          adjustments=[...(Array.isArray(adjustments)?adjustments:[]),...localAdjustmentsMissing];
+        }
+        if(localCarryForwardMissing)carryForwardAmount=localCarryForward;
+
+        financeState={version:2,adjustments,carryForwardAmount};
+        localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
+        localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
+        localStorage.setItem(FINANCE_KEY,JSON.stringify(financeState));
+        await saveCloudState();
+      }
+    }
+
+    // If this is a genuinely empty cloud state, offer to migrate the complete
+    // old browser dataset. This is deliberately after loadCloudState() but uses
+    // the pre-load snapshots above, so nothing can be lost by the cloud read.
+    const cloudHasData=
+      data.length>0 ||
+      contributions.length>0 ||
+      groundPayments.length>0 ||
+      manualPayments.length>0 ||
+      adjustments.length>0 ||
+      Number(carryForwardAmount||0)!==0;
+
     const localHasData=
       (Array.isArray(localMatches)&&localMatches.length>0) ||
       (Array.isArray(localContrib)&&localContrib.length>0) ||
@@ -2726,17 +2783,6 @@ async function initializeCloudApp(){
       localAdjustments.length>0 ||
       localCarryForward!==0;
 
-    const cloudLoaded=await loadCloudState();
-    if(typeof loadConfigurationAccess==='function')await loadConfigurationAccess();
-    let cloudHasData=
-      data.length>0 ||
-      contributions.length>0 ||
-      groundPayments.length>0 ||
-      manualPayments.length>0 ||
-      adjustments.length>0 ||
-      Number(carryForwardAmount||0)!==0;
-
-    // First cloud login: offer to migrate the data already stored in this browser.
     if(!cloudHasData && localHasData){
       if(confirm('Existing ArezoKings data was found in this browser.\n\nUpload it to the shared cloud database now?')){
         data=Array.isArray(localMatches)?localMatches:[];
@@ -2746,21 +2792,12 @@ async function initializeCloudApp(){
         adjustments=localAdjustments;
         carryForwardAmount=localCarryForward;
         financeState={version:2,adjustments,carryForwardAmount};
-        await saveCloudState();
-        cloudHasData=true;
-      }
-    }else if(
-      (Array.isArray(localManualPayments)&&localManualPayments.length>0&&manualPayments.length===0) ||
-      (localAdjustments.length>0&&adjustments.length===0) ||
-      (localCarryForward!==0&&Number(carryForwardAmount||0)===0)
-    ){
-      // Preserve finance records created in this browser before the cloud
-      // finance fields were introduced. Migrate only missing finance data.
-      if(confirm('Additional finance data was found in this browser but is not yet in the shared cloud database.\n\nUpload the missing finance data now?')){
-        if(manualPayments.length===0)manualPayments=localManualPayments;
-        if(adjustments.length===0)adjustments=localAdjustments;
-        if(Number(carryForwardAmount||0)===0)carryForwardAmount=localCarryForward;
-        financeState={version:2,adjustments,carryForwardAmount};
+
+        localStorage.setItem(KEY,JSON.stringify(data));
+        localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
+        localStorage.setItem(PAYMENT_KEY,JSON.stringify(groundPayments));
+        localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
+        localStorage.setItem(FINANCE_KEY,JSON.stringify(financeState));
         await saveCloudState();
       }
     }
@@ -2774,9 +2811,6 @@ async function initializeCloudApp(){
     showApp();
   }catch(err){
     console.error('Cloud initialization failed after successful authentication:',err);
-    // Authentication succeeded. Do not trap the user on the login screen just
-    // because loading the optional team_state record failed.
-    // Keep any browser-local data available and let the user enter the app.
     try{
       render();
       renderContributions();
