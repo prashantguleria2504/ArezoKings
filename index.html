@@ -702,7 +702,7 @@ function cloudEmailFromUsername(username){
 async function loadCloudState(){
   if(!supabaseClient || !cloudUser)return false;
   const result=await supabaseClient.from('team_state')
-    .select('matches,contributions,ground_payments,manual_payments,ground_names')
+    .select('matches,contributions,ground_payments,manual_payments,finance_state,ground_names')
     .eq('id',true).maybeSingle();
   if(result.error)throw result.error;
 
@@ -712,6 +712,10 @@ async function loadCloudState(){
     contributions=Array.isArray(row.contributions)?row.contributions:[];
     groundPayments=Array.isArray(row.ground_payments)?row.ground_payments:[];
     manualPayments=Array.isArray(row.manual_payments)?row.manual_payments:[];
+    const cloudFinance=row.finance_state&&typeof row.finance_state==='object'?row.finance_state:{};
+    adjustments=Array.isArray(cloudFinance.adjustments)?cloudFinance.adjustments:[];
+    carryForwardAmount=Number(cloudFinance.carryForwardAmount||0);
+    financeState={version:2,adjustments,carryForwardAmount};
     if(Array.isArray(row.ground_names))saveGrounds(row.ground_names);
     localStorage.setItem(KEY,JSON.stringify(data));
     localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
@@ -728,6 +732,7 @@ async function loadCloudState(){
     contributions:Array.isArray(contributions)?contributions:[],
     ground_payments:Array.isArray(groundPayments)?groundPayments:[],
     manual_payments:Array.isArray(manualPayments)?manualPayments:[],
+    finance_state:{version:2,adjustments:Array.isArray(adjustments)?adjustments:[],carryForwardAmount:Number(carryForwardAmount||0)},
     ground_names:getGrounds(),
     updated_at:new Date().toISOString()
   },{onConflict:'id'});
@@ -738,7 +743,7 @@ async function refreshCloudState(){
   if(!supabaseClient || !cloudUser)return;
   try{
     const before=JSON.stringify({
-      m:data,c:contributions,p:groundPayments,mp:manualPayments,g:getGrounds()
+      m:data,c:contributions,p:groundPayments,mp:manualPayments,a:adjustments,cf:carryForwardAmount,g:getGrounds()
     });
     await loadCloudState();
     const after=JSON.stringify({
@@ -770,7 +775,7 @@ async function maybeMigrateLocalData(){
   if(!hasLocal)return;
 
   const result=await supabaseClient.from('team_state')
-    .select('matches,contributions,ground_payments,manual_payments')
+    .select('matches,contributions,ground_payments,manual_payments,finance_state')
     .eq('id',true).maybeSingle();
   if(result.error)throw result.error;
 
@@ -779,7 +784,8 @@ async function maybeMigrateLocalData(){
     (!(Array.isArray(row.matches)&&row.matches.length) &&
      !(Array.isArray(row.contributions)&&row.contributions.length) &&
      !(Array.isArray(row.ground_payments)&&row.ground_payments.length) &&
-     !(Array.isArray(row.manual_payments)&&row.manual_payments.length));
+     !(Array.isArray(row.manual_payments)&&row.manual_payments.length) &&
+     !(row.finance_state&&Array.isArray(row.finance_state.adjustments)&&row.finance_state.adjustments.length));
 
   if(!cloudEmpty)return;
 
@@ -2550,6 +2556,7 @@ function buildBackupPayload(){
     matches:Array.isArray(data)?data:[],
     contributions:Array.isArray(contributions)?contributions:[],
     groundPayments:Array.isArray(groundPayments)?groundPayments:[],
+    manualPayments:Array.isArray(manualPayments)?manualPayments:[],
     groundNames:getGrounds(),
     finance:{version:2,adjustments:Array.isArray(adjustments)?adjustments:[],carryForwardAmount:Number(carryForwardAmount||0)}
   };
@@ -2632,6 +2639,7 @@ async function restoreData(e){
     let restoredMatches=[];
     let restoredContributions=[];
     let restoredGroundPayments=[];
+    let restoredManualPayments=[];
     let restoredGroundNames=[];
     let restoredFinance=null;
 
@@ -2643,6 +2651,7 @@ async function restoreData(e){
       restoredMatches=x.matches;
       restoredContributions=Array.isArray(x.contributions)?x.contributions:[];
       restoredGroundPayments=Array.isArray(x.groundPayments)?x.groundPayments:[];
+      restoredManualPayments=Array.isArray(x.manualPayments)?x.manualPayments:[];
       restoredGroundNames=Array.isArray(x.groundNames)?x.groundNames:[];
       restoredFinance=x.finance||null;
     }else{
@@ -2652,6 +2661,7 @@ async function restoreData(e){
     data=restoredMatches;
     contributions=restoredContributions;
     groundPayments=restoredGroundPayments;
+    manualPayments=restoredManualPayments;
     if(restoredFinance){
       adjustments=Array.isArray(restoredFinance.adjustments)?restoredFinance.adjustments:[];
       carryForwardAmount=Number(restoredFinance.carryForwardAmount||0);
@@ -2665,6 +2675,7 @@ async function restoreData(e){
     localStorage.setItem(KEY,JSON.stringify(data));
     localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
     localStorage.setItem(PAYMENT_KEY,JSON.stringify(groundPayments));
+    localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
 
     normalizeFinanceOwnership();
     render();
@@ -2703,23 +2714,54 @@ async function initializeCloudApp(){
     const localMatches=JSON.parse(localStorage.getItem(KEY)||'[]');
     const localContrib=JSON.parse(localStorage.getItem(CONTRIBUTION_KEY)||'[]');
     const localPayments=JSON.parse(localStorage.getItem(PAYMENT_KEY)||'[]');
+    const localManualPayments=JSON.parse(localStorage.getItem(MANUAL_PAYMENT_KEY)||'[]');
+    const localFinance=JSON.parse(localStorage.getItem(FINANCE_KEY)||'{}');
+    const localAdjustments=Array.isArray(localFinance?.adjustments)?localFinance.adjustments:[];
+    const localCarryForward=Number(localFinance?.carryForwardAmount||0);
     const localHasData=
       (Array.isArray(localMatches)&&localMatches.length>0) ||
       (Array.isArray(localContrib)&&localContrib.length>0) ||
-      (Array.isArray(localPayments)&&localPayments.length>0);
+      (Array.isArray(localPayments)&&localPayments.length>0) ||
+      (Array.isArray(localManualPayments)&&localManualPayments.length>0) ||
+      localAdjustments.length>0 ||
+      localCarryForward!==0;
 
     const cloudLoaded=await loadCloudState();
     if(typeof loadConfigurationAccess==='function')await loadConfigurationAccess();
-    let cloudHasData=data.length>0 || contributions.length>0 || groundPayments.length>0;
+    let cloudHasData=
+      data.length>0 ||
+      contributions.length>0 ||
+      groundPayments.length>0 ||
+      manualPayments.length>0 ||
+      adjustments.length>0 ||
+      Number(carryForwardAmount||0)!==0;
 
     // First cloud login: offer to migrate the data already stored in this browser.
     if(!cloudHasData && localHasData){
-      if(confirm('Existing ArezoKings data was found in this browser.\\n\\nUpload it to the shared cloud database now?')){
+      if(confirm('Existing ArezoKings data was found in this browser.\n\nUpload it to the shared cloud database now?')){
         data=Array.isArray(localMatches)?localMatches:[];
         contributions=Array.isArray(localContrib)?localContrib:[];
         groundPayments=Array.isArray(localPayments)?localPayments:[];
+        manualPayments=Array.isArray(localManualPayments)?localManualPayments:[];
+        adjustments=localAdjustments;
+        carryForwardAmount=localCarryForward;
+        financeState={version:2,adjustments,carryForwardAmount};
         await saveCloudState();
         cloudHasData=true;
+      }
+    }else if(
+      (Array.isArray(localManualPayments)&&localManualPayments.length>0&&manualPayments.length===0) ||
+      (localAdjustments.length>0&&adjustments.length===0) ||
+      (localCarryForward!==0&&Number(carryForwardAmount||0)===0)
+    ){
+      // Preserve finance records created in this browser before the cloud
+      // finance fields were introduced. Migrate only missing finance data.
+      if(confirm('Additional finance data was found in this browser but is not yet in the shared cloud database.\n\nUpload the missing finance data now?')){
+        if(manualPayments.length===0)manualPayments=localManualPayments;
+        if(adjustments.length===0)adjustments=localAdjustments;
+        if(Number(carryForwardAmount||0)===0)carryForwardAmount=localCarryForward;
+        financeState={version:2,adjustments,carryForwardAmount};
+        await saveCloudState();
       }
     }
 
@@ -2808,6 +2850,7 @@ const ACCOUNT_PEOPLE=['Neeraj','Suyog','Prashant'];
 function saveFinanceLocal(){
   financeState={version:2,adjustments,carryForwardAmount:Number(carryForwardAmount||0)};
   localStorage.setItem(FINANCE_KEY,JSON.stringify(financeState));
+  if(cloudUser&&typeof saveCloudState==='function')saveCloudState().catch(err=>console.error('Finance state cloud sync failed:',err));
 }
 let carryForwardAmount=Number(financeState.carryForwardAmount||0);
 let carryForwardAdmin=false;
