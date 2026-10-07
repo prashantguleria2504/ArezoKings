@@ -702,7 +702,7 @@ function cloudEmailFromUsername(username){
 async function loadCloudState(){
   if(!supabaseClient || !cloudUser)return false;
   const result=await supabaseClient.from('team_state')
-    .select('matches,contributions,ground_payments,ground_names')
+    .select('matches,contributions,ground_payments,manual_payments,ground_names')
     .eq('id',true).maybeSingle();
   if(result.error)throw result.error;
 
@@ -711,10 +711,12 @@ async function loadCloudState(){
     data=Array.isArray(row.matches)?row.matches:[];
     contributions=Array.isArray(row.contributions)?row.contributions:[];
     groundPayments=Array.isArray(row.ground_payments)?row.ground_payments:[];
+    manualPayments=Array.isArray(row.manual_payments)?row.manual_payments:[];
     if(Array.isArray(row.ground_names))saveGrounds(row.ground_names);
     localStorage.setItem(KEY,JSON.stringify(data));
     localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
     localStorage.setItem(PAYMENT_KEY,JSON.stringify(groundPayments));
+    localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
     return true;
   }
   return false;
@@ -725,6 +727,7 @@ async function loadCloudState(){
     matches:Array.isArray(data)?data:[],
     contributions:Array.isArray(contributions)?contributions:[],
     ground_payments:Array.isArray(groundPayments)?groundPayments:[],
+    manual_payments:Array.isArray(manualPayments)?manualPayments:[],
     ground_names:getGrounds(),
     updated_at:new Date().toISOString()
   },{onConflict:'id'});
@@ -735,7 +738,7 @@ async function refreshCloudState(){
   if(!supabaseClient || !cloudUser)return;
   try{
     const before=JSON.stringify({
-      m:data,c:contributions,p:groundPayments,g:getGrounds()
+      m:data,c:contributions,p:groundPayments,mp:manualPayments,g:getGrounds()
     });
     await loadCloudState();
     const after=JSON.stringify({
@@ -759,13 +762,15 @@ async function maybeMigrateLocalData(){
   const localMatches=JSON.parse(localStorage.getItem(KEY)||'[]');
   const localContrib=JSON.parse(localStorage.getItem(CONTRIBUTION_KEY)||'[]');
   const localPayments=JSON.parse(localStorage.getItem(PAYMENT_KEY)||'[]');
+  const localManualPayments=JSON.parse(localStorage.getItem(MANUAL_PAYMENT_KEY)||'[]');
   const hasLocal=(Array.isArray(localMatches)&&localMatches.length>0) ||
                  (Array.isArray(localContrib)&&localContrib.length>0) ||
-                 (Array.isArray(localPayments)&&localPayments.length>0);
+                 (Array.isArray(localPayments)&&localPayments.length>0) ||
+                 (Array.isArray(localManualPayments)&&localManualPayments.length>0);
   if(!hasLocal)return;
 
   const result=await supabaseClient.from('team_state')
-    .select('matches,contributions,ground_payments')
+    .select('matches,contributions,ground_payments,manual_payments')
     .eq('id',true).maybeSingle();
   if(result.error)throw result.error;
 
@@ -773,7 +778,8 @@ async function maybeMigrateLocalData(){
   const cloudEmpty=!row ||
     (!(Array.isArray(row.matches)&&row.matches.length) &&
      !(Array.isArray(row.contributions)&&row.contributions.length) &&
-     !(Array.isArray(row.ground_payments)&&row.ground_payments.length));
+     !(Array.isArray(row.ground_payments)&&row.ground_payments.length) &&
+     !(Array.isArray(row.manual_payments)&&row.manual_payments.length));
 
   if(!cloudEmpty)return;
 
@@ -781,6 +787,7 @@ async function maybeMigrateLocalData(){
     data=Array.isArray(localMatches)?localMatches:[];
     contributions=Array.isArray(localContrib)?localContrib:[];
     groundPayments=Array.isArray(localPayments)?localPayments:[];
+    manualPayments=Array.isArray(localManualPayments)?localManualPayments:[];
     await saveCloudState();
   }
 }
