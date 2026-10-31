@@ -2329,9 +2329,11 @@ function toggleAddPlayer(id){
     const select=document.getElementById('matchPlayerSelect-'+id);
     const newName=document.getElementById('matchPlayerNewName-'+id);
     const amount=document.getElementById('matchPlayerAmount-'+id);
+    const collector=document.getElementById('matchPlayerCollector-'+id);
     select.value='';
     newName.value='';
     amount.value='';
+    if(collector)collector.value='';
     newName.classList.add('hidden');
     select.focus();
   }
@@ -2363,14 +2365,14 @@ function saveMatchPlayer(mid){
 
   x.players=x.players||[];
   const deductionCheckbox=document.getElementById('matchPlayerContriDeduction-'+mid);
-  x.players.push({id:crypto.randomUUID(),name,amount:amt,contriDeduction:deductionCheckbox?deductionCheckbox.checked:true});
+  const collector=document.getElementById('matchPlayerCollector-'+mid);
+  x.players.push({id:crypto.randomUUID(),name,amount:amt,collectedBy:collector?.value||'',contriDeduction:deductionCheckbox?deductionCheckbox.checked:true});
   addTeamPlayer(name,false);
   // Keep Player 11 details expanded and clear the saved row for the next entry.
   select.value='';
   if(newName){newName.value='';newName.classList.add('hidden');}
   if(amount)amount.value='';
   if(deductionCheckbox)deductionCheckbox.checked=true;
-  const collector=document.getElementById('matchPlayerCollector-'+mid);
   if(collector)collector.value='';
   save();
 }
@@ -2586,6 +2588,7 @@ function render(){
         '<option value="__NEW_PLAYER__">➕ New Player</option></select>'+
         '<input id="matchPlayerNewName-'+x.id+'" class="hidden" placeholder="New player name">'+
         '<input id="matchPlayerAmount-'+x.id+'" type="number" min="0" step="1" placeholder="Amount">'+
+        '<label style="display:inline-flex;align-items:center;gap:6px;margin:6px 10px">Collected By <select id="matchPlayerCollector-'+x.id+'" style="font:inherit;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff">'+financePersonOptions()+'</select></label>'+
         '<label style="display:inline-flex;align-items:center;gap:6px;margin:6px 10px"><input id="matchPlayerContriDeduction-'+x.id+'" type="checkbox" checked> Contri Deduction</label>'+
         '<button class="primary" onclick="saveMatchPlayer(\''+x.id+'\')">Save</button>'+
         '<button onclick="cancelAddPlayer(\''+x.id+'\')">Cancel</button></div></details></td></tr>';
