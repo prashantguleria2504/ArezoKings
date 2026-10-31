@@ -2571,21 +2571,22 @@ function render(){
       }).join('');
 
       const playerTable=x.players&&x.players.length
-        ? '<tfoot><tr class="total-row"><td>Total</td><td class="amount">'+money(other)+'</td><td></td><td></td></tr></tfoot>'
+        ? '<tfoot><tr class="total-row"><td>Total</td><td class="amount">'+money(other)+'</td><td></td><td></td><td></td></tr></tfoot>'
         : '';
 
       const contributionBlock='<tr><td colspan="10"><details><summary>Player 11 details ('+(x.players||[]).length+')</summary>'+
-        '<div class="table-wrap"><table class="player-table"><thead><tr><th>Player</th><th class="amount">Amount</th><th>Collected By</th><th>Actions</th></tr></thead><tbody>'+
-        (playerRows || '<tr><td colspan="4" class="empty">No player contributions yet.</td></tr>')+
+        '<div class="table-wrap"><table class="player-table"><thead><tr><th>Player</th><th class="amount">Amount</th><th>Collected By</th><th>Contri Deduction</th><th>Actions</th></tr></thead><tbody>'+
+        (playerRows || '<tr><td colspan="5" class="empty">No player contributions yet.</td></tr>')+
         '</tbody>'+playerTable+'</table></div>'+
         '<button type="button" aria-label="Add player" title="Add player" style="margin:10px 0 0 0;width:34px;height:34px;padding:0;border-radius:50%;font-size:24px;line-height:1;font-weight:700;background:#176b3a;color:#fff;border:1px solid #176b3a;display:inline-flex;align-items:center;justify-content:center" onclick="toggleAddPlayer(\''+x.id+'\')">+</button>'+
         '<div id="addPlayerPanel-'+x.id+'" class="match-player-add-panel">'+
         '<select id="matchPlayerSelect-'+x.id+'" onchange="handleMatchPlayerChoice(\''+x.id+'\')"><option value="">Select player</option>'+
-        '<label style="display:inline-flex;align-items:center;gap:6px;margin:6px 10px"><input id="matchPlayerContriDeduction-'+x.id+'" type="checkbox" checked> Contri Deduction</label>'+
+
         teamPlayers.slice().sort((a,b)=>a.localeCompare(b)).map(name=>'<option value="'+esc(name)+'">'+esc(name)+'</option>').join('')+
         '<option value="__NEW_PLAYER__">➕ New Player</option></select>'+
         '<input id="matchPlayerNewName-'+x.id+'" class="hidden" placeholder="New player name">'+
         '<input id="matchPlayerAmount-'+x.id+'" type="number" min="0" step="1" placeholder="Amount">'+
+        '<label style="display:inline-flex;align-items:center;gap:6px;margin:6px 10px"><input id="matchPlayerContriDeduction-'+x.id+'" type="checkbox" checked> Contri Deduction</label>'+
         '<button class="primary" onclick="saveMatchPlayer(\''+x.id+'\')">Save</button>'+
         '<button onclick="cancelAddPlayer(\''+x.id+'\')">Cancel</button></div></details></td></tr>';
 
