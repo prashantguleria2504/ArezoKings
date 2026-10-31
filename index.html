@@ -730,6 +730,7 @@ async function loadCloudState(){
     groundPayments=Array.isArray(row.ground_payments)?row.ground_payments.map(p=>({...p,paidBy:String(p?.paidBy||p?.payee||'').trim()})):[];
     manualPayments=Array.isArray(row.manual_payments)?row.manual_payments:[];
     const cloudFinance=row.finance_state&&typeof row.finance_state==='object'?row.finance_state:{};
+    const needsPlayerRosterMigration=!Array.isArray(cloudFinance.players);
     adjustments=Array.isArray(cloudFinance.adjustments)?cloudFinance.adjustments:[];
     carryForwardAmount=Number(cloudFinance.carryForwardAmount||0);
     if(Array.isArray(cloudFinance.players))teamPlayers=cloudFinance.players;
@@ -744,6 +745,7 @@ async function loadCloudState(){
     localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
     localStorage.setItem(PAYMENT_KEY,JSON.stringify(groundPayments));
     localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
+    if(needsPlayerRosterMigration)await saveCloudState();
     return true;
   }
   return false;
@@ -1178,10 +1180,10 @@ function resolveContributionPlayer(paidBy){
 function populateManualPaymentPeople(selected=''){
   const el=document.getElementById('mpPaidBy');
   if(!el)return;
-  const people=getContributionPeople();
-  const options=people.length?people:['Neeraj','Suyog','Prashant'];
+  const people=(Array.isArray(teamPlayers)?teamPlayers:[]).slice().sort((a,b)=>a.localeCompare(b));
   const current=selected||el.value||'';
-  el.innerHTML='<option value="">Select person</option>'+options.map(n=>'<option value="'+esc(n)+'" '+(n===current?'selected':'')+'>'+esc(n)+'</option>').join('');
+  el.innerHTML='<option value="">Select player</option>'+
+    (people.length?people.map(n=>'<option value="'+esc(n)+'" '+(n===current?'selected':'')+'>'+esc(n)+'</option>').join(''):'<option value="" disabled>No players in roster</option>');
 }
 function syncManualPaymentContribution(payment){
   if(!payment?.addToContribution)return false;
@@ -2339,6 +2341,12 @@ function saveMatchPlayer(mid){
   x.players=x.players||[];
   x.players.push({id:crypto.randomUUID(),name,amount:amt});
   addTeamPlayer(name);
+  // Keep Player 11 details expanded and clear the saved row for the next entry.
+  select.value='';
+  if(newName){newName.value='';newName.classList.add('hidden');}
+  if(amount)amount.value='';
+  const collector=document.getElementById('matchPlayerCollector-'+mid);
+  if(collector)collector.value='';
   save();
 }
 function cancelAddPlayer(id){
@@ -2353,6 +2361,7 @@ function editPlayer(mid,pid){
   const amt=Number(prompt('Amount:',p.amount)||0);
   const collector=prompt('Collected by (Neeraj / Suyog / Prashant):',p.collectedBy||'')||'';
   const normalizedCollector=['Neeraj','Suyog','Prashant'].find(n=>n.toLowerCase()===collector.trim().toLowerCase())||'';
+  addTeamPlayer(name.trim());
   Object.assign(p,{name:name.trim(),amount:amt,collectedBy:normalizedCollector});
   save();
 }
@@ -2935,7 +2944,7 @@ document.addEventListener('submit', function(e){
 window.showAccounts=function(){
     document.getElementById('manualPaymentsSection')?.classList.add('hidden');
     document.getElementById('manualPaymentsSection')?.classList.add('hidden');
-  ['summarySection','playerContributionSummarySection','paymentsSection','contributionsSection','matchFormSection','weeks'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
+  ['summarySection','playerContributionSummarySection','paymentsSection','contributionsSection','playersSection','matchFormSection','weeks'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
   document.querySelector('.cards')?.classList.add('hidden');
   document.getElementById('accountsSection')?.classList.remove('hidden');
   const sel=document.getElementById('accountsMonth');
@@ -3934,7 +3943,7 @@ function applyConfigurationVisibility(){
   if(restoreInput)restoreInput.disabled=!admin;
 }
 async function showConfiguration(){
-  ['summarySection','playerContributionSummarySection','paymentsSection','manualPaymentsSection','contributionsSection','matchFormSection','weeks','accountsSection'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
+  ['summarySection','playerContributionSummarySection','paymentsSection','manualPaymentsSection','contributionsSection','playersSection','matchFormSection','weeks','accountsSection'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
   document.querySelector('.cards')?.classList.add('hidden');
   document.getElementById('configurationSection')?.classList.remove('hidden');
   applyConfigurationVisibility();
