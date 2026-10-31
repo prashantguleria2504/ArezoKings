@@ -3409,6 +3409,12 @@ window.render=function(){
   });
   oldRender();
   ensureFinanceFields();
+  // Re-ensure the collector selector after every Matches re-render. The add-player
+  // panel is rebuilt by render(), so injected controls must be restored as well.
+  document.querySelectorAll('.match-player-add-panel').forEach(panel=>{
+    const mid=panel.id.replace('addPlayerPanel-','');
+    if(mid)addCollectorToPlayerPanel(mid);
+  });
   openDetails.forEach(mid=>{
     const details=document.getElementById('addPlayerPanel-'+mid)?.closest('details');
     if(details)details.open=true;
