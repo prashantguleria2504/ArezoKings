@@ -2447,7 +2447,7 @@ function render(){
         '<div class="table-wrap"><table class="player-table"><thead><tr><th>Player</th><th class="amount">Amount</th><th>Collected By</th><th>Actions</th></tr></thead><tbody>'+
         (playerRows || '<tr><td colspan="4" class="empty">No player contributions yet.</td></tr>')+
         '</tbody>'+playerTable+'</table></div>'+
-        '<button class="primary" style="margin:10px 0 0 0" onclick="toggleAddPlayer(\''+x.id+'\')">＋ Add Player</button>'+
+        '<button type="button" aria-label="Add player" title="Add player" style="margin:10px 0 0 0;width:34px;height:34px;padding:0;border-radius:50%;font-size:24px;line-height:1;font-weight:700;background:#176b3a;color:#fff;border:1px solid #176b3a;display:inline-flex;align-items:center;justify-content:center" onclick="toggleAddPlayer(\''+x.id+'\')">+</button>'+
         '<div id="addPlayerPanel-'+x.id+'" class="match-player-add-panel">'+
         '<select id="matchPlayerSelect-'+x.id+'" onchange="handleMatchPlayerChoice(\''+x.id+'\')"><option value="">Select player</option>'+
         contributions.map(c=>'<option value="'+esc(c.name)+'">'+esc(c.name)+'</option>').join('')+
@@ -3246,7 +3246,41 @@ async function showAccounts(){
 const oldShowTracker=window.showTracker;
 window.showTracker=function(){document.getElementById('accountsSection')?.classList.add('hidden');oldShowTracker();};
 const oldRender=window.render;
-window.render=function(){oldRender();ensureFinanceFields();};
+window.render=function(){
+  // Preserve expanded player-entry panels and their in-progress values when a
+  // background refresh or save rebuilds the Matches table.
+  const openDetails=[...document.querySelectorAll('#weeks tr[data-match-id]')].filter(row=>row.querySelector('details')?.open).map(row=>row.dataset.matchId);
+  const panelState=[...document.querySelectorAll('.match-player-add-panel')].filter(panel=>panel.style.display==='block').map(panel=>{
+    const mid=panel.id.replace('addPlayerPanel-','');
+    return {
+      mid,
+      select:document.getElementById('matchPlayerSelect-'+mid)?.value||'',
+      newName:document.getElementById('matchPlayerNewName-'+mid)?.value||'',
+      amount:document.getElementById('matchPlayerAmount-'+mid)?.value||'',
+      collector:document.getElementById('matchPlayerCollector-'+mid)?.value||''
+    };
+  });
+  oldRender();
+  ensureFinanceFields();
+  openDetails.forEach(mid=>{
+    const row=document.querySelector('#weeks tr[data-match-id="'+mid+'"]');
+    const details=row?.querySelector('details');
+    if(details)details.open=true;
+  });
+  panelState.forEach(state=>{
+    const panel=document.getElementById('addPlayerPanel-'+state.mid);
+    if(!panel)return;
+    panel.style.display='block';
+    const select=document.getElementById('matchPlayerSelect-'+state.mid);
+    const newName=document.getElementById('matchPlayerNewName-'+state.mid);
+    const amount=document.getElementById('matchPlayerAmount-'+state.mid);
+    const collector=document.getElementById('matchPlayerCollector-'+state.mid);
+    if(select)select.value=state.select;
+    if(newName){newName.value=state.newName;newName.classList.toggle('hidden',state.select!=='__NEW_PLAYER__');}
+    if(amount)amount.value=state.amount;
+    if(collector)collector.value=state.collector;
+  });
+};
 document.addEventListener('change',e=>{if(e.target?.id==='accountsMonth')renderAccounts();});
 window.renderAccounts=function(){
   if(typeof window.renderAccountsDashboard==='function'){
