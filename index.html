@@ -1641,7 +1641,8 @@ function playerMatchContributionTotal(playerName){
   const target=String(playerName||'').trim().toLowerCase();
   return data.reduce((sum,match)=>{
     return sum+(match.players||[]).reduce((matchSum,player)=>{
-      return matchSum+(String(player.name||'').trim().toLowerCase()===target ? Number(player.amount||0) : 0);
+      const deductionEnabled=player.contriDeduction!==false;
+      return matchSum+(deductionEnabled&&String(player.name||'').trim().toLowerCase()===target ? Number(player.amount||0) : 0);
     },0);
   },0);
 }
@@ -2361,12 +2362,14 @@ function saveMatchPlayer(mid){
   if(!x)return;
 
   x.players=x.players||[];
-  x.players.push({id:crypto.randomUUID(),name,amount:amt});
+  const deductionCheckbox=document.getElementById('matchPlayerContriDeduction-'+mid);
+  x.players.push({id:crypto.randomUUID(),name,amount:amt,contriDeduction:deductionCheckbox?deductionCheckbox.checked:true});
   addTeamPlayer(name,false);
   // Keep Player 11 details expanded and clear the saved row for the next entry.
   select.value='';
   if(newName){newName.value='';newName.classList.add('hidden');}
   if(amount)amount.value='';
+  if(deductionCheckbox)deductionCheckbox.checked=true;
   const collector=document.getElementById('matchPlayerCollector-'+mid);
   if(collector)collector.value='';
   save();
@@ -2389,6 +2392,7 @@ async function saveMatchPlayerEdit(mid,pid){
   const nameEl=document.getElementById('editMatchPlayerName-'+pid);
   const amountEl=document.getElementById('editMatchPlayerAmount-'+pid);
   const collectorEl=document.getElementById('editMatchPlayerCollector-'+pid);
+  const deductionEl=document.getElementById('editMatchPlayerContriDeduction-'+pid);
   const name=String(nameEl?.value||'').trim();
   const amount=Number(amountEl?.value);
   if(!name){alert('Please enter a player name.');return;}
@@ -2400,7 +2404,7 @@ async function saveMatchPlayerEdit(mid,pid){
   const updatedMatch=data.find(a=>a.id===mid);
   const updatedPlayer=updatedMatch?.players?.find(a=>a.id===pid);
   if(!updatedPlayer)return;
-  Object.assign(updatedPlayer,{name,amount,collectedBy:collectorEl?.value||''});
+  Object.assign(updatedPlayer,{name,amount,collectedBy:collectorEl?.value||'',contriDeduction:deductionEl?deductionEl.checked:true});
   editingMatchPlayer=null;
   await save();
   renderPlayers();
@@ -2561,9 +2565,9 @@ function render(){
       const playerRows=(x.players||[]).map(p=>{
         const isEditing=editingMatchPlayer?.mid===x.id&&editingMatchPlayer?.pid===p.id;
         if(isEditing){
-          return '<tr class="player-inline-edit-row"><td><input id="editMatchPlayerName-'+p.id+'" type="text" list="teamPlayersDatalist" value="'+esc(p.name)+'" style="width:150px;max-width:100%" aria-label="Player name"></td><td class="amount"><input id="editMatchPlayerAmount-'+p.id+'" type="number" min="0" step="1" value="'+Number(p.amount||0)+'" style="width:105px;text-align:right"></td><td><select id="editMatchPlayerCollector-'+p.id+'"><option value="">Not assigned</option>'+ACCOUNT_PEOPLE.map(n=>'<option value="'+esc(n)+'" '+(n===(p.collectedBy||'')?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></td><td><button class="primary" onclick="saveMatchPlayerEdit(\''+x.id+'\',\''+p.id+'\')">Save</button><button onclick="cancelEditPlayer()">Cancel</button></td></tr>';
+          return '<tr class="player-inline-edit-row"><td><input id="editMatchPlayerName-'+p.id+'" type="text" list="teamPlayersDatalist" value="'+esc(p.name)+'" style="width:150px;max-width:100%" aria-label="Player name"></td><td class="amount"><input id="editMatchPlayerAmount-'+p.id+'" type="number" min="0" step="1" value="'+Number(p.amount||0)+'" style="width:105px;text-align:right"></td><td><select id="editMatchPlayerCollector-'+p.id+'"><option value="">Not assigned</option>'+ACCOUNT_PEOPLE.map(n=>'<option value="'+esc(n)+'" '+(n===(p.collectedBy||'')?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></td><td><label><input id="editMatchPlayerContriDeduction-'+p.id+'" type="checkbox" '+(p.contriDeduction!==false?'checked':'')+'> Contri Deduction</label></td><td><button class="primary" onclick="saveMatchPlayerEdit(\''+x.id+'\',\''+p.id+'\')">Save</button><button onclick="cancelEditPlayer()">Cancel</button></td></tr>';
         }
-        return '<tr><td>'+esc(p.name)+'</td><td class="amount">'+money(p.amount)+'</td><td>'+esc(p.collectedBy||'Not assigned')+'</td><td><button onclick="editPlayer(\''+x.id+'\',\''+p.id+'\')">Edit</button><button class="danger" onclick="deletePlayer(\''+x.id+'\',\''+p.id+'\')">Delete</button></td></tr>';
+        return '<tr><td>'+esc(p.name)+'</td><td class="amount">'+money(p.amount)+'</td><td>'+esc(p.collectedBy||'Not assigned')+'</td><td>'+(p.contriDeduction===false?'No':'Yes')+'</td><td><button onclick="editPlayer(\''+x.id+'\',\''+p.id+'\')">Edit</button><button class="danger" onclick="deletePlayer(\''+x.id+'\',\''+p.id+'\')">Delete</button></td></tr>';
       }).join('');
 
       const playerTable=x.players&&x.players.length
@@ -2577,6 +2581,7 @@ function render(){
         '<button type="button" aria-label="Add player" title="Add player" style="margin:10px 0 0 0;width:34px;height:34px;padding:0;border-radius:50%;font-size:24px;line-height:1;font-weight:700;background:#176b3a;color:#fff;border:1px solid #176b3a;display:inline-flex;align-items:center;justify-content:center" onclick="toggleAddPlayer(\''+x.id+'\')">+</button>'+
         '<div id="addPlayerPanel-'+x.id+'" class="match-player-add-panel">'+
         '<select id="matchPlayerSelect-'+x.id+'" onchange="handleMatchPlayerChoice(\''+x.id+'\')"><option value="">Select player</option>'+
+        '<label style="display:inline-flex;align-items:center;gap:6px;margin:6px 10px"><input id="matchPlayerContriDeduction-'+x.id+'" type="checkbox" checked> Contri Deduction</label>'+
         teamPlayers.slice().sort((a,b)=>a.localeCompare(b)).map(name=>'<option value="'+esc(name)+'">'+esc(name)+'</option>').join('')+
         '<option value="__NEW_PLAYER__">➕ New Player</option></select>'+
         '<input id="matchPlayerNewName-'+x.id+'" class="hidden" placeholder="New player name">'+
