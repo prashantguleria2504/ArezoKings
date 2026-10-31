@@ -1585,6 +1585,21 @@ function addTeamPlayer(name,syncCloud=true){
   if(syncCloud&&cloudUser&&typeof saveCloudState==='function')saveCloudState().catch(err=>console.error('Player roster cloud sync failed:',err));
   return true;
 }
+function renameTeamPlayer(oldName,newName){
+  const oldClean=String(oldName||'').trim(),newClean=String(newName||'').trim();
+  if(!newClean)return false;
+  if(oldClean&&oldClean.toLowerCase()!==newClean.toLowerCase()){
+    data=(Array.isArray(data)?data:[]).map(match=>({...match,players:(Array.isArray(match.players)?match.players:[]).map(player=>
+      String(player?.name||'').trim().toLowerCase()===oldClean.toLowerCase()?{...player,name:newClean}:player)}));
+    contributions=(Array.isArray(contributions)?contributions:[]).map(player=>
+      String(player?.name||'').trim().toLowerCase()===oldClean.toLowerCase()?{...player,name:newClean}:player);
+    teamPlayers=teamPlayers.filter(n=>n.toLowerCase()!==oldClean.toLowerCase());
+  }
+  if(!teamPlayers.some(n=>n.toLowerCase()===newClean.toLowerCase()))teamPlayers.push(newClean);
+  persistTeamPlayers();renderPlayers();
+  if(typeof renderContributions==='function')renderContributions();
+  return true;
+}
 function addPlayerFromRoster(){
   const input=document.getElementById('teamPlayerNameInput'),name=input?.value?.trim()||'';
   if(!name){alert('Please enter a player name.');return;}
@@ -1599,9 +1614,12 @@ function removeTeamPlayer(name){
   if(cloudUser&&typeof saveCloudState==='function')saveCloudState().catch(err=>console.error('Player roster cloud sync failed:',err));
 }
 function renderPlayers(){
-  const list=document.getElementById('teamPlayersList');if(!list)return;
   const names=(Array.isArray(teamPlayers)?teamPlayers:[]).slice().sort((a,b)=>a.localeCompare(b));
-  list.innerHTML=names.length?names.map(name=>'<div class="player-roster-item"><span>'+esc(name)+'</span><button type="button" class="player-roster-remove" title="Remove player" aria-label="Remove player" onclick="removeTeamPlayer(\''+String(name).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')">−</button></div>').join(''):'<div class="empty" style="grid-column:1/-1">No players added yet. Use + to add the team roster.</div>';
+  const list=document.getElementById('teamPlayersList');
+  if(list)list.innerHTML=names.length?names.map(name=>'<div class="player-roster-item"><span>'+esc(name)+'</span><button type="button" class="player-roster-remove" title="Remove player" aria-label="Remove player" onclick="removeTeamPlayer(\''+String(name).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')">−</button></div>').join(''):'<div class="empty" style="grid-column:1/-1">No players added yet. Use + to add the team roster.</div>';
+  let datalist=document.getElementById('teamPlayersDatalist');
+  if(!datalist){datalist=document.createElement('datalist');datalist.id='teamPlayersDatalist';document.body.appendChild(datalist);}
+  datalist.innerHTML=names.map(name=>'<option value="'+esc(name)+'"></option>').join('');
 }
 function showPlayers(){
   hideAllPageSections();document.getElementById('playersSection')?.classList.remove('hidden');
@@ -1639,7 +1657,6 @@ function getPlayerBalance(contribution){
 function saveContribution(){
   const name=document.getElementById('cPlayerName').value.trim();
   if(!name){alert('Please enter Player Name.');return;}
-  addTeamPlayer(name,false);
   const carry=Number(document.getElementById('cCarry').value||0);
   const recent=Number(document.getElementById('cRecent').value||0);
   const recentDate=document.getElementById('cRecentDate').value||'';
@@ -1647,6 +1664,8 @@ function saveContribution(){
 
   let player=editingContributionId ? contributions.find(x=>x.id===editingContributionId) : null;
   if(!player) player=contributions.find(x=>String(x.name).trim().toLowerCase()===name.toLowerCase());
+  if(player&&String(player.name||'').trim().toLowerCase()!==name.toLowerCase())renameTeamPlayer(player.name,name);
+  else addTeamPlayer(name,false);
 
   if(editingRecentContributionId!==null && editingRecentContributionId!==undefined && player){
     const entry=player.recentEntries[editingRecentContributionId];
@@ -2369,12 +2388,14 @@ async function saveMatchPlayerEdit(mid,pid){
   const collectorEl=document.getElementById('editMatchPlayerCollector-'+pid);
   const name=String(nameEl?.value||'').trim();
   const amount=Number(amountEl?.value);
-  if(!name){alert('Please select a player name.');return;}
+  if(!name){alert('Please enter a player name.');return;}
   if(!Number.isFinite(amount)||amount<0){alert('Please enter a valid amount.');return;}
-  addTeamPlayer(name,false);
+  if(String(p.name||'').trim().toLowerCase()!==name.toLowerCase())renameTeamPlayer(p.name,name);
+  else addTeamPlayer(name,false);
   Object.assign(p,{name,amount,collectedBy:collectorEl?.value||''});
   editingMatchPlayer=null;
   await save();
+  renderPlayers();
 }
 function cancelEditPlayer(){
   editingMatchPlayer=null;
@@ -2532,8 +2553,7 @@ function render(){
       const playerRows=(x.players||[]).map(p=>{
         const isEditing=editingMatchPlayer?.mid===x.id&&editingMatchPlayer?.pid===p.id;
         if(isEditing){
-          const roster=[...new Set([...(Array.isArray(teamPlayers)?teamPlayers:[]),p.name].filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-          return '<tr class="player-inline-edit-row"><td><select id="editMatchPlayerName-'+p.id+'">'+roster.map(n=>'<option value="'+esc(n)+'" '+(n===p.name?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></td><td class="amount"><input id="editMatchPlayerAmount-'+p.id+'" type="number" min="0" step="1" value="'+Number(p.amount||0)+'" style="width:105px;text-align:right"></td><td><select id="editMatchPlayerCollector-'+p.id+'"><option value="">Not assigned</option>'+ACCOUNT_PEOPLE.map(n=>'<option value="'+esc(n)+'" '+(n===(p.collectedBy||'')?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></td><td><button class="primary" onclick="saveMatchPlayerEdit(\''+x.id+'\',\''+p.id+'\')">Save</button><button onclick="cancelEditPlayer()">Cancel</button></td></tr>';
+          return '<tr class="player-inline-edit-row"><td><input id="editMatchPlayerName-'+p.id+'" type="text" list="teamPlayersDatalist" value="'+esc(p.name)+'" style="width:150px;max-width:100%" aria-label="Player name"></td><td class="amount"><input id="editMatchPlayerAmount-'+p.id+'" type="number" min="0" step="1" value="'+Number(p.amount||0)+'" style="width:105px;text-align:right"></td><td><select id="editMatchPlayerCollector-'+p.id+'"><option value="">Not assigned</option>'+ACCOUNT_PEOPLE.map(n=>'<option value="'+esc(n)+'" '+(n===(p.collectedBy||'')?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></td><td><button class="primary" onclick="saveMatchPlayerEdit(\''+x.id+'\',\''+p.id+'\')">Save</button><button onclick="cancelEditPlayer()">Cancel</button></td></tr>';
         }
         return '<tr><td>'+esc(p.name)+'</td><td class="amount">'+money(p.amount)+'</td><td>'+esc(p.collectedBy||'Not assigned')+'</td><td><button onclick="editPlayer(\''+x.id+'\',\''+p.id+'\')">Edit</button><button class="danger" onclick="deletePlayer(\''+x.id+'\',\''+p.id+'\')">Delete</button></td></tr>';
       }).join('');
