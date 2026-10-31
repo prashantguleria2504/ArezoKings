@@ -3336,7 +3336,10 @@ const oldRender=window.render;
 window.render=function(){
   // Preserve expanded player-entry panels and their in-progress values when a
   // background refresh or save rebuilds the Matches table.
-  const openDetails=[...document.querySelectorAll('#weeks tr[data-match-id]')].filter(row=>row.querySelector('details')?.open).map(row=>row.dataset.matchId);
+  const openDetails=[...document.querySelectorAll('#weeks details')].filter(details=>details.open).map(details=>{
+    const panel=details.querySelector('.match-player-add-panel');
+    return panel?.id.replace('addPlayerPanel-','')||'';
+  }).filter(Boolean);
   const panelState=[...document.querySelectorAll('.match-player-add-panel')].filter(panel=>panel.style.display==='block').map(panel=>{
     const mid=panel.id.replace('addPlayerPanel-','');
     return {
@@ -3350,8 +3353,7 @@ window.render=function(){
   oldRender();
   ensureFinanceFields();
   openDetails.forEach(mid=>{
-    const row=document.querySelector('#weeks tr[data-match-id="'+mid+'"]');
-    const details=row?.querySelector('details');
+    const details=document.getElementById('addPlayerPanel-'+mid)?.closest('details');
     if(details)details.open=true;
   });
   panelState.forEach(state=>{
