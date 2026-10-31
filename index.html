@@ -2801,6 +2801,7 @@ async function initializeCloudApp(){
     const localPayments=JSON.parse(localStorage.getItem(PAYMENT_KEY)||'[]');
     const localManualPayments=JSON.parse(localStorage.getItem(MANUAL_PAYMENT_KEY)||'[]');
     const localFinance=JSON.parse(localStorage.getItem(FINANCE_KEY)||'{}');
+    const localTeamPlayers=JSON.parse(localStorage.getItem(TEAM_PLAYERS_KEY)||'[]');
     const localAdjustments=Array.isArray(localFinance?.adjustments)?localFinance.adjustments:[];
     const localCarryForward=Number(localFinance?.carryForwardAmount||0);
 
@@ -2864,7 +2865,8 @@ async function initializeCloudApp(){
       (Array.isArray(localPayments)&&localPayments.length>0) ||
       (Array.isArray(localManualPayments)&&localManualPayments.length>0) ||
       localAdjustments.length>0 ||
-      localCarryForward!==0;
+      localCarryForward!==0 ||
+      (Array.isArray(localTeamPlayers)&&localTeamPlayers.length>0);
 
     if(!cloudHasData && localHasData){
       if(confirm('Existing ArezoKings data was found in this browser.\n\nUpload it to the shared cloud database now?')){
@@ -2873,6 +2875,8 @@ async function initializeCloudApp(){
         groundPayments=Array.isArray(localPayments)?localPayments:[];
         manualPayments=Array.isArray(localManualPayments)?localManualPayments:[];
         adjustments=localAdjustments;
+        teamPlayers=Array.isArray(localTeamPlayers)?localTeamPlayers:teamPlayers;
+        persistTeamPlayers();
         carryForwardAmount=localCarryForward;
         financeState={version:2,adjustments,carryForwardAmount};
 
