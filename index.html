@@ -2354,16 +2354,31 @@ function cancelAddPlayer(id){
   if(panel)panel.style.display='none';
 }
 
+let editingMatchPlayer=null;
 function editPlayer(mid,pid){
   const x=data.find(a=>a.id===mid),p=x?.players?.find(a=>a.id===pid);
   if(!p)return;
-  const name=prompt('Player name:',p.name);if(!name?.trim())return;
-  const amt=Number(prompt('Amount:',p.amount)||0);
-  const collector=prompt('Collected by (Neeraj / Suyog / Prashant):',p.collectedBy||'')||'';
-  const normalizedCollector=['Neeraj','Suyog','Prashant'].find(n=>n.toLowerCase()===collector.trim().toLowerCase())||'';
-  addTeamPlayer(name.trim(),false);
-  Object.assign(p,{name:name.trim(),amount:amt,collectedBy:normalizedCollector});
-  save();
+  editingMatchPlayer={mid,pid};
+  render();
+}
+async function saveMatchPlayerEdit(mid,pid){
+  const x=data.find(a=>a.id===mid),p=x?.players?.find(a=>a.id===pid);
+  if(!p)return;
+  const nameEl=document.getElementById('editMatchPlayerName-'+pid);
+  const amountEl=document.getElementById('editMatchPlayerAmount-'+pid);
+  const collectorEl=document.getElementById('editMatchPlayerCollector-'+pid);
+  const name=String(nameEl?.value||'').trim();
+  const amount=Number(amountEl?.value);
+  if(!name){alert('Please select a player name.');return;}
+  if(!Number.isFinite(amount)||amount<0){alert('Please enter a valid amount.');return;}
+  addTeamPlayer(name,false);
+  Object.assign(p,{name,amount,collectedBy:collectorEl?.value||''});
+  editingMatchPlayer=null;
+  await save();
+}
+function cancelEditPlayer(){
+  editingMatchPlayer=null;
+  render();
 }
 function deletePlayer(mid,pid){const x=data.find(a=>a.id===mid);x.players=x.players.filter(p=>p.id!==pid);save();}
 
@@ -2515,6 +2530,11 @@ function render(){
         : '';
 
       const playerRows=(x.players||[]).map(p=>{
+        const isEditing=editingMatchPlayer?.mid===x.id&&editingMatchPlayer?.pid===p.id;
+        if(isEditing){
+          const roster=[...new Set([...(Array.isArray(teamPlayers)?teamPlayers:[]),p.name].filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+          return '<tr class="player-inline-edit-row"><td><select id="editMatchPlayerName-'+p.id+'">'+roster.map(n=>'<option value="'+esc(n)+'" '+(n===p.name?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></td><td class="amount"><input id="editMatchPlayerAmount-'+p.id+'" type="number" min="0" step="1" value="'+Number(p.amount||0)+'" style="width:105px;text-align:right"></td><td><select id="editMatchPlayerCollector-'+p.id+'"><option value="">Not assigned</option>'+ACCOUNT_PEOPLE.map(n=>'<option value="'+esc(n)+'" '+(n===(p.collectedBy||'')?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></td><td><button class="primary" onclick="saveMatchPlayerEdit(\''+x.id+'\',\''+p.id+'\')">Save</button><button onclick="cancelEditPlayer()">Cancel</button></td></tr>';
+        }
         return '<tr><td>'+esc(p.name)+'</td><td class="amount">'+money(p.amount)+'</td><td>'+esc(p.collectedBy||'Not assigned')+'</td><td><button onclick="editPlayer(\''+x.id+'\',\''+p.id+'\')">Edit</button><button class="danger" onclick="deletePlayer(\''+x.id+'\',\''+p.id+'\')">Delete</button></td></tr>';
       }).join('');
 
