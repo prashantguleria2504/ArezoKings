@@ -1578,11 +1578,11 @@ function persistTeamPlayers(){
     localStorage.setItem(FINANCE_KEY,JSON.stringify(financeState));
   }
 }
-function addTeamPlayer(name){
+function addTeamPlayer(name,syncCloud=true){
   const clean=String(name||'').trim();if(!clean)return false;
   if(!teamPlayers.some(n=>n.toLowerCase()===clean.toLowerCase()))teamPlayers.push(clean);
   persistTeamPlayers();renderPlayers();
-  if(cloudUser&&typeof saveCloudState==='function')saveCloudState().catch(err=>console.error('Player roster cloud sync failed:',err));
+  if(syncCloud&&cloudUser&&typeof saveCloudState==='function')saveCloudState().catch(err=>console.error('Player roster cloud sync failed:',err));
   return true;
 }
 function addPlayerFromRoster(){
@@ -1639,7 +1639,7 @@ function getPlayerBalance(contribution){
 function saveContribution(){
   const name=document.getElementById('cPlayerName').value.trim();
   if(!name){alert('Please enter Player Name.');return;}
-  addTeamPlayer(name);
+  addTeamPlayer(name,false);
   const carry=Number(document.getElementById('cCarry').value||0);
   const recent=Number(document.getElementById('cRecent').value||0);
   const recentDate=document.getElementById('cRecentDate').value||'';
@@ -2340,7 +2340,7 @@ function saveMatchPlayer(mid){
 
   x.players=x.players||[];
   x.players.push({id:crypto.randomUUID(),name,amount:amt});
-  addTeamPlayer(name);
+  addTeamPlayer(name,false);
   // Keep Player 11 details expanded and clear the saved row for the next entry.
   select.value='';
   if(newName){newName.value='';newName.classList.add('hidden');}
@@ -2361,7 +2361,7 @@ function editPlayer(mid,pid){
   const amt=Number(prompt('Amount:',p.amount)||0);
   const collector=prompt('Collected by (Neeraj / Suyog / Prashant):',p.collectedBy||'')||'';
   const normalizedCollector=['Neeraj','Suyog','Prashant'].find(n=>n.toLowerCase()===collector.trim().toLowerCase())||'';
-  addTeamPlayer(name.trim());
+  addTeamPlayer(name.trim(),false);
   Object.assign(p,{name:name.trim(),amount:amt,collectedBy:normalizedCollector});
   save();
 }
