@@ -889,6 +889,9 @@ function showApp(){
   if(badge)badge.textContent=username?'👤 '+username:'';
 
   if(typeof applyConfigurationVisibility==='function')applyConfigurationVisibility();
+  // Render the base Matches UI first, then restore the last page. Calling render()
+  // after restoring a page was rebuilding the Matches screen over the saved page.
+  render();
   const lastPage=localStorage.getItem('arezoKingsLastPageV1')||'matches';
   if(lastPage==='accounts')showAccounts();
   else if(lastPage==='payments')showPayments();
@@ -897,7 +900,6 @@ function showApp(){
   else if(lastPage==='players')showPlayers();
   else if(lastPage==='configuration')showConfiguration();
   else showTracker();
-  render();
   window.scrollTo(0,0);
 }
 
@@ -3667,6 +3669,8 @@ ensureFinanceFields();wrapLegacyFunctions();
   };
 
   window.showAccounts=async function(){
+    // This is the final active Accounts handler.
+    localStorage.setItem('arezoKingsLastPageV1','accounts');
     // Open Accounts exclusively without changing the normal Matches rendering.
     ['summarySection','playerContributionSummarySection','paymentsSection','manualPaymentsSection','contributionsSection','matchFormSection','weeks','configurationSection'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
     document.querySelector('.cards')?.classList.add('hidden');
