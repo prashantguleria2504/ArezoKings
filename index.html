@@ -3015,6 +3015,9 @@ document.addEventListener('submit', function(e){
 }, true);
 
 window.showAccounts=function(){
+    // This later override is the active Accounts navigation handler; persist
+    // the route here so refresh restores Accounts instead of Matches.
+    localStorage.setItem('arezoKingsLastPageV1','accounts');
     document.getElementById('manualPaymentsSection')?.classList.add('hidden');
     document.getElementById('manualPaymentsSection')?.classList.add('hidden');
   ['summarySection','playerContributionSummarySection','paymentsSection','contributionsSection','playersSection','matchFormSection','weeks'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
