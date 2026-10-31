@@ -1664,8 +1664,11 @@ function saveContribution(){
 
   let player=editingContributionId ? contributions.find(x=>x.id===editingContributionId) : null;
   if(!player) player=contributions.find(x=>String(x.name).trim().toLowerCase()===name.toLowerCase());
-  if(player&&String(player.name||'').trim().toLowerCase()!==name.toLowerCase())renameTeamPlayer(player.name,name);
-  else addTeamPlayer(name,false);
+  if(player&&String(player.name||'').trim().toLowerCase()!==name.toLowerCase()){
+    const oldName=player.name;
+    renameTeamPlayer(oldName,name);
+    player=contributions.find(x=>x.id===player.id);
+  }else addTeamPlayer(name,false);
 
   if(editingRecentContributionId!==null && editingRecentContributionId!==undefined && player){
     const entry=player.recentEntries[editingRecentContributionId];
@@ -2390,9 +2393,14 @@ async function saveMatchPlayerEdit(mid,pid){
   const amount=Number(amountEl?.value);
   if(!name){alert('Please enter a player name.');return;}
   if(!Number.isFinite(amount)||amount<0){alert('Please enter a valid amount.');return;}
-  if(String(p.name||'').trim().toLowerCase()!==name.toLowerCase())renameTeamPlayer(p.name,name);
-  else addTeamPlayer(name,false);
-  Object.assign(p,{name,amount,collectedBy:collectorEl?.value||''});
+  if(String(p.name||'').trim().toLowerCase()!==name.toLowerCase()){
+    const oldName=p.name;
+    renameTeamPlayer(oldName,name);
+  }else addTeamPlayer(name,false);
+  const updatedMatch=data.find(a=>a.id===mid);
+  const updatedPlayer=updatedMatch?.players?.find(a=>a.id===pid);
+  if(!updatedPlayer)return;
+  Object.assign(updatedPlayer,{name,amount,collectedBy:collectorEl?.value||''});
   editingMatchPlayer=null;
   await save();
   renderPlayers();
