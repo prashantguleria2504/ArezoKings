@@ -889,7 +889,14 @@ function showApp(){
   if(badge)badge.textContent=username?'👤 '+username:'';
 
   if(typeof applyConfigurationVisibility==='function')applyConfigurationVisibility();
-  showTracker();
+  const lastPage=localStorage.getItem('arezoKingsLastPageV1')||'matches';
+  if(lastPage==='accounts')showAccounts();
+  else if(lastPage==='payments')showPayments();
+  else if(lastPage==='contributions')showContributions();
+  else if(lastPage==='summary')showSummary();
+  else if(lastPage==='players')showPlayers();
+  else if(lastPage==='configuration')showConfiguration();
+  else showTracker();
   render();
   window.scrollTo(0,0);
 }
@@ -1622,6 +1629,7 @@ function renderPlayers(){
   datalist.innerHTML=names.map(name=>'<option value="'+esc(name)+'"></option>').join('');
 }
 function showPlayers(){
+  localStorage.setItem('arezoKingsLastPageV1','players');
   hideAllPageSections();document.getElementById('playersSection')?.classList.remove('hidden');
   renderPlayers();window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1956,6 +1964,7 @@ function toggleContributionForm(force){
 }
 
 function showPayments(){
+  localStorage.setItem('arezoKingsLastPageV1','payments');
   hideAllPageSections();
   document.getElementById('paymentsSection')?.classList.remove('hidden');
   document.getElementById('manualPaymentsSection')?.classList.remove('hidden');
@@ -1970,6 +1979,7 @@ function showPayments(){
 }
 
 function showContributions(){
+  localStorage.setItem('arezoKingsLastPageV1','contributions');
   hideAllPageSections();
   document.getElementById('contributionsSection')?.classList.remove('hidden');
   // Player Contribution Summary belongs to the Contributions page, not Summary.
@@ -1980,6 +1990,7 @@ function showContributions(){
 }
 
 function showSummary(){
+  localStorage.setItem('arezoKingsLastPageV1','summary');
   hideAllPageSections();
   // Summary page contains only the cricket/monthly summary.
   document.getElementById('summarySection')?.classList.remove('hidden');
@@ -1987,6 +1998,7 @@ function showSummary(){
 }
 
 function showTracker(){
+  localStorage.setItem('arezoKingsLastPageV1','matches');
   hideAllPageSections();
   const monthFilter=document.getElementById('monthFilter');
   if(monthFilter)monthFilter.style.setProperty('display','block','important');
@@ -3363,6 +3375,7 @@ function syncFinanceCloud(){
   if(cloudUser&&typeof saveCloudState==='function')saveCloudState().catch(err=>console.error('Finance cloud sync failed',err));
 }
 async function showAccounts(){
+  localStorage.setItem('arezoKingsLastPageV1','accounts');
   ['summarySection','playerContributionSummarySection','paymentsSection','contributionsSection','matchFormSection','weeks'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
   document.querySelector('.cards')?.classList.add('hidden');
   const section=document.getElementById('accountsSection');
@@ -4018,6 +4031,7 @@ function applyConfigurationVisibility(){
   if(restoreInput)restoreInput.disabled=!admin;
 }
 async function showConfiguration(){
+  localStorage.setItem('arezoKingsLastPageV1','configuration');
   ['summarySection','playerContributionSummarySection','paymentsSection','manualPaymentsSection','contributionsSection','playersSection','matchFormSection','weeks','accountsSection'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
   document.querySelector('.cards')?.classList.add('hidden');
   document.getElementById('configurationSection')?.classList.remove('hidden');
