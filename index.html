@@ -3509,9 +3509,12 @@ ensureFinanceFields();wrapLegacyFunctions();
         +manual.filter(a=>(a.deductFrom||a.paidBy||'')===person).reduce((s,a)=>s+num(a.amount),0);
       // Keep Transfer payments separate from the existing Money Received figure.
       // Net Balance = Money Received + Transferred Received - (Ground Paid + Adjustments).
-      const received=opp+play+cont;
-      const net=received+transferReceived-gp-adj;
-      return {person,opp,play,cont,transferReceived,gp,adj,received,net};
+      // Keep player fees as a separate visible component of money held.
+      // Net Balance still includes them exactly once.
+      const received=opp+cont;
+      const playersFee=play;
+      const net=received+playersFee+transferReceived-gp-adj;
+      return {person,opp,play,playersFee,cont,transferReceived,gp,adj,received,net};
     });
 
     return {month,groundBooking,groundPaid,otherPaid,totalPaid,opponent,players,regular,adjustments:totalAdjustmentAmount,monthAdjustments:manual,people,matches,payments,otherPayments};
@@ -3536,7 +3539,7 @@ ensureFinanceFields();wrapLegacyFunctions();
 
     const months=allMonths();
     const totals={groundBooking:0,groundPaid:0,manualPaid:0,opponent:0,players:0,regular:0,adjustments:0};
-    const people={Neeraj:{received:0,transferReceived:0,gp:0,adj:0,net:0},Suyog:{received:0,transferReceived:0,gp:0,adj:0,net:0},Prashant:{received:0,transferReceived:0,gp:0,adj:0,net:0}};
+    const people={Neeraj:{received:0,playersFee:0,transferReceived:0,gp:0,adj:0,net:0},Suyog:{received:0,playersFee:0,transferReceived:0,gp:0,adj:0,net:0},Prashant:{received:0,playersFee:0,transferReceived:0,gp:0,adj:0,net:0}};
     const results=months.map(m=>calculate(m));
 
     results.forEach(r=>{
@@ -3549,6 +3552,7 @@ ensureFinanceFields();wrapLegacyFunctions();
       totals.adjustments+=r.adjustments;
       r.people.forEach(p=>{
         people[p.person].received+=p.received;
+        people[p.person].playersFee+=p.playersFee||0;
         people[p.person].transferReceived+=p.transferReceived||0;
         people[p.person].gp+=p.gp;
         people[p.person].adj+=p.adj;        people[p.person].net+=p.net;
@@ -3563,9 +3567,10 @@ ensureFinanceFields();wrapLegacyFunctions();
     }
 
     const consolidatedMoneyReceived=Object.values(people).reduce((sum,p)=>sum+Number(p.received||0),0);
+    const consolidatedPlayersFee=Object.values(people).reduce((sum,p)=>sum+Number(p.playersFee||0),0);
     const consolidatedTransferReceived=Object.values(people).reduce((sum,p)=>sum+Number(p.transferReceived||0),0);
-    // Total Amount reflects money collected/received by people; carry-forward remains shown separately.
-    const consolidatedTotalAmount=consolidatedMoneyReceived+consolidatedTransferReceived;
+    // Player fees are shown separately but included once in the consolidated total.
+    const consolidatedTotalAmount=consolidatedMoneyReceived+consolidatedPlayersFee+consolidatedTransferReceived;
     // Manual payment allocations reduce the displayed remaining payment balance. Add all adjustments back
     // as actual expenses so linked adjustments are counted once and unlinked adjustments are not omitted.
     const consolidatedAdjusted=totals.adjustments;
@@ -3586,9 +3591,9 @@ ensureFinanceFields();wrapLegacyFunctions();
       '</div></div>'+
       '<div class="accounts-overall-section accounts-held-section">'+
       '<div class="finance-section-title">💰 Amount Currently Held by Each Person</div>'+
-      '<div class="accounts-help">Cumulative across all recorded months. <strong>Money Received</strong> is the existing amount collected by that person; <strong>Transferred Received</strong> shows Transfer payments separately. <strong>Net Balance</strong> = Money Received + Transferred Received − (Ground Paid + Adjustments).</div>'+
-      '<div class="table-wrap"><table class="finance-table owner-balance-table"><thead><tr><th>Person</th><th class="amount">Money Received</th><th class="amount">Transferred Received</th><th class="amount">Ground Paid</th><th class="amount">Adjustments</th><th class="amount">Net Balance</th></tr></thead><tbody>'+
-      ['Neeraj','Suyog','Prashant'].map(n=>'<tr><td><strong>'+n+'</strong></td><td class="amount">'+cash(people[n].received)+'</td><td class="amount">'+cash(people[n].transferReceived)+'</td><td class="amount">'+cash(people[n].gp)+'</td><td class="amount">'+cash(people[n].adj)+'</td><td class="amount"><strong>'+cash(people[n].net)+'</strong></td></tr>').join('')+
+      '<div class="accounts-help">Cumulative across all recorded months. <strong>Money Received</strong> includes opponent collections and regular contributions. <strong>Players fee</strong> shows player fees collected by that person. Both are included once in <strong>Net Balance</strong>, together with Transferred Received, less Ground Paid and Adjustments.</div>'+
+      '<div class="table-wrap"><table class="finance-table owner-balance-table"><thead><tr><th>Person</th><th class="amount">Money Received</th><th class="amount">Players fee</th><th class="amount">Transferred Received</th><th class="amount">Ground Paid</th><th class="amount">Adjustments</th><th class="amount">Net Balance</th></tr></thead><tbody>'+
+      ['Neeraj','Suyog','Prashant'].map(n=>'<tr><td><strong>'+n+'</strong></td><td class="amount">'+cash(people[n].received)+'</td><td class="amount">'+cash(people[n].playersFee)+'</td><td class="amount">'+cash(people[n].transferReceived)+'</td><td class="amount">'+cash(people[n].gp)+'</td><td class="amount">'+cash(people[n].adj)+'</td><td class="amount"><strong>'+cash(people[n].net)+'</strong></td></tr>').join('')+
       '</tbody></table></div></div>'+
       '<div class="accounts-overall-section accounts-adjustments-section">'+
       '<div class="finance-section-title manual-adjustments-title">↔ Manual Adjustments</div>'+
