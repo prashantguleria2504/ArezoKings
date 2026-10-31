@@ -12,7 +12,13 @@
 #appShell>.container{position:relative;z-index:1}.hero{position:relative;display:flex;align-items:center;justify-content:space-between;gap:16px;background:linear-gradient(135deg,#124b2d,#1b7a45);color:#fff;border-radius:14px;padding:20px 22px;box-shadow:var(--shadow);margin-bottom:14px;border-bottom:4px solid #d6b25e;position:relative;overflow:hidden}.hero-brand{min-width:0}.hero-logo{width:64px;height:64px;object-fit:contain;border-radius:4px;flex:0 0 auto}.hero h1{margin:0}.hero{background:#134d2e}.hero:after{content:"";position:absolute;right:-40px;bottom:-70px;width:190px;height:190px;border:2px solid rgba(255,255,255,.14);border-radius:50%}
 .hero h1{margin:0 0 5px;font-size:27px}.hero p{margin:0;opacity:.9}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.toolbar select,.toolbar button,.form-grid input,.form-grid select{font:inherit;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fff}
-button{cursor:pointer}.primary{background:var(--pitch)!important;color:#fff;border-color:var(--pitch)!important}.secondary{background:#eef4fa!important;color:#174a72;border-color:#d5e1ed!important}.nav-summary{background:#eaf2fb!important;color:#1c5b91!important;border-color:#cddff0!important}.nav-contrib{background:#eaf7ef!important;color:#176b3a!important;border-color:#cce6d5!important}.nav-payments{background:#fff7e8!important;color:#8a5a00!important;border-color:#ecd9ae!important}.nav-accounts{background:#f3edfb!important;color:#68418d!important;border-color:#dfd0ef!important}.nav-config{background:#eef7f1!important;color:#176b3a!important;border-color:#cce6d5!important}
+button{cursor:pointer}.primary{background:var(--pitch)!important;color:#fff;border-color:var(--pitch)!important}.secondary{background:#eef4fa!important;color:#174a72;border-color:#d5e1ed!important}.nav-summary{background:#eaf2fb!important;color:#1c5b91!important;border-color:#cddff0!important}.nav-contrib{background:#eaf7ef!important;color:#176b3a!important;border-color:#cce6d5!important}.nav-players{background:#eaf2fb!important;color:#245b87!important;border-color:#cbdced!important}
+.players-roster{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;padding:14px}
+.player-roster-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border:1px solid #d7e5dc;border-radius:10px;background:#f7fbf8;font-weight:700}
+.player-roster-remove{width:30px;height:30px;flex:0 0 30px;border-radius:50%;padding:0;font-size:20px;line-height:1;background:#fff0ee!important;color:#b42318!important;border:1px solid #e7aaa2!important}
+.players-add-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid var(--line)}
+.players-add-row input{font:inherit;border:1px solid var(--line);border-radius:8px;padding:9px 11px;min-width:220px}
+.players-add-button{width:36px;height:36px;border-radius:50%;padding:0;font-size:24px;line-height:1;background:#176b3a!important;color:#fff!important;border:1px solid #176b3a!important}.nav-payments{background:#fff7e8!important;color:#8a5a00!important;border-color:#ecd9ae!important}.nav-accounts{background:#f3edfb!important;color:#68418d!important;border-color:#dfd0ef!important}.nav-config{background:#eef7f1!important;color:#176b3a!important;border-color:#cce6d5!important}
 .config-intro{padding:12px 16px;border-bottom:1px solid var(--line);background:#fbfdfb;color:#536257}
 .config-current-card{margin:14px 16px;padding:14px;border:1px solid #cfe2d5;border-left:4px solid var(--pitch);border-radius:9px;background:#f4faf5}
 .config-toolbar{display:flex;align-items:center;gap:12px;padding:0 16px 14px;flex-wrap:wrap}
@@ -371,6 +377,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
   <select id="monthFilter"></select>
   <button class="primary" onclick="openMatchForm()">＋ Add Match</button>
   <button class="secondary nav-summary" onclick="showSummary()">📊 Summary</button>
+  <button class="secondary nav-players" onclick="showPlayers()">👥 Players</button>
   <button class="secondary nav-contrib" onclick="showContributions()">🏏 Contributions</button>
   <button class="secondary nav-payments" onclick="showPayments()">🏟️ Payments</button>
 <button class="secondary nav-accounts" id="accountsNavButton" onclick="showAccounts()">💰 Accounts & Settlement</button>
@@ -523,6 +530,16 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
       <tbody id="manualPaymentRows"></tbody>
     </table>
   </div>
+</section>
+
+<section class="section hidden" id="playersSection">
+  <div class="section-head"><h2>👥 Team Players</h2><button class="primary" onclick="showTracker()">← Back to Matches</button></div>
+  <div class="players-add-row">
+    <input id="teamPlayerNameInput" type="text" placeholder="Enter player name" aria-label="New player name" onkeydown="if(event.key==='Enter')addPlayerFromRoster()">
+    <button class="players-add-button" type="button" title="Add player" aria-label="Add player" onclick="addPlayerFromRoster()">+</button>
+    <span class="config-note">Existing match records and contribution history are retained when a player is removed from the roster.</span>
+  </div>
+  <div id="teamPlayersList" class="players-roster"></div>
 </section>
 
 <section class="section hidden" id="contributionsSection">
@@ -715,7 +732,13 @@ async function loadCloudState(){
     const cloudFinance=row.finance_state&&typeof row.finance_state==='object'?row.finance_state:{};
     adjustments=Array.isArray(cloudFinance.adjustments)?cloudFinance.adjustments:[];
     carryForwardAmount=Number(cloudFinance.carryForwardAmount||0);
-    financeState={version:2,adjustments,carryForwardAmount};
+    if(Array.isArray(cloudFinance.players))teamPlayers=cloudFinance.players;
+    else{
+      const legacyNames=[...(Array.isArray(teamPlayers)?teamPlayers:[]),...(Array.isArray(contributions)?contributions:[]).map(p=>p?.name),...(Array.isArray(data)?data:[]).flatMap(m=>(Array.isArray(m.players)?m.players:[]).map(p=>p?.name))];
+      teamPlayers=[...new Map(legacyNames.map(n=>[String(n||'').trim().toLowerCase(),String(n||'').trim()]).filter(([k,v])=>k&&v)).values()];
+    }
+    persistTeamPlayers();
+    financeState={version:2,adjustments,carryForwardAmount,players:teamPlayers};
     if(Array.isArray(row.ground_names))saveGrounds(row.ground_names);
     localStorage.setItem(KEY,JSON.stringify(data));
     localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
@@ -732,7 +755,7 @@ async function loadCloudState(){
     contributions:Array.isArray(contributions)?contributions:[],
     ground_payments:Array.isArray(groundPayments)?groundPayments.map(p=>({...p,paidBy:String(p?.paidBy||p?.payee||'').trim()})):[],
     manual_payments:Array.isArray(manualPayments)?manualPayments:[],
-    finance_state:{version:2,adjustments:Array.isArray(adjustments)?adjustments:[],carryForwardAmount:Number(carryForwardAmount||0)},
+    finance_state:{version:2,adjustments:Array.isArray(adjustments)?adjustments:[],carryForwardAmount:Number(carryForwardAmount||0),players:Array.isArray(teamPlayers)?teamPlayers:[]},
     ground_names:getGrounds(),
     updated_at:new Date().toISOString()
   },{onConflict:'id'});
@@ -1538,6 +1561,50 @@ function renderManualPayments(){
 }
 const CONTRIBUTION_KEY='cricketMatchContributionsV1';
 let contributions=JSON.parse(localStorage.getItem(CONTRIBUTION_KEY)||'[]');
+const TEAM_PLAYERS_KEY='arezoKingsPlayersV1';
+let teamPlayers=JSON.parse(localStorage.getItem(TEAM_PLAYERS_KEY)||'null');
+if(!Array.isArray(teamPlayers)){
+  const legacyNames=[...(Array.isArray(contributions)?contributions:[]).map(p=>p?.name),...(Array.isArray(data)?data:[]).flatMap(m=>(Array.isArray(m.players)?m.players:[]).map(p=>p?.name))];
+  teamPlayers=[...new Map(legacyNames.map(n=>[String(n||'').trim().toLowerCase(),String(n||'').trim()]).filter(([k,v])=>k&&v)).values()];
+  localStorage.setItem(TEAM_PLAYERS_KEY,JSON.stringify(teamPlayers));
+}
+function persistTeamPlayers(){
+  teamPlayers=[...new Map((Array.isArray(teamPlayers)?teamPlayers:[]).map(n=>String(n||'').trim()).filter(Boolean).map(n=>[n.toLowerCase(),n])).values()].sort((a,b)=>a.localeCompare(b));
+  localStorage.setItem(TEAM_PLAYERS_KEY,JSON.stringify(teamPlayers));
+  if(typeof financeState!=='undefined'&&financeState){
+    financeState={...financeState,version:2,adjustments:Array.isArray(adjustments)?adjustments:[],carryForwardAmount:Number(carryForwardAmount||0),players:teamPlayers};
+    localStorage.setItem(FINANCE_KEY,JSON.stringify(financeState));
+  }
+}
+function addTeamPlayer(name){
+  const clean=String(name||'').trim();if(!clean)return false;
+  if(!teamPlayers.some(n=>n.toLowerCase()===clean.toLowerCase()))teamPlayers.push(clean);
+  persistTeamPlayers();renderPlayers();
+  if(cloudUser&&typeof saveCloudState==='function')saveCloudState().catch(err=>console.error('Player roster cloud sync failed:',err));
+  return true;
+}
+function addPlayerFromRoster(){
+  const input=document.getElementById('teamPlayerNameInput'),name=input?.value?.trim()||'';
+  if(!name){alert('Please enter a player name.');return;}
+  if(teamPlayers.some(n=>n.toLowerCase()===name.toLowerCase())){alert('This player is already in the Players list.');return;}
+  addTeamPlayer(name);if(input)input.value='';
+}
+function removeTeamPlayer(name){
+  const clean=String(name||'').trim();if(!clean)return;
+  if(!confirm('Remove '+clean+' from the team Players list? Existing match records and contribution history will be retained.'))return;
+  teamPlayers=teamPlayers.filter(n=>n.toLowerCase()!==clean.toLowerCase());
+  persistTeamPlayers();renderPlayers();
+  if(cloudUser&&typeof saveCloudState==='function')saveCloudState().catch(err=>console.error('Player roster cloud sync failed:',err));
+}
+function renderPlayers(){
+  const list=document.getElementById('teamPlayersList');if(!list)return;
+  const names=(Array.isArray(teamPlayers)?teamPlayers:[]).slice().sort((a,b)=>a.localeCompare(b));
+  list.innerHTML=names.length?names.map(name=>'<div class="player-roster-item"><span>'+esc(name)+'</span><button type="button" class="player-roster-remove" title="Remove player" aria-label="Remove player" onclick="removeTeamPlayer(\''+String(name).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')">−</button></div>').join(''):'<div class="empty" style="grid-column:1/-1">No players added yet. Use + to add the team roster.</div>';
+}
+function showPlayers(){
+  hideAllPageSections();document.getElementById('playersSection')?.classList.remove('hidden');
+  renderPlayers();window.scrollTo({top:0,behavior:'smooth'});
+}
 contributions=contributions.map(x=>{
   if(Array.isArray(x.recentEntries)) return x;
   const entries=[];
@@ -1570,6 +1637,7 @@ function getPlayerBalance(contribution){
 function saveContribution(){
   const name=document.getElementById('cPlayerName').value.trim();
   if(!name){alert('Please enter Player Name.');return;}
+  addTeamPlayer(name);
   const carry=Number(document.getElementById('cCarry').value||0);
   const recent=Number(document.getElementById('cRecent').value||0);
   const recentDate=document.getElementById('cRecentDate').value||'';
@@ -1830,6 +1898,7 @@ function hideAllPageSections(){
     'matchFormSection',
     'accountsSection',
     'configurationSection',
+    'playersSection',
     'weeks'
   ].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
   document.querySelector('.cards')?.classList.add('hidden');
@@ -2269,6 +2338,7 @@ function saveMatchPlayer(mid){
 
   x.players=x.players||[];
   x.players.push({id:crypto.randomUUID(),name,amount:amt});
+  addTeamPlayer(name);
   save();
 }
 function cancelAddPlayer(id){
@@ -2450,7 +2520,7 @@ function render(){
         '<button type="button" aria-label="Add player" title="Add player" style="margin:10px 0 0 0;width:34px;height:34px;padding:0;border-radius:50%;font-size:24px;line-height:1;font-weight:700;background:#176b3a;color:#fff;border:1px solid #176b3a;display:inline-flex;align-items:center;justify-content:center" onclick="toggleAddPlayer(\''+x.id+'\')">+</button>'+
         '<div id="addPlayerPanel-'+x.id+'" class="match-player-add-panel">'+
         '<select id="matchPlayerSelect-'+x.id+'" onchange="handleMatchPlayerChoice(\''+x.id+'\')"><option value="">Select player</option>'+
-        contributions.map(c=>'<option value="'+esc(c.name)+'">'+esc(c.name)+'</option>').join('')+
+        teamPlayers.slice().sort((a,b)=>a.localeCompare(b)).map(name=>'<option value="'+esc(name)+'">'+esc(name)+'</option>').join('')+
         '<option value="__NEW_PLAYER__">➕ New Player</option></select>'+
         '<input id="matchPlayerNewName-'+x.id+'" class="hidden" placeholder="New player name">'+
         '<input id="matchPlayerAmount-'+x.id+'" type="number" min="0" step="1" placeholder="Amount">'+
@@ -2558,7 +2628,7 @@ function buildBackupPayload(){
     groundPayments:Array.isArray(groundPayments)?groundPayments:[],
     manualPayments:Array.isArray(manualPayments)?manualPayments:[],
     groundNames:getGrounds(),
-    finance:{version:2,adjustments:Array.isArray(adjustments)?adjustments:[],carryForwardAmount:Number(carryForwardAmount||0)}
+    finance:{version:2,adjustments:Array.isArray(adjustments)?adjustments:[],carryForwardAmount:Number(carryForwardAmount||0),players:Array.isArray(teamPlayers)?teamPlayers:[]}
   };
 }
 function closeBackupModal(){
@@ -2642,6 +2712,7 @@ async function restoreData(e){
     let restoredManualPayments=[];
     let restoredGroundNames=[];
     let restoredFinance=null;
+    let restoredTeamPlayers=null;
 
     if(Array.isArray(x)){
       // Legacy backup containing matches only.
@@ -2654,12 +2725,15 @@ async function restoreData(e){
       restoredManualPayments=Array.isArray(x.manualPayments)?x.manualPayments:[];
       restoredGroundNames=Array.isArray(x.groundNames)?x.groundNames:[];
       restoredFinance=x.finance||null;
+      restoredTeamPlayers=Array.isArray(x.finance?.players)?x.finance.players:null;
     }else{
       throw new Error('Unsupported backup format');
     }
 
     data=restoredMatches;
     contributions=restoredContributions;
+    teamPlayers=Array.isArray(restoredTeamPlayers)?restoredTeamPlayers:[...new Set([...restoredContributions.map(p=>p?.name),...restoredMatches.flatMap(m=>(Array.isArray(m.players)?m.players:[]).map(p=>p?.name))].map(n=>String(n||'').trim()).filter(Boolean))];
+    persistTeamPlayers();
     groundPayments=restoredGroundPayments;
     manualPayments=restoredManualPayments;
     if(restoredFinance){
@@ -2882,7 +2956,7 @@ let adjustments=Array.isArray(financeState.adjustments)?financeState.adjustments
 const ACCOUNT_PEOPLE=['Neeraj','Suyog','Prashant'];
 
 function saveFinanceLocal(){
-  financeState={version:2,adjustments,carryForwardAmount:Number(carryForwardAmount||0)};
+  financeState={version:2,adjustments,carryForwardAmount:Number(carryForwardAmount||0),players:Array.isArray(teamPlayers)?teamPlayers:[]};
   localStorage.setItem(FINANCE_KEY,JSON.stringify(financeState));
   if(cloudUser&&typeof saveCloudState==='function')saveCloudState().catch(err=>console.error('Finance state cloud sync failed:',err));
 }
@@ -3796,7 +3870,8 @@ async function cleanupAllApplicationData(){
     groundPayments=[];
     manualPayments=[];
     adjustments=[];
-    financeState={version:2,adjustments:[],carryForwardAmount:0};
+    financeState={version:2,adjustments:[],carryForwardAmount:0,players:[]};
+    teamPlayers=[];localStorage.removeItem(TEAM_PLAYERS_KEY);
     carryForwardAmount=0;
 
     // Refresh all in-memory/UI state without logging the administrator out.
