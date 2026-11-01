@@ -2899,100 +2899,107 @@ refreshGroundDropdown();
 
 async function initializeCloudApp(){
   try{
-    // Snapshot browser data BEFORE cloud loading. loadCloudState() updates the
-    // browser cache from Supabase, so this snapshot is required to safely
-    // migrate records created before cloud persistence was introduced.
-    const localMatches=JSON.parse(localStorage.getItem(KEY)||'[]');
-    const localContrib=JSON.parse(localStorage.getItem(CONTRIBUTION_KEY)||'[]');
-    const localPayments=JSON.parse(localStorage.getItem(PAYMENT_KEY)||'[]');
-    const localManualPayments=JSON.parse(localStorage.getItem(MANUAL_PAYMENT_KEY)||'[]');
-    const localFinance=JSON.parse(localStorage.getItem(FINANCE_KEY)||'{}');
-    const localTeamPlayers=JSON.parse(localStorage.getItem(TEAM_PLAYERS_KEY)||'[]');
-    const localAdjustments=Array.isArray(localFinance?.adjustments)?localFinance.adjustments:[];
-    const localCarryForward=Number(localFinance?.carryForwardAmount||0);
+    // Preserve a snapshot of browser-only records before cloud loading replaces
+    // the normal local cache with the shared Supabase state.
+    const readLocal=(key,fallback)=>{try{const v=JSON.parse(localStorage.getItem(key)||'null');return v??fallback;}catch{return fallback;}};
+    const pendingRecovery=readLocal('arezoKingsPendingLocalRecoveryV1',{});
+    const localMatches=[...readLocal(KEY,[]),...(Array.isArray(pendingRecovery.matches)?pendingRecovery.matches:[])];
+    const localContrib=[...readLocal(CONTRIBUTION_KEY,[]),...(Array.isArray(pendingRecovery.contributions)?pendingRecovery.contributions:[])];
+    const localPayments=[...readLocal(PAYMENT_KEY,[]),...(Array.isArray(pendingRecovery.groundPayments)?pendingRecovery.groundPayments:[])];
+    const localManualPayments=[...readLocal(MANUAL_PAYMENT_KEY,[]),...(Array.isArray(pendingRecovery.manualPayments)?pendingRecovery.manualPayments:[])];
+    const localFinance=readLocal(FINANCE_KEY,{});
+    const localAdjustments=[...(Array.isArray(localFinance?.adjustments)?localFinance.adjustments:[]),...(Array.isArray(pendingRecovery.adjustments)?pendingRecovery.adjustments:[])];
+    const localInternalTransfers=[...(Array.isArray(localFinance?.internalTransfers)?localFinance.internalTransfers:[]),...(Array.isArray(pendingRecovery.internalTransfers)?pendingRecovery.internalTransfers:[])];
+    const localCarryForward=Number(localFinance?.carryForwardAmount||pendingRecovery.carryForwardAmount||0);
+    const localTeamPlayers=[...readLocal(TEAM_PLAYERS_KEY,[]),...(Array.isArray(localFinance?.players)?localFinance.players:[]),...(Array.isArray(pendingRecovery.players)?pendingRecovery.players:[])];
+    const localGroundNames=[...readLocal('cricketGrounds',[]),...(Array.isArray(pendingRecovery.groundNames)?pendingRecovery.groundNames:[])];
 
     await loadCloudState();
     if(typeof loadConfigurationAccess==='function')await loadConfigurationAccess();
 
-    const localManualMissing=localManualPayments.filter(lp=>
-      !manualPayments.some(cp=>String(cp?.id||'')===String(lp?.id||''))
-    );
-    const localAdjustmentsMissing=localAdjustments.filter(la=>
-      !adjustments.some(ca=>String(ca?.id||'')===String(la?.id||''))
-    );
-    const localCarryForwardMissing=
-      localCarryForward!==0 && Number(carryForwardAmount||0)===0;
-
-    // The cloud is authoritative once populated, but records that exist only
-    // in this browser are offered for one-time migration instead of being
-    // silently discarded.
-    const missingFinanceData=
-      localManualMissing.length>0 ||
-      localAdjustmentsMissing.length>0 ||
-      localCarryForwardMissing;
-
-    if(missingFinanceData){
-      const parts=[];
-      if(localManualMissing.length)parts.push(localManualMissing.length+' Manual Payment(s)');
-      if(localAdjustmentsMissing.length)parts.push(localAdjustmentsMissing.length+' Adjustment(s)');
-      if(localCarryForwardMissing)parts.push('Carry Forward Amount');
-
-      if(confirm('Additional finance data was found in this browser that is not in the shared cloud database:\n\n'+parts.join(', ')+'.\n\nUpload the missing records now?')){
-        if(localManualMissing.length){
-          manualPayments=[...(Array.isArray(manualPayments)?manualPayments:[]),...localManualMissing];
+    const mergeRows=(cloudRows,localRows,keyFn,mergeExisting)=>{
+      const out=Array.isArray(cloudRows)?cloudRows.slice():[];
+      const byKey=new Map(out.map((row,index)=>[keyFn(row),index]));
+      let added=0, enriched=0;
+      (Array.isArray(localRows)?localRows:[]).forEach(row=>{
+        const key=keyFn(row);
+        if(!key)return;
+        if(!byKey.has(key)){byKey.set(key,out.length);out.push(row);added++;}
+        else if(mergeExisting){
+          const index=byKey.get(key);
+          if(mergeExisting(out[index],row))enriched++;
         }
-        if(localAdjustmentsMissing.length){
-          adjustments=[...(Array.isArray(adjustments)?adjustments:[]),...localAdjustmentsMissing];
-        }
-        if(localCarryForwardMissing)carryForwardAmount=localCarryForward;
+      });
+      return {rows:out,added,enriched};
+    };
+    const idKey=(row,fallback)=>row?.id?('id:'+String(row.id)):fallback(row);
+    const matchesMerge=mergeRows(data,localMatches,row=>idKey(row,x=>'match:'+JSON.stringify(x)));
+    const contributionMerge=mergeRows(contributions,localContrib,row=>idKey(row,x=>'player:'+String(x?.name||'').trim().toLowerCase()),(cloudRow,localRow)=>{
+      const current=Array.isArray(cloudRow.recentEntries)?cloudRow.recentEntries:[];
+      const incoming=Array.isArray(localRow.recentEntries)?localRow.recentEntries:[];
+      const merged=mergeRows(current,incoming,x=>x?.id?('id:'+x.id):'entry:'+JSON.stringify([x?.date,x?.amount,x?.comment,x?.manualPaymentId]));
+      if(merged.added){cloudRow.recentEntries=merged.rows;return true;}
+      return false;
+    });
+    const groundMerge=mergeRows(groundPayments,localPayments,row=>idKey(row,x=>'ground:'+JSON.stringify(x)));
+    const manualMerge=mergeRows(manualPayments,localManualPayments,row=>idKey(row,x=>'manual:'+JSON.stringify(x)));
+    const adjustmentMerge=mergeRows(adjustments,localAdjustments,row=>idKey(row,x=>'adjustment:'+JSON.stringify(x)));
+    const internalTransferMerge=mergeRows(internalTransfers,localInternalTransfers,row=>idKey(row,x=>'internal-transfer:'+JSON.stringify(x)));
+    const playerNames=[...new Map([...teamPlayers,...localTeamPlayers].map(n=>String(n||'').trim()).filter(Boolean).map(n=>[n.toLowerCase(),n])).values()];
+    const groundNames=[...new Map([...getGrounds(),...localGroundNames].map(n=>String(n||'').trim()).filter(Boolean).map(n=>[n.toLowerCase(),n])).values()];
+    const rosterAdded=playerNames.length-teamPlayers.length;
+    const groundsAdded=groundNames.length-getGrounds().length;
+    const carryForwardMissing=Number(carryForwardAmount||0)===0&&localCarryForward!==0;
+    const recoveryCounts={
+      matches:matchesMerge.added,contributions:contributionMerge.added+contributionMerge.enriched,
+      groundPayments:groundMerge.added,manualPayments:manualMerge.added,
+      adjustments:adjustmentMerge.added,internalTransfers:internalTransferMerge.added,
+      players:rosterAdded,grounds:groundsAdded,carryForward:carryForwardMissing?1:0
+    };
+    const recoveryTotal=Object.values(recoveryCounts).reduce((sum,n)=>sum+n,0);
 
-        financeState={version:2,adjustments,carryForwardAmount};
-        localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
-        localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
-        localStorage.setItem(FINANCE_KEY,JSON.stringify(financeState));
-        await saveCloudState();
-      }
-    }
-
-    // If this is a genuinely empty cloud state, offer to migrate the complete
-    // old browser dataset. This is deliberately after loadCloudState() but uses
-    // the pre-load snapshots above, so nothing can be lost by the cloud read.
-    const cloudHasData=
-      data.length>0 ||
-      contributions.length>0 ||
-      groundPayments.length>0 ||
-      manualPayments.length>0 ||
-      adjustments.length>0 ||
-      Number(carryForwardAmount||0)!==0;
-
-    const localHasData=
-      (Array.isArray(localMatches)&&localMatches.length>0) ||
-      (Array.isArray(localContrib)&&localContrib.length>0) ||
-      (Array.isArray(localPayments)&&localPayments.length>0) ||
-      (Array.isArray(localManualPayments)&&localManualPayments.length>0) ||
-      localAdjustments.length>0 ||
-      localCarryForward!==0 ||
-      (Array.isArray(localTeamPlayers)&&localTeamPlayers.length>0);
-
-    if(!cloudHasData && localHasData){
-      if(confirm('Existing ArezoKings data was found in this browser.\n\nUpload it to the shared cloud database now?')){
-        data=Array.isArray(localMatches)?localMatches:[];
-        contributions=Array.isArray(localContrib)?localContrib:[];
-        groundPayments=Array.isArray(localPayments)?localPayments:[];
-        manualPayments=Array.isArray(localManualPayments)?localManualPayments:[];
-        adjustments=localAdjustments;
-        teamPlayers=Array.isArray(localTeamPlayers)?localTeamPlayers:teamPlayers;
-        persistTeamPlayers();
-        carryForwardAmount=localCarryForward;
-        financeState={version:2,adjustments,carryForwardAmount};
-
+    if(recoveryTotal>0){
+      const labels=[];
+      if(recoveryCounts.matches)labels.push(recoveryCounts.matches+' Match record(s)');
+      if(recoveryCounts.contributions)labels.push(recoveryCounts.contributions+' Player contribution record(s) / entries');
+      if(recoveryCounts.groundPayments)labels.push(recoveryCounts.groundPayments+' Ground Payment(s)');
+      if(recoveryCounts.manualPayments)labels.push(recoveryCounts.manualPayments+' Manual Payment(s)');
+      if(recoveryCounts.adjustments)labels.push(recoveryCounts.adjustments+' Adjustment(s)');
+      if(recoveryCounts.internalTransfers)labels.push(recoveryCounts.internalTransfers+' Internal Transfer(s)');
+      if(recoveryCounts.players)labels.push(recoveryCounts.players+' Player name(s)');
+      if(recoveryCounts.grounds)labels.push(recoveryCounts.grounds+' Ground name(s)');
+      if(recoveryCounts.carryForward)labels.push('Carry Forward Amount');
+      const message='Some records exist in this browser but are missing from the shared cloud data:\n\n'+labels.join('\n')+'\n\nUpload only these missing records? Existing cloud records will be kept; matching IDs will not be duplicated.';
+      if(confirm(message)){
+        data=matchesMerge.rows;
+        contributions=contributionMerge.rows;
+        groundPayments=groundMerge.rows;
+        manualPayments=manualMerge.rows;
+        adjustments=adjustmentMerge.rows;
+        internalTransfers=internalTransferMerge.rows;
+        teamPlayers=playerNames;
+        saveGrounds(groundNames);
+        if(carryForwardMissing)carryForwardAmount=localCarryForward;
+        financeState={version:2,adjustments,internalTransfers,carryForwardAmount,players:teamPlayers};
         localStorage.setItem(KEY,JSON.stringify(data));
         localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
         localStorage.setItem(PAYMENT_KEY,JSON.stringify(groundPayments));
         localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
         localStorage.setItem(FINANCE_KEY,JSON.stringify(financeState));
+        localStorage.setItem(TEAM_PLAYERS_KEY,JSON.stringify(teamPlayers));
         await saveCloudState();
+        localStorage.removeItem('arezoKingsPendingLocalRecoveryV1');
+      }else{
+        // Keep a separate recovery copy if the user chooses not to upload now.
+        localStorage.setItem('arezoKingsPendingLocalRecoveryV1',JSON.stringify({
+          matches:localMatches,contributions:localContrib,groundPayments:localPayments,
+          manualPayments:localManualPayments,adjustments:localAdjustments,
+          internalTransfers:localInternalTransfers,carryForwardAmount:localCarryForward,
+          players:localTeamPlayers,groundNames:localGroundNames
+        }));
       }
+    }else if(Object.keys(pendingRecovery).length){
+      localStorage.removeItem('arezoKingsPendingLocalRecoveryV1');
     }
 
     render();
