@@ -3653,7 +3653,7 @@ ensureFinanceFields();wrapLegacyFunctions();
       '<div class="accounts-help">Reallocate an existing Transferred Received balance from one member to another. These transfers are not expenses and do not change the team Total Amount or Amount Paid.</div>'+
       '<div class="table-wrap manual-adjustments-wrap"><table class="finance-table manual-adjustments-table"><thead><tr><th>Date</th><th>Transferred From</th><th>Transferred To</th><th class="amount">Amount</th><th>Description</th><th>Actions</th></tr></thead><tbody>'+
       (Array.isArray(internalTransfers)&&internalTransfers.length
-        ? internalTransfers.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(t=>'<tr><td>'+safe(t.date||'')+'</td><td><strong>'+safe(t.from||'')+'</strong></td><td><strong>'+safe(t.to||'')+'</strong></td><td class="amount"><strong>'+cash(t.amount)+'</strong></td><td>'+safe(t.description||'')+'</td><td class="actions"><button onclick="openInternalTransferForm(\\''+safe(t.id||'')+'\\')">Edit</button><button class="danger" onclick="deleteInternalTransfer(\\''+safe(t.id||'')+'\\')">Delete</button></td></tr>').join('')
+        ? internalTransfers.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(t=>'<tr><td>'+safe(t.date||'')+'</td><td><strong>'+safe(t.from||'')+'</strong></td><td><strong>'+safe(t.to||'')+'</strong></td><td class="amount"><strong>'+cash(t.amount)+'</strong></td><td>'+safe(t.description||'')+'</td><td class="actions"><button onclick="openInternalTransferForm(\''+safe(t.id||'')+'\')">Edit</button><button class="danger" onclick="deleteInternalTransfer(\''+safe(t.id||'')+'\')">Delete</button></td></tr>').join('')
         : '<tr><td colspan="6" class="empty">No internal transfers recorded.</td></tr>')+
       '</tbody></table></div>'+
       '<div class="finance-toolbar manual-adjustment-action">'+
@@ -3709,7 +3709,7 @@ ensureFinanceFields();wrapLegacyFunctions();
       '<div><label>Transfer From</label><select id="fTransferFrom">'+fromOptions+'</select></div>'+
       '<div><label>Transfer To</label><select id="fTransferTo">'+toOptions+'</select></div>'+
       '<div style="grid-column:1/-1"><label>Description</label><input id="fTransferDescription" value="'+safe(existing?.description||'')+'" placeholder="e.g. Move Neeraj’s transferred balance to Suyog"></div>'+
-      '<div class="form-actions"><button class="primary" type="button" onclick="saveInternalTransfer(\\''+safe(existing?.id||'')+'\\')">Save Transfer</button><button class="secondary" type="button" onclick="closeFinanceModal()">Cancel</button></div></div></div></div>';
+      '<div class="form-actions"><button class="primary" type="button" onclick="saveInternalTransfer(\''+safe(existing?.id||'')+'\')">Save Transfer</button><button class="secondary" type="button" onclick="closeFinanceModal()">Cancel</button></div></div></div></div>';
   };
 
   window.saveInternalTransfer=function(id=''){
@@ -3718,7 +3718,7 @@ ensureFinanceFields();wrapLegacyFunctions();
     const from=document.getElementById('fTransferFrom')?.value||'';
     const to=document.getElementById('fTransferTo')?.value||'';
     const description=document.getElementById('fTransferDescription')?.value.trim()||'';
-    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)){alert('Please select a valid transfer date.');return;}
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){alert('Please select a valid transfer date.');return;}
     if(!Number.isFinite(amount)||amount<=0){alert('Please enter a valid transfer amount greater than zero.');return;}
     if(!from||!to){alert('Please select both Transfer From and Transfer To.');return;}
     if(from===to){alert('Transfer From and Transfer To must be different people.');return;}
