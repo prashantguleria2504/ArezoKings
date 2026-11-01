@@ -3538,15 +3538,9 @@ ensureFinanceFields();wrapLegacyFunctions();
       // Net Balance = Money Received + Transferred Received - (Ground Paid + Adjustments).
       // Keep player fees as a separate visible component of money held.
       // Net Balance still includes them exactly once.
-      // Include any manual payment assigned through Transferred To in the recipient's Money Received,
-      // regardless of category. Transfer-category amounts are already included here, so do not add
-      // transferReceived again to Net Balance.
-      const recipientReceived=otherPayments
-        .filter(p=>String(p.transferredTo||'').trim()===person)
-        .reduce((s,p)=>s+num(p.amount),0);
-      const received=opp+cont+recipientReceived;
+      const received=opp+cont;
       const playersFee=play;
-      const net=received+playersFee-gp-adj;
+      const net=received+playersFee+transferReceived-gp-adj;
       return {person,opp,play,playersFee,cont,transferReceived,gp,adj,received,net};
     });
 
@@ -3603,9 +3597,7 @@ ensureFinanceFields();wrapLegacyFunctions();
     const consolidatedPlayersFee=Object.values(people).reduce((sum,p)=>sum+Number(p.playersFee||0),0);
     const consolidatedTransferReceived=Object.values(people).reduce((sum,p)=>sum+Number(p.transferReceived||0),0);
     // Player fees are shown separately but included once in the consolidated total.
-    // Transferred To amounts are now included in Money Received, including Transfer-category payments.
-    // Keep the separate Transferred Received column as a breakdown, but do not double-count it here.
-    const consolidatedTotalAmount=consolidatedMoneyReceived+consolidatedPlayersFee;
+    const consolidatedTotalAmount=consolidatedMoneyReceived+consolidatedPlayersFee+consolidatedTransferReceived;
     // Manual payment allocations reduce the displayed remaining payment balance. Add all adjustments back
     // as actual expenses so linked adjustments are counted once and unlinked adjustments are not omitted.
     const consolidatedAdjusted=totals.adjustments;
@@ -3620,13 +3612,13 @@ ensureFinanceFields();wrapLegacyFunctions();
     overall.innerHTML=
       '<div class="accounts-overall-section accounts-summary-section"><div class="finance-summary-title">🏏 Consolidated Team Summary</div>'+
       '<div class="accounts-funds-grid">'+
-      '<div class="accounts-available-card accounts-total-card"><div style="width:100%"><div class="accounts-available-label">Total Amount</div><div class="accounts-available-value">'+cash(consolidatedTotalAmount)+'</div><div class="accounts-available-note">Money Received, including payments assigned through Transferred To, across all team members</div><div class="accounts-carry-forward-mini"><span><strong>Carry Forwarded Amount (shown separately)</strong></span><span>'+cash(carryForwardAmount)+'</span></div></div></div>'+
+      '<div class="accounts-available-card accounts-total-card"><div style="width:100%"><div class="accounts-available-label">Total Amount</div><div class="accounts-available-value">'+cash(consolidatedTotalAmount)+'</div><div class="accounts-available-note">Money Received + Transferred Received across all team members</div><div class="accounts-carry-forward-mini"><span><strong>Carry Forwarded Amount (shown separately)</strong></span><span>'+cash(carryForwardAmount)+'</span></div></div></div>'+
       '<div class="accounts-available-card accounts-paid-card"><div style="width:100%"><div class="accounts-available-label">Amount Paid</div><div class="accounts-paid-total">'+cash(consolidatedAmountPaid)+'</div><div class="accounts-paid-breakdown"><div class="payment-mini payment-mini-ground"><span>Ground Payments</span><strong>'+cash(totals.groundPaid)+'</strong></div><div class="payment-mini payment-mini-manual"><span>Manual Payments</span><strong>'+cash(totals.manualPaid)+'</strong><small style="display:block;margin-top:4px;font-size:11px;color:var(--muted);">This amount needs to be returned to the team member, with proper adjustment created.</small></div><div class="payment-mini payment-mini-manual"><span>Adjusted</span><strong>'+cash(consolidatedAdjusted)+'</strong></div></div><div class="accounts-available-note">Ground Payments + remaining Manual Payments + Adjusted expenses</div></div></div>'+
       '<div class="accounts-available-card accounts-balance-card"><div><div class="accounts-available-label">Total Available Amount</div><div class="accounts-available-value">'+cash(consolidatedAvailableAmount)+'</div><div class="accounts-available-note">Total Amount − Amount Paid</div>'+pendingAdjustmentNote+'</div><span class="accounts-available-badge">Team Pool</span></div>'+
       '</div></div>'+
       '<div class="accounts-overall-section accounts-held-section">'+
       '<div class="finance-section-title">💰 Amount Currently Held by Each Person</div>'+
-      '<div class="accounts-help">Cumulative across all recorded months. <strong>Money Received</strong> includes opponent collections, regular contributions, and manual payments assigned to that person through <strong>Transferred To</strong>, regardless of category. <strong>Players fee</strong> shows player fees collected by that person. <strong>Transferred Received</strong> remains a separate breakdown for Transfer-category payments and is not counted twice. These amounts are included once in <strong>Net Balance</strong>, less Ground Paid and Adjustments.</div>'+
+      '<div class="accounts-help">Cumulative across all recorded months. <strong>Money Received</strong> includes opponent collections and regular contributions. <strong>Players fee</strong> shows player fees collected by that person. Both are included once in <strong>Net Balance</strong>, together with Transferred Received, less Ground Paid and Adjustments.</div>'+
       '<div class="table-wrap"><table class="finance-table owner-balance-table"><thead><tr><th>Person</th><th class="amount">Money Received</th><th class="amount">Players fee</th><th class="amount">Transferred Received</th><th class="amount">Ground Paid</th><th class="amount">Adjustments</th><th class="amount">Net Balance</th></tr></thead><tbody>'+
       ['Neeraj','Suyog','Prashant'].map(n=>'<tr><td><strong>'+n+'</strong></td><td class="amount">'+cash(people[n].received)+'</td><td class="amount">'+cash(people[n].playersFee)+'</td><td class="amount">'+cash(people[n].transferReceived)+'</td><td class="amount">'+cash(people[n].gp)+'</td><td class="amount">'+cash(people[n].adj)+'</td><td class="amount"><strong>'+cash(people[n].net)+'</strong></td></tr>').join('')+
       '</tbody></table></div></div>'+
