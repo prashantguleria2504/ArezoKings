@@ -4120,7 +4120,7 @@ function applyConfigurationVisibility(){
   const restoreInput=document.getElementById('restoreFile');
   if(restoreInput)restoreInput.disabled=!admin;
 }
-async function showConfiguration(){
+async async function showConfiguration(){
   localStorage.setItem('arezoKingsLastPageV1','configuration');
   ['summarySection','playerContributionSummarySection','paymentsSection','manualPaymentsSection','contributionsSection','playersSection','internalTransfersSection','matchFormSection','weeks','accountsSection'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
   document.querySelector('.cards')?.classList.add('hidden');
