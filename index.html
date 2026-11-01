@@ -785,13 +785,13 @@ async function loadCloudState(){
 async function refreshCloudState(){
   if(!supabaseClient || !cloudUser)return;
   try{
-    const snapshot=()=>JSON.stringify({
-      m:data,c:contributions,p:groundPayments,mp:manualPayments,
-      a:adjustments,it:internalTransfers,cf:carryForwardAmount,g:getGrounds()
+    const before=JSON.stringify({
+      m:data,c:contributions,p:groundPayments,mp:manualPayments,a:adjustments,it:internalTransfers,cf:carryForwardAmount,g:getGrounds()
     });
-    const before=snapshot();
     await loadCloudState();
-    const after=snapshot();
+    const after=JSON.stringify({
+      m:data,c:contributions,p:groundPayments,g:getGrounds()
+    });
     if(before!==after){
       normalizeFinanceOwnership();
       render();
@@ -799,26 +799,6 @@ async function refreshCloudState(){
       renderGroundPayments();
       refreshGroundDropdown();
       refreshPaymentGroundDropdown();
-      refreshManualPaymentCategories();
-      populateManualPaymentPeople();
-      populateManualPaymentAdjustments();
-      syncAllManualPaymentContributions();
-      const currentPage=localStorage.getItem('arezoKingsLastPageV1')||'matches';
-      if(currentPage==='payments'){
-        renderGroundPayments();
-        renderManualPayments();
-      }else if(currentPage==='accounts'){
-        if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();
-        if(typeof renderAccounts==='function')renderAccounts();
-      }else if(currentPage==='internal_transfers'){
-        renderInternalTransfers();
-      }else if(currentPage==='contributions'){
-        renderContributions();
-      }else if(currentPage==='summary'){
-        renderSummary();
-      }else if(currentPage==='players'){
-        renderPlayers();
-      }
     }
   }catch(err){
     console.error('Cloud refresh failed:',err);
@@ -936,7 +916,6 @@ function showApp(){
   else if(lastPage==='contributions')showContributions();
   else if(lastPage==='summary')showSummary();
   else if(lastPage==='players')showPlayers();
-  else if(lastPage==='internal_transfers')showInternalTransfers();
   else if(lastPage==='configuration')showConfiguration();
   else showTracker();
   window.scrollTo(0,0);
@@ -1578,15 +1557,11 @@ function clearManualPaymentFilters(){
   renderManualPayments();
 }
 function renderManualPayments(){
-  // Supabase is the source of truth for signed-in users. Do not overwrite
-  // the freshly loaded cloud ledger with an older browser-local copy.
-  if(!cloudUser){
-    try{
-      const stored=JSON.parse(localStorage.getItem(MANUAL_PAYMENT_KEY)||'[]');
-      if(Array.isArray(stored))manualPayments=stored;
-    }catch(err){
-      console.error('Manual payments local data load failed:',err);
-    }
+  try{
+    const stored=JSON.parse(localStorage.getItem(MANUAL_PAYMENT_KEY)||'[]');
+    if(Array.isArray(stored))manualPayments=stored;
+  }catch(err){
+    console.error('Manual payments local data load failed:',err);
   }
   syncAllManualPaymentContributions();
   populateManualPaymentCategoryFilter();
@@ -2971,7 +2946,7 @@ async function initializeCloudApp(){
         }
         if(localCarryForwardMissing)carryForwardAmount=localCarryForward;
 
-        financeState={version:2,adjustments,internalTransfers:Array.isArray(internalTransfers)?internalTransfers:[],carryForwardAmount};
+        financeState={version:2,adjustments,carryForwardAmount};
         localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
         localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
         localStorage.setItem(FINANCE_KEY,JSON.stringify(financeState));
@@ -3009,7 +2984,7 @@ async function initializeCloudApp(){
         teamPlayers=Array.isArray(localTeamPlayers)?localTeamPlayers:teamPlayers;
         persistTeamPlayers();
         carryForwardAmount=localCarryForward;
-        financeState={version:2,adjustments,internalTransfers:Array.isArray(internalTransfers)?internalTransfers:[],carryForwardAmount};
+        financeState={version:2,adjustments,carryForwardAmount};
 
         localStorage.setItem(KEY,JSON.stringify(data));
         localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
