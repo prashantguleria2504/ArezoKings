@@ -1578,11 +1578,15 @@ function clearManualPaymentFilters(){
   renderManualPayments();
 }
 function renderManualPayments(){
-  try{
-    const stored=JSON.parse(localStorage.getItem(MANUAL_PAYMENT_KEY)||'[]');
-    if(Array.isArray(stored))manualPayments=stored;
-  }catch(err){
-    console.error('Manual payments local data load failed:',err);
+  // Supabase is the source of truth for signed-in users. Do not overwrite
+  // the freshly loaded cloud ledger with an older browser-local copy.
+  if(!cloudUser){
+    try{
+      const stored=JSON.parse(localStorage.getItem(MANUAL_PAYMENT_KEY)||'[]');
+      if(Array.isArray(stored))manualPayments=stored;
+    }catch(err){
+      console.error('Manual payments local data load failed:',err);
+    }
   }
   syncAllManualPaymentContributions();
   populateManualPaymentCategoryFilter();
