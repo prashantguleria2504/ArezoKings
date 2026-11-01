@@ -380,6 +380,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
   <button class="secondary nav-players" onclick="showPlayers()">👥 Players</button>
   <button class="secondary nav-contrib" onclick="showContributions()">🏏 Contributions</button>
   <button class="secondary nav-payments" onclick="showPayments()">🏟️ Payments</button>
+<button class="secondary nav-payments" onclick="showInternalTransfers()">↔ Internal Transfers</button>
 <button class="secondary nav-accounts" id="accountsNavButton" onclick="showAccounts()">💰 Accounts & Settlement</button>
 <button class="secondary nav-config" id="configNavButton" onclick="showConfiguration()">⚙️ Configuration</button>
 
@@ -531,6 +532,20 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
       <tbody id="manualPaymentRows"></tbody>
     </table>
   </div>
+</section>
+
+<section class="section hidden" id="internalTransfersSection">
+  <div class="section-head"><h2>↔ Internal Transfers</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><span class="payment-note">Move existing team money between members. This is not a new receipt or team expense.</span><button class="secondary" type="button" onclick="toggleInternalTransferForm()">＋ Add Internal Transfer</button></div></div>
+  <div class="contrib-form hidden" id="internalTransferForm">
+    <div><label>Transfer Date</label><input id="itDate" type="date"></div>
+    <div><label>Amount</label><input id="itAmount" type="number" min="0.01" step="0.01" placeholder="0"></div>
+    <div><label>Transferred From</label><select id="itFrom"><option value="">Select sender</option><option>Neeraj</option><option>Suyog</option><option>Prashant</option></select></div>
+    <div><label>Transferred To</label><select id="itTo"><option value="">Select recipient</option><option>Neeraj</option><option>Suyog</option><option>Prashant</option></select></div>
+    <div style="grid-column:1/-1"><label>Description</label><input id="itDescription" placeholder="e.g. Neeraj balance transferred to Suyog"></div>
+    <div class="form-actions"><button class="primary" type="button" onclick="saveInternalTransfer()">Save Internal Transfer</button><button class="secondary" type="button" onclick="clearInternalTransferForm()">Clear</button></div>
+    <div class="accounts-help" style="grid-column:1/-1">The sender's balance decreases and the recipient's balance increases. Consolidated Total Amount and Amount Paid do not change.</div>
+  </div>
+  <div class="table-wrap"><table class="contribution-table"><thead><tr><th>Date</th><th>Transferred From</th><th>Transferred To</th><th class="amount">Amount</th><th>Description</th><th>Actions</th></tr></thead><tbody id="internalTransferRows"></tbody></table></div>
 </section>
 
 <section class="section hidden" id="playersSection">
@@ -733,6 +748,7 @@ async function loadCloudState(){
     const cloudFinance=row.finance_state&&typeof row.finance_state==='object'?row.finance_state:{};
     const needsPlayerRosterMigration=!Array.isArray(cloudFinance.players);
     adjustments=Array.isArray(cloudFinance.adjustments)?cloudFinance.adjustments:[];
+    internalTransfers=Array.isArray(cloudFinance.internalTransfers)?cloudFinance.internalTransfers:[];
     carryForwardAmount=Number(cloudFinance.carryForwardAmount||0);
     if(Array.isArray(cloudFinance.players))teamPlayers=cloudFinance.players;
     else{
@@ -740,7 +756,8 @@ async function loadCloudState(){
       teamPlayers=[...new Map(legacyNames.map(n=>[String(n||'').trim().toLowerCase(),String(n||'').trim()]).filter(([k,v])=>k&&v)).values()];
     }
     persistTeamPlayers();
-    financeState={version:2,adjustments,carryForwardAmount,players:teamPlayers};
+    financeState={version:2,adjustments,internalTransfers,carryForwardAmount,players:teamPlayers};
+    localStorage.setItem(FINANCE_KEY,JSON.stringify(financeState));
     if(Array.isArray(row.ground_names))saveGrounds(row.ground_names);
     localStorage.setItem(KEY,JSON.stringify(data));
     localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
@@ -758,7 +775,7 @@ async function loadCloudState(){
     contributions:Array.isArray(contributions)?contributions:[],
     ground_payments:Array.isArray(groundPayments)?groundPayments.map(p=>({...p,paidBy:String(p?.paidBy||p?.payee||'').trim()})):[],
     manual_payments:Array.isArray(manualPayments)?manualPayments:[],
-    finance_state:{version:2,adjustments:Array.isArray(adjustments)?adjustments:[],carryForwardAmount:Number(carryForwardAmount||0),players:Array.isArray(teamPlayers)?teamPlayers:[]},
+    finance_state:{version:2,adjustments:Array.isArray(adjustments)?adjustments:[],internalTransfers:Array.isArray(internalTransfers)?internalTransfers:[],carryForwardAmount:Number(carryForwardAmount||0),players:Array.isArray(teamPlayers)?teamPlayers:[]},
     ground_names:getGrounds(),
     updated_at:new Date().toISOString()
   },{onConflict:'id'});
@@ -769,7 +786,7 @@ async function refreshCloudState(){
   if(!supabaseClient || !cloudUser)return;
   try{
     const before=JSON.stringify({
-      m:data,c:contributions,p:groundPayments,mp:manualPayments,a:adjustments,cf:carryForwardAmount,g:getGrounds()
+      m:data,c:contributions,p:groundPayments,mp:manualPayments,a:adjustments,it:internalTransfers,cf:carryForwardAmount,g:getGrounds()
     });
     await loadCloudState();
     const after=JSON.stringify({
@@ -1942,6 +1959,7 @@ function hideAllPageSections(){
     'accountsSection',
     'configurationSection',
     'playersSection',
+    'internalTransfersSection',
     'weeks'
   ].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
   document.querySelector('.cards')?.classList.add('hidden');
@@ -1971,6 +1989,14 @@ function toggleContributionForm(force){
   const shouldShow=typeof force==='boolean'?force:form.classList.contains('hidden');
   form.classList.toggle('hidden',!shouldShow);
   if(shouldShow)document.getElementById('cPlayerName')?.focus();
+}
+
+function showInternalTransfers(){
+  localStorage.setItem('arezoKingsLastPageV1','internal_transfers');
+  hideAllPageSections();
+  document.getElementById('internalTransfersSection')?.classList.remove('hidden');
+  renderInternalTransfers();
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 function showPayments(){
@@ -2716,7 +2742,7 @@ function buildBackupPayload(){
     groundPayments:Array.isArray(groundPayments)?groundPayments:[],
     manualPayments:Array.isArray(manualPayments)?manualPayments:[],
     groundNames:getGrounds(),
-    finance:{version:2,adjustments:Array.isArray(adjustments)?adjustments:[],carryForwardAmount:Number(carryForwardAmount||0),players:Array.isArray(teamPlayers)?teamPlayers:[]}
+    finance:{version:2,adjustments:Array.isArray(adjustments)?adjustments:[],internalTransfers:Array.isArray(internalTransfers)?internalTransfers:[],carryForwardAmount:Number(carryForwardAmount||0),players:Array.isArray(teamPlayers)?teamPlayers:[]}
   };
 }
 function closeBackupModal(){
@@ -2826,6 +2852,7 @@ async function restoreData(e){
     manualPayments=restoredManualPayments;
     if(restoredFinance){
       adjustments=Array.isArray(restoredFinance.adjustments)?restoredFinance.adjustments:[];
+      internalTransfers=Array.isArray(restoredFinance.internalTransfers)?restoredFinance.internalTransfers:[];
       carryForwardAmount=Number(restoredFinance.carryForwardAmount||0);
       saveFinanceLocal();
     }
@@ -3048,10 +3075,11 @@ window.showAccounts=function(){
 const FINANCE_KEY='arezoKingsFinanceV1';
 let financeState=JSON.parse(localStorage.getItem(FINANCE_KEY)||'{}');
 let adjustments=Array.isArray(financeState.adjustments)?financeState.adjustments:[];
+let internalTransfers=Array.isArray(financeState.internalTransfers)?financeState.internalTransfers:[];
 const ACCOUNT_PEOPLE=['Neeraj','Suyog','Prashant'];
 
 function saveFinanceLocal(){
-  financeState={version:2,adjustments,carryForwardAmount:Number(carryForwardAmount||0),players:Array.isArray(teamPlayers)?teamPlayers:[]};
+  financeState={version:2,adjustments,internalTransfers:Array.isArray(internalTransfers)?internalTransfers:[],carryForwardAmount:Number(carryForwardAmount||0),players:Array.isArray(teamPlayers)?teamPlayers:[]};
   localStorage.setItem(FINANCE_KEY,JSON.stringify(financeState));
   if(cloudUser&&typeof saveCloudState==='function')saveCloudState().catch(err=>console.error('Finance state cloud sync failed:',err));
 }
@@ -3528,6 +3556,8 @@ ensureFinanceFields();wrapLegacyFunctions();
 
     const people=['Neeraj','Suyog','Prashant'].map(person=>{
       const transferReceived=otherPayments.filter(p=>(isTransferManualPayment(p)||p.addToTransferredReceived)&&(p.transferredTo||'')===person).reduce((s,p)=>s+num(p.amount),0);
+      const internalTransferReceived=internalTransfers.filter(t=>monthOf(t.date)===month&&t.to===person).reduce((s,t)=>s+num(t.amount),0);
+      const internalTransferSent=internalTransfers.filter(t=>monthOf(t.date)===month&&t.from===person).reduce((s,t)=>s+num(t.amount),0);
       const opp=matches.filter(m=>(m.opponentOwner||m.opponentReceivedBy||'')===person)
         .reduce((s,m)=>s+num(m.opponentAmount),0);
       const play=matches.reduce((s,m)=>s+(Array.isArray(m.players)?m.players:[])
@@ -3545,11 +3575,11 @@ ensureFinanceFields();wrapLegacyFunctions();
       // Keep Transfer payments separate from the existing Money Received figure.
       // Net Balance = Money Received + Transferred Received - (Ground Paid + Adjustments).
       // Keep player fees as a separate visible component of money held.
-      // Net Balance still includes them exactly once.
+      // Internal transfers move existing funds between members; they do not create team income or expenses.
       const received=opp+cont;
       const playersFee=play;
-      const net=received+playersFee+transferReceived-gp-adj;
-      return {person,opp,play,playersFee,cont,transferReceived,gp,adj,received,net};
+      const net=received+playersFee+transferReceived+internalTransferReceived-internalTransferSent-gp-adj;
+      return {person,opp,play,playersFee,cont,transferReceived,internalTransferReceived,internalTransferSent,gp,adj,received,net};
     });
 
     return {month,groundBooking,groundPaid,otherPaid,totalPaid,opponent,players,regular,adjustments:totalAdjustmentAmount,monthAdjustments:manual,people,matches,payments,otherPayments};
@@ -3574,7 +3604,7 @@ ensureFinanceFields();wrapLegacyFunctions();
 
     const months=allMonths();
     const totals={groundBooking:0,groundPaid:0,manualPaid:0,opponent:0,players:0,regular:0,adjustments:0};
-    const people={Neeraj:{received:0,playersFee:0,transferReceived:0,gp:0,adj:0,net:0},Suyog:{received:0,playersFee:0,transferReceived:0,gp:0,adj:0,net:0},Prashant:{received:0,playersFee:0,transferReceived:0,gp:0,adj:0,net:0}};
+    const people={Neeraj:{received:0,playersFee:0,transferReceived:0,internalTransferReceived:0,internalTransferSent:0,gp:0,adj:0,net:0},Suyog:{received:0,playersFee:0,transferReceived:0,internalTransferReceived:0,internalTransferSent:0,gp:0,adj:0,net:0},Prashant:{received:0,playersFee:0,transferReceived:0,internalTransferReceived:0,internalTransferSent:0,gp:0,adj:0,net:0}};
     const results=months.map(m=>calculate(m));
 
     results.forEach(r=>{
@@ -3589,6 +3619,8 @@ ensureFinanceFields();wrapLegacyFunctions();
         people[p.person].received+=p.received;
         people[p.person].playersFee+=p.playersFee||0;
         people[p.person].transferReceived+=p.transferReceived||0;
+        people[p.person].internalTransferReceived+=p.internalTransferReceived||0;
+        people[p.person].internalTransferSent+=p.internalTransferSent||0;
         people[p.person].gp+=p.gp;
         people[p.person].adj+=p.adj;        people[p.person].net+=p.net;
       });
@@ -3627,8 +3659,8 @@ ensureFinanceFields();wrapLegacyFunctions();
       '<div class="accounts-overall-section accounts-held-section">'+
       '<div class="finance-section-title">💰 Amount Currently Held by Each Person</div>'+
       '<div class="accounts-help">Cumulative across all recorded months. <strong>Money Received</strong> includes opponent collections and regular contributions. <strong>Players fee</strong> shows player fees collected by that person. Both are included once in <strong>Net Balance</strong>, together with Transferred Received, less Ground Paid and Adjustments.</div>'+
-      '<div class="table-wrap"><table class="finance-table owner-balance-table"><thead><tr><th>Person</th><th class="amount">Money Received</th><th class="amount">Players fee</th><th class="amount">Transferred Received</th><th class="amount">Ground Paid</th><th class="amount">Adjustments</th><th class="amount">Net Balance</th></tr></thead><tbody>'+
-      ['Neeraj','Suyog','Prashant'].map(n=>'<tr><td><strong>'+n+'</strong></td><td class="amount">'+cash(people[n].received)+'</td><td class="amount">'+cash(people[n].playersFee)+'</td><td class="amount">'+cash(people[n].transferReceived)+'</td><td class="amount">'+cash(people[n].gp)+'</td><td class="amount">'+cash(people[n].adj)+'</td><td class="amount"><strong>'+cash(people[n].net)+'</strong></td></tr>').join('')+
+      '<div class="table-wrap"><table class="finance-table owner-balance-table"><thead><tr><th>Person</th><th class="amount">Money Received</th><th class="amount">Players fee</th><th class="amount">Transferred Received</th><th class="amount">Internal Transfer Received</th><th class="amount">Internal Transfer Sent</th><th class="amount">Ground Paid</th><th class="amount">Adjustments</th><th class="amount">Net Balance</th></tr></thead><tbody>'+
+      ['Neeraj','Suyog','Prashant'].map(n=>'<tr><td><strong>'+n+'</strong></td><td class="amount">'+cash(people[n].received)+'</td><td class="amount">'+cash(people[n].playersFee)+'</td><td class="amount">'+cash(people[n].transferReceived)+'</td><td class="amount">'+cash(people[n].internalTransferReceived)+'</td><td class="amount">'+cash(people[n].internalTransferSent)+'</td><td class="amount">'+cash(people[n].gp)+'</td><td class="amount">'+cash(people[n].adj)+'</td><td class="amount"><strong>'+cash(people[n].net)+'</strong></td></tr>').join('')+
       '</tbody></table></div></div>'+
       '<div class="accounts-overall-section accounts-adjustments-section">'+
       '<div class="finance-section-title manual-adjustments-title">↔ Manual Adjustments</div>'+
@@ -3659,12 +3691,46 @@ ensureFinanceFields();wrapLegacyFunctions();
       '<div class="finance-summary-grid">'+
       [['Ground booking',r.groundBooking,'Matches'],['Ground paid',r.totalPaid,'Payments'],['Opponent',r.opponent,'Opponent fees'],['Players',r.players,'Playing players'],['Contributions',r.regular,'Regular contributions'],['Adjustments',r.adjustments,'Match + manual']].map(x=>'<div class="finance-summary-item"><div class="label">'+safe(x[0])+'</div><div class="value">'+cash(x[1])+'</div><div class="hint">'+safe(x[2])+'</div></div>').join('')+
       '</div>'+
-      '<div class="table-wrap"><table class="finance-table"><thead><tr><th>Person</th><th class="amount">Opponent</th><th class="amount">Players</th><th class="amount">Contributions</th><th class="amount">Ground Paid</th><th class="amount">Adjustments</th><th class="amount">Net Balance</th></tr></thead><tbody>'+
-      r.people.map(p=>'<tr><td><strong>'+p.person+'</strong></td><td class="amount">'+cash(p.opp)+'</td><td class="amount">'+cash(p.play)+'</td><td class="amount">'+cash(p.cont)+'</td><td class="amount">'+cash(p.gp)+'</td><td class="amount">'+cash(p.adj)+'</td><td class="amount"><strong>'+cash(p.net)+'</strong></td></tr>').join('')+
+      '<div class="table-wrap"><table class="finance-table"><thead><tr><th>Person</th><th class="amount">Opponent</th><th class="amount">Players</th><th class="amount">Contributions</th><th class="amount">Internal Transfer Received</th><th class="amount">Internal Transfer Sent</th><th class="amount">Ground Paid</th><th class="amount">Adjustments</th><th class="amount">Net Balance</th></tr></thead><tbody>'+
+      r.people.map(p=>'<tr><td><strong>'+p.person+'</strong></td><td class="amount">'+cash(p.opp)+'</td><td class="amount">'+cash(p.play)+'</td><td class="amount">'+cash(p.cont)+'</td><td class="amount">'+cash(p.internalTransferReceived)+'</td><td class="amount">'+cash(p.internalTransferSent)+'</td><td class="amount">'+cash(p.gp)+'</td><td class="amount">'+cash(p.adj)+'</td><td class="amount"><strong>'+cash(p.net)+'</strong></td></tr>').join('')+
       '</tbody></table></div>'+
       '<div class="accounts-month-foot">Money collected: <strong>'+cash(r.opponent+r.players+r.regular)+'</strong> · Team payments: <strong>'+cash(r.totalPaid)+'</strong> · Adjustments: <strong>'+cash(r.adjustments)+'</strong></div>'+
       (r.monthAdjustments?.length ? '<div class="finance-section-title">↔ Adjustments</div><div class="table-wrap"><table class="finance-table"><thead><tr><th>Date</th><th>Deduct From</th><th class="amount">Amount</th><th>Payee / From</th><th>Reason</th><th>Actions</th></tr></thead><tbody>'+r.monthAdjustments.map(a=>'<tr><td>'+safe(a.date)+'</td><td><strong>'+safe(a.deductFrom||a.paidBy||'')+'</strong></td><td class="amount">'+cash(a.amount)+'</td><td>'+safe(a.payee||'')+'</td><td>'+safe(a.reason||'')+'</td><td><button onclick="openAdjustmentForm(\''+a.id+'\')">Edit</button> <button class="danger" onclick="deleteAdjustment(\''+a.id+'\')">Delete</button></td></tr>').join('')+'</tbody></table></div>' : '')+
       '</div>';
+  };
+
+  function cumulativePersonNet(person){
+    return allMonths().reduce((sum,m)=>{const row=calculate(m).people.find(p=>p.person===person);return sum+num(row?.net);},0);
+  }
+  window.toggleInternalTransferForm=function(force){
+    const form=document.getElementById('internalTransferForm');if(!form)return;
+    const show=typeof force==='boolean'?force:form.classList.contains('hidden');form.classList.toggle('hidden',!show);
+    if(show){const date=document.getElementById('itDate');if(date&&!date.value)date.value=new Date().toISOString().slice(0,10);}
+  };
+  window.clearInternalTransferForm=function(){['itDate','itAmount','itFrom','itTo','itDescription'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});};
+  window.renderInternalTransfers=function(){
+    const body=document.getElementById('internalTransferRows');if(!body)return;
+    const rows=Array.isArray(internalTransfers)?internalTransfers.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))):[];
+    body.innerHTML=rows.length?rows.map(t=>'<tr><td>'+safe(t.date||'')+'</td><td>'+safe(t.from||'')+'</td><td>'+safe(t.to||'')+'</td><td class="amount">'+cash(t.amount)+'</td><td>'+safe(t.description||'')+'</td><td class="actions"><button class="danger" onclick="deleteInternalTransfer(\\''+safe(t.id)+'\\')">Delete</button></td></tr>').join(''):'<tr><td colspan="6" class="empty">No internal transfers recorded.</td></tr>';
+  };
+  window.saveInternalTransfer=function(){
+    const date=document.getElementById('itDate')?.value||'',amount=Number(document.getElementById('itAmount')?.value||0);
+    const from=document.getElementById('itFrom')?.value||'',to=document.getElementById('itTo')?.value||'',description=document.getElementById('itDescription')?.value.trim()||'';
+    if(!date){alert('Please select the transfer date.');return;}
+    if(!Number.isFinite(amount)||amount<=0){alert('Please enter a valid transfer amount.');return;}
+    if(!from||!to){alert('Please select both sender and recipient.');return;}
+    if(from===to){alert('Sender and recipient must be different.');return;}
+    const senderBalance=cumulativePersonNet(from);
+    if(senderBalance<0||amount>senderBalance+0.000001){alert(from+' has an available Net Balance of '+cash(senderBalance)+'. The transfer cannot exceed this balance.');return;}
+    if(!confirm('Record internal transfer of '+cash(amount)+' from '+from+' to '+to+'?\\n\\n'+from+' balance will decrease and '+to+' balance will increase. Consolidated Total Amount and Amount Paid will not change.'))return;
+    internalTransfers.push({id:'IT-'+Date.now().toString(36).toUpperCase(),date,month:date.slice(0,7),amount,from,to,description,createdAt:new Date().toISOString()});
+    saveFinanceLocal();clearInternalTransferForm();toggleInternalTransferForm(false);renderInternalTransfers();renderAccountsDashboard();
+    alert('Internal transfer recorded successfully.');
+  };
+  window.deleteInternalTransfer=function(id){
+    const item=internalTransfers.find(t=>t.id===id);if(!item)return;
+    if(!confirm('Delete this internal transfer of '+cash(item.amount)+' from '+item.from+' to '+item.to+'? Both members’ balances will be reversed.'))return;
+    internalTransfers=internalTransfers.filter(t=>t.id!==id);saveFinanceLocal();renderInternalTransfers();renderAccountsDashboard();
   };
 
   window.showSelectedAccountsMonth=function(){
@@ -3680,7 +3746,7 @@ ensureFinanceFields();wrapLegacyFunctions();
     // This is the final active Accounts handler.
     localStorage.setItem('arezoKingsLastPageV1','accounts');
     // Open Accounts exclusively without changing the normal Matches rendering.
-    ['summarySection','playerContributionSummarySection','paymentsSection','manualPaymentsSection','contributionsSection','matchFormSection','weeks','configurationSection'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
+    ['summarySection','playerContributionSummarySection','paymentsSection','manualPaymentsSection','contributionsSection','internalTransfersSection','matchFormSection','weeks','configurationSection'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
     document.querySelector('.cards')?.classList.add('hidden');
 
     const section=document.getElementById('accountsSection');
@@ -3963,7 +4029,7 @@ async function cleanupAllApplicationData(){
       matches:[],
       contributions:[],
       ground_payments:[],
-      finance_state:{version:2,adjustments:[],carryForwardAmount:0,players:[]},
+      finance_state:{version:2,adjustments:[],internalTransfers:[],carryForwardAmount:0,players:[]},
       ground_names:[],
       updated_at:new Date().toISOString()
     }).eq('id',true);
@@ -3982,7 +4048,8 @@ async function cleanupAllApplicationData(){
     groundPayments=[];
     manualPayments=[];
     adjustments=[];
-    financeState={version:2,adjustments:[],carryForwardAmount:0,players:[]};
+    internalTransfers=[];
+    financeState={version:2,adjustments:[],internalTransfers:[],carryForwardAmount:0,players:[]};
     teamPlayers=[];localStorage.removeItem(TEAM_PLAYERS_KEY);
     carryForwardAmount=0;
 
@@ -4047,7 +4114,7 @@ function applyConfigurationVisibility(){
 }
 async function showConfiguration(){
   localStorage.setItem('arezoKingsLastPageV1','configuration');
-  ['summarySection','playerContributionSummarySection','paymentsSection','manualPaymentsSection','contributionsSection','playersSection','matchFormSection','weeks','accountsSection'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
+  ['summarySection','playerContributionSummarySection','paymentsSection','manualPaymentsSection','contributionsSection','playersSection','internalTransfersSection','matchFormSection','weeks','accountsSection'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
   document.querySelector('.cards')?.classList.add('hidden');
   document.getElementById('configurationSection')?.classList.remove('hidden');
   applyConfigurationVisibility();
