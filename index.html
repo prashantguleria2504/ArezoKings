@@ -785,13 +785,13 @@ async function loadCloudState(){
 async function refreshCloudState(){
   if(!supabaseClient || !cloudUser)return;
   try{
-    const before=JSON.stringify({
-      m:data,c:contributions,p:groundPayments,mp:manualPayments,a:adjustments,it:internalTransfers,cf:carryForwardAmount,g:getGrounds()
+    const snapshot=()=>JSON.stringify({
+      m:data,c:contributions,p:groundPayments,mp:manualPayments,
+      a:adjustments,it:internalTransfers,cf:carryForwardAmount,g:getGrounds()
     });
+    const before=snapshot();
     await loadCloudState();
-    const after=JSON.stringify({
-      m:data,c:contributions,p:groundPayments,g:getGrounds()
-    });
+    const after=snapshot();
     if(before!==after){
       normalizeFinanceOwnership();
       render();
@@ -799,6 +799,26 @@ async function refreshCloudState(){
       renderGroundPayments();
       refreshGroundDropdown();
       refreshPaymentGroundDropdown();
+      refreshManualPaymentCategories();
+      populateManualPaymentPeople();
+      populateManualPaymentAdjustments();
+      syncAllManualPaymentContributions();
+      const currentPage=localStorage.getItem('arezoKingsLastPageV1')||'matches';
+      if(currentPage==='payments'){
+        renderGroundPayments();
+        renderManualPayments();
+      }else if(currentPage==='accounts'){
+        if(typeof renderAccountsDashboard==='function')renderAccountsDashboard();
+        if(typeof renderAccounts==='function')renderAccounts();
+      }else if(currentPage==='internal_transfers'){
+        renderInternalTransfers();
+      }else if(currentPage==='contributions'){
+        renderContributions();
+      }else if(currentPage==='summary'){
+        renderSummary();
+      }else if(currentPage==='players'){
+        renderPlayers();
+      }
     }
   }catch(err){
     console.error('Cloud refresh failed:',err);
@@ -916,6 +936,7 @@ function showApp(){
   else if(lastPage==='contributions')showContributions();
   else if(lastPage==='summary')showSummary();
   else if(lastPage==='players')showPlayers();
+  else if(lastPage==='internal_transfers')showInternalTransfers();
   else if(lastPage==='configuration')showConfiguration();
   else showTracker();
   window.scrollTo(0,0);
@@ -2946,7 +2967,7 @@ async function initializeCloudApp(){
         }
         if(localCarryForwardMissing)carryForwardAmount=localCarryForward;
 
-        financeState={version:2,adjustments,carryForwardAmount};
+        financeState={version:2,adjustments,internalTransfers:Array.isArray(internalTransfers)?internalTransfers:[],carryForwardAmount};
         localStorage.setItem(MANUAL_PAYMENT_KEY,JSON.stringify(manualPayments));
         localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
         localStorage.setItem(FINANCE_KEY,JSON.stringify(financeState));
@@ -2984,7 +3005,7 @@ async function initializeCloudApp(){
         teamPlayers=Array.isArray(localTeamPlayers)?localTeamPlayers:teamPlayers;
         persistTeamPlayers();
         carryForwardAmount=localCarryForward;
-        financeState={version:2,adjustments,carryForwardAmount};
+        financeState={version:2,adjustments,internalTransfers:Array.isArray(internalTransfers)?internalTransfers:[],carryForwardAmount};
 
         localStorage.setItem(KEY,JSON.stringify(data));
         localStorage.setItem(CONTRIBUTION_KEY,JSON.stringify(contributions));
