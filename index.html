@@ -3592,6 +3592,7 @@ ensureFinanceFields();wrapLegacyFunctions();
     (Array.isArray(manualPayments)?manualPayments:[]).forEach(p=>{const m=p.month||monthOf(p.date);if(m)set.add(m);});
     (Array.isArray(contributions)?contributions:[]).forEach(p=>(p.recentEntries||[]).forEach(e=>{if(monthOf(e.date))set.add(monthOf(e.date));}));
     (Array.isArray(adjustments)?adjustments:[]).forEach(a=>{if(a.applyMonth)set.add(a.applyMonth);});
+    (Array.isArray(internalTransfers)?internalTransfers:[]).forEach(t=>{const m=t.month||monthOf(t.date);if(m)set.add(m);});
     return [...set].sort();
   }
 
