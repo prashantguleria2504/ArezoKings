@@ -1333,7 +1333,7 @@ function getSelectedManualPaymentCategory(){
 }
 function populateManualPaymentTransferredTo(selected=''){const el=document.getElementById('mpTransferredTo');if(!el)return;el.innerHTML='<option value="">Select person</option>'+['Neeraj','Suyog','Prashant'].map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('');el.value=selected||'';}
 function isTransferManualPayment(p){return String(p?.category||'').trim().toLowerCase()==='transfer';}
-function isManualPaymentSettled(p){return !!p&&(isTransferManualPayment(p)||((p.settledAgainstContribution&&!getPaymentAdjustmentIds(p).length)||paymentIsFullySettled(p)));}
+function isManualPaymentSettled(p){return !!p&&((isTransferManualPayment(p)&&!p.addToTransferredReceived)||((p.settledAgainstContribution&&!getPaymentAdjustmentIds(p).length)||paymentIsFullySettled(p)));}
 function addManualPaymentCategoryIfNew(category){
   const builtIn=['Equipment','Snacks / Food','Transport','Ground-related','Contribution','Transfer','Other'];
   if(category && !builtIn.includes(category)){
@@ -1421,7 +1421,7 @@ function saveManualPayment(){
     contributions.forEach(p=>{p.recentEntries=(Array.isArray(p.recentEntries)?p.recentEntries:[]).filter(e=>e.manualPaymentId!==item.id);});
   }
 
-  if(item.settledAgainstContribution||isTransferManualPayment(item)){
+  if(item.settledAgainstContribution||(isTransferManualPayment(item)&&!item.addToTransferredReceived)){
     item.linkedAdjustmentIds=[];
     if(isTransferManualPayment(item)){item.linkedAdjustmentId='';item.addToContribution=false;item.settledAgainstContribution=false;}
     
