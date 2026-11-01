@@ -1331,7 +1331,7 @@ function getSelectedManualPaymentCategory(){
   return el.value||'';
 }
 function populateManualPaymentTransferredTo(selected=''){const el=document.getElementById('mpTransferredTo');if(!el)return;el.innerHTML='<option value="">Select person</option>'+['Neeraj','Suyog','Prashant'].map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('');el.value=selected||'';}
-function isTransferManualPayment(p){return String(p?.category||'').trim().toLowerCase()==='transfer';}
+function isTransferManualPayment(p){return String(p?.category||'').trim().toLowerCase()==='transfer'||!!String(p?.transferredTo||'').trim();}
 function isManualPaymentSettled(p){return !!p&&(isTransferManualPayment(p)||((p.settledAgainstContribution&&!getPaymentAdjustmentIds(p).length)||paymentIsFullySettled(p)));}
 function addManualPaymentCategoryIfNew(category){
   const builtIn=['Equipment','Snacks / Food','Transport','Ground-related','Contribution','Transfer','Other'];
@@ -1352,7 +1352,7 @@ function saveManualPayment(){
   const linkedAdjustmentId=document.getElementById('mpLinkedAdjustment')?.value||'';
   const addToContribution=!!document.getElementById('mpAddToContribution')?.checked;
   const transferredTo=document.getElementById('mpTransferredTo')?.value||'';
-  const isTransfer=isTransferManualPayment({category});
+  const isTransfer=isTransferManualPayment({category,transferredTo});
   const notes=document.getElementById('mpNotes')?.value.trim()||'';
   if(!category){alert('Please select a payment category.');return;}
   addManualPaymentCategoryIfNew(category);
