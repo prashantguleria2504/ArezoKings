@@ -121,6 +121,12 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 .match-not-scheduled{color:#b45309;font-weight:800;font-size:12px;display:block;margin-top:3px;}
 
 .match-not-scheduled-row{background:#fff4e5 !important;}
+.match-completed-row{background:#eef8f0 !important;}
+.match-upcoming-row{background:#eef6ff !important;}
+.match-status-badge{display:inline-block;margin-top:5px;padding:3px 7px;border-radius:12px;font-size:10px;font-weight:800;line-height:1.2;white-space:nowrap;}
+.match-status-completed{background:#d9f0df;color:#176b3a;}
+.match-status-upcoming{background:#dcecff;color:#245f8f;}
+.match-status-unscheduled{background:#ffedcf;color:#8a5200;}
 .match-date-field{position:relative;min-width:0}
 .match-date-field #mDate{width:100%;cursor:pointer;background:#fff}
 .match-date-picker{position:absolute;z-index:1000;top:calc(100% + 6px);left:0;width:310px;background:#fff;border:1px solid #cfe0d2;border-radius:12px;box-shadow:0 12px 28px rgba(23,37,27,.18);padding:12px}
@@ -1039,7 +1045,14 @@ function normalizeFinanceOwnership(){
 const money=n=>{const v=Number(n||0);const txt='₹'+v.toLocaleString('en-IN');return v<0?`<span class="negative-amount">${txt}</span>`:txt;};
 const monthKey=d=>d.slice(0,7);
 const monthName=k=>new Date(k+'-01T00:00:00').toLocaleDateString('en-IN',{month:'long',year:'numeric'});
-const weekOfMonth=d=>Math.ceil(new Date(d+'T00:00:00').getDate()/7);
+// Calendar weeks run Monday through Sunday. Week numbers are relative to
+// the month, so dates on Saturday and Sunday stay in the same week.
+const weekOfMonth=d=>{
+  const date=new Date(d+'T00:00:00');
+  const firstDay=new Date(date.getFullYear(),date.getMonth(),1);
+  const mondayOffset=(firstDay.getDay()+6)%7;
+  return Math.ceil((date.getDate()+mondayOffset)/7);
+};
 
 async function save(){
   localStorage.setItem(KEY,JSON.stringify(data));
@@ -2562,6 +2575,8 @@ function render(){
   refreshMonths();
   const month=selectedMonth();
   const rows=data.filter(x=>monthKey(x.date)===month).sort((a,b)=>a.date.localeCompare(b.date));
+  const now=new Date();
+  const todayKey=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
   const opponent=rows.reduce((s,x)=>s+Number(x.opponentAmount||0),0);
   const players=rows.reduce((s,x)=>s+(x.players||[]).reduce((a,p)=>a+Number(p.amount||0),0),0);
   const groundBookingTotal=rows.reduce((sum,x)=>sum+Number(x.groundAmount||0),0);
@@ -2622,8 +2637,14 @@ function render(){
         '<button class="primary" onclick="saveMatchPlayer(\''+x.id+'\')">Save</button>'+
         '<button onclick="cancelAddPlayer(\''+x.id+'\')">Cancel</button></div></details></td></tr>';
 
-      return '<tr data-match-id="'+esc(x.id)+'" class="'+((!x.opponent || !String(x.opponent).trim())?'match-not-scheduled-row':'')+'">'+
-        '<td><div>'+dateText+'</div><div class="date-day">'+dayText+'</div>'+((!x.opponent || !String(x.opponent).trim()) ? '<div class="match-not-scheduled-note">Match not scheduled yet.</div>' : '')+'</td>'+
+      const isScheduled=Boolean(String(x.opponent||'').trim());
+      const matchStatus=!isScheduled
+        ? {label:'Not Scheduled',rowClass:'match-not-scheduled-row',badgeClass:'match-status-unscheduled'}
+        : (x.date<todayKey
+          ? {label:'Completed',rowClass:'match-completed-row',badgeClass:'match-status-completed'}
+          : {label:'Upcoming',rowClass:'match-upcoming-row',badgeClass:'match-status-upcoming'});
+      return '<tr data-match-id="'+esc(x.id)+'" class="'+matchStatus.rowClass+'">'+
+        '<td><div>'+dateText+'</div><div class="date-day">'+dayText+'</div><span class="match-status-badge '+matchStatus.badgeClass+'">'+matchStatus.label+'</span>'+(!isScheduled ? '<div class="match-not-scheduled-note">Match not scheduled yet.</div>' : '')+'</td>'+
         '<td>'+esc(x.ground)+'</td>'+
         '<td class="amount">'+money(x.groundAmount)+'</td>'+
         '<td>'+esc(x.opponent)+'</td>'+
