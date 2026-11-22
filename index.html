@@ -775,7 +775,7 @@ async function refreshCloudState(){
     });
     await loadCloudState();
     const after=JSON.stringify({
-      m:data,c:contributions,p:groundPayments,a:adjustments,it:internalTransfers,g:getGrounds()
+      m:data,c:contributions,p:groundPayments,mp:manualPayments,a:adjustments,it:internalTransfers,cf:carryForwardAmount,g:getGrounds()
     });
     if(before!==after){
       normalizeFinanceOwnership();
@@ -848,10 +848,6 @@ async function hashPassword(password){
   return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-
-function normalizeUsername(value){
-  return String(value||'').trim().toLowerCase();
-}
 
 function setAuthMessage(id,message,type=''){
   const el=document.getElementById(id);
