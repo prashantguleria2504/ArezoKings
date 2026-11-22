@@ -319,7 +319,9 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
 <body>
 <div class="container">
 
-<section id="authPage" class="auth-page">
+<div id="startupLoading" role="status" aria-live="polite" style="min-height:70vh;display:flex;align-items:center;justify-content:center;color:#176b3a;font-weight:700">Loading ArezoKings...</div>
+
+<section id="authPage" class="auth-page hidden">
   <div class="auth-card">
     <div class="auth-brand">
       <h1>🏏 ArezoKings</h1>
@@ -881,6 +883,7 @@ function showAuth(mode='login'){
 function showApp(){
   const authPage=document.getElementById('authPage');
   const appShell=document.getElementById('appShell');
+  document.getElementById('startupLoading')?.remove();
   if(authPage)authPage.remove();
   if(appShell)appShell.style.display='block';
 
@@ -906,10 +909,11 @@ function showApp(){
 function showLogin(){
   stopCloudRefresh();
   cloudUser=null;
+  document.getElementById('startupLoading')?.remove();
   const appShell=document.getElementById('appShell');
   const authPage=document.getElementById('authPage');
   if(appShell)appShell.style.display='none';
-  if(authPage)authPage.style.display='flex';
+  if(authPage){authPage.classList.remove('hidden');authPage.style.display='flex';}
   showAuth('login');
   window.scrollTo(0,0);
 }
@@ -2999,18 +3003,24 @@ async function initializeCloudApp(){
   }
 }
 async function initAuth(){
-  if(!supabaseClient){
-    showLogin();
-    return;
-  }
+  try{
+    if(!supabaseClient){
+      showLogin();
+      return;
+    }
 
-  const sessionResult=await supabaseClient.auth.getSession();
-  const session=sessionResult.data?.session;
+    const sessionResult=await supabaseClient.auth.getSession();
+    if(sessionResult.error)throw sessionResult.error;
+    const session=sessionResult.data?.session;
 
-  if(session?.user){
-    cloudUser=session.user;
-    await initializeCloudApp();
-  }else{
+    if(session?.user){
+      cloudUser=session.user;
+      await initializeCloudApp();
+    }else{
+      showLogin();
+    }
+  }catch(err){
+    console.error('Authentication session check failed:',err);
     showLogin();
   }
 }
