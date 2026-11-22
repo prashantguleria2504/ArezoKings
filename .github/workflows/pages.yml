@@ -36,3 +36,4 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 # redeploy trigger
+# clean deployment run trigger 2026-11-22
