@@ -2009,6 +2009,10 @@ function showSummary(){
 function showTracker(){
   localStorage.setItem('arezoKingsLastPageV1','matches');
   hideAllPageSections();
+  // Rebuild the Matches view whenever returning from another page. The month
+  // selector can retain its value while the match list is stale or was rebuilt
+  // by a background refresh; rendering here keeps the selected month's rows in sync.
+  render();
   const monthFilter=document.getElementById('monthFilter');
   if(monthFilter)monthFilter.style.setProperty('display','block','important');
   const monthFilterWrap=document.getElementById('matchesMonthFilterWrap');
