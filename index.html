@@ -2871,7 +2871,7 @@ async function restoreData(e){
     alert(err?.message||'Invalid backup file.');
   }
 }
-monthFilter.addEventListener('change',render);initAuth();
+monthFilter.addEventListener('change',render);
 refreshGroundDropdown();
 
 async function initializeCloudApp(){
@@ -4155,5 +4155,8 @@ async function showConfiguration(){
 }
 
 
+// Start authentication only after the finance and configuration layers have
+// been evaluated; startup depends on their keys and helper functions.
+initAuth();
 </script></body>
 </html>
